@@ -3,12 +3,12 @@ import { supabase } from '../supabase'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 const CATEGORIES = ['Cash', 'Investments', 'Property', 'Crypto', 'Other']
-
 const emptyEntry = { name: '', type: 'Cash', value: '' }
 
 export default function NetWorthTracker() {
   const [snapshots, setSnapshots] = useState([])
   const [entries, setEntries] = useState([{ ...emptyEntry }])
+  const [snapshotDate, setSnapshotDate] = useState('')
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
 
@@ -20,7 +20,7 @@ export default function NetWorthTracker() {
     const { data, error } = await supabase
       .from('net_worth_snapshots')
       .select('*')
-      .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
     if (!error) setSnapshots(data)
   }
 
@@ -29,12 +29,13 @@ export default function NetWorthTracker() {
     const validEntries = entries.filter(e => e.name && e.value)
     const total = validEntries.reduce((sum, e) => sum + (parseFloat(e.value) || 0), 0)
     const { error } = await supabase.from('net_worth_snapshots').insert([{
-      date: new Date().toISOString().split('T')[0],
+      date: snapshotDate || new Date().toISOString().split('T')[0],
       entries: validEntries,
       total,
     }])
     if (!error) {
       setEntries([{ ...emptyEntry }])
+      setSnapshotDate('')
       setShowForm(false)
       fetchSnapshots()
     }
@@ -71,21 +72,29 @@ export default function NetWorthTracker() {
       }, {})
     : {}
 
+  const chartData = [...snapshots]
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .map(s => ({
+      date: new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+      total: s.total
+    }))
+
   return (
     <div className="space-y-6">
+
       {/* Net worth display */}
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm tracking-widest uppercase text-gray-400">Net Worth</h2>
           <button
             onClick={() => {
-  if (!showForm && latest) {
-    setEntries(latest.entries.map(e => ({ ...e })))
-  } else if (!showForm) {
-    setEntries([{ ...emptyEntry }])
-  }
-  setShowForm(!showForm)
-}}
+              if (!showForm && latest) {
+                setEntries(latest.entries.map(e => ({ name: e.name, type: e.type, value: String(e.value) })))
+              } else if (!showForm) {
+                setEntries([{ ...emptyEntry }])
+              }
+              setShowForm(!showForm)
+            }}
             className="text-xs tracking-widest uppercase px-4 py-2 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors"
           >
             {showForm ? 'Cancel' : 'Update'}
@@ -125,10 +134,37 @@ export default function NetWorthTracker() {
         </div>
       </div>
 
+      {/* Chart */}
+      {snapshots.length > 1 && (
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+          <h3 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Net Worth Over Time</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData}>
+              <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `£${(v/1000).toFixed(0)}k`} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }}
+                labelStyle={{ color: '#9ca3af' }}
+                formatter={v => [`£${v.toLocaleString('en-GB')}`, 'Net Worth']}
+              />
+              <Line type="monotone" dataKey="total" stroke="#34d399" strokeWidth={2} dot={{ fill: '#34d399', r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       {/* Update form */}
       {showForm && (
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-          <h3 className="text-sm tracking-widest uppercase text-gray-400 mb-4">New Snapshot</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm tracking-widest uppercase text-gray-400">New Snapshot</h3>
+            <input
+              type="date"
+              value={snapshotDate}
+              onChange={e => setSnapshotDate(e.target.value)}
+              className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
+            />
+          </div>
           <div className="space-y-3 mb-4">
             {entries.map((entry, index) => (
               <div key={index} className="grid grid-cols-12 gap-3 items-center">
@@ -225,25 +261,7 @@ export default function NetWorthTracker() {
           </div>
         </div>
       )}
-    {snapshots.length > 1 && (
-  <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-    <h3 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Net Worth Over Time</h3>
-    <ResponsiveContainer width="100%" height={200}>
-      <LineChart data={[...snapshots].reverse().map(s => ({
-        date: new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-        total: s.total
-      }))}>
-        <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `£${(v/1000).toFixed(0)}k`} />
-        <Tooltip
-          contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }}
-          labelStyle={{ color: '#9ca3af' }}
-          formatter={v => [`£${v.toLocaleString('en-GB')}`, 'Net Worth']}
-        />
-        <Line type="monotone" dataKey="total" stroke="#34d399" strokeWidth={2} dot={{ fill: '#34d399', r: 3 }} />
-      </LineChart>
-    </ResponsiveContainer>
-  </div>
-)}</div>
+
+    </div>
   )
 }
