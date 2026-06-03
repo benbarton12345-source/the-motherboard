@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 const CATEGORIES = ['Cash', 'Investments', 'Property', 'Crypto', 'Other']
 
@@ -77,7 +78,14 @@ export default function NetWorthTracker() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm tracking-widest uppercase text-gray-400">Net Worth</h2>
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+  if (!showForm && latest) {
+    setEntries(latest.entries.map(e => ({ ...e })))
+  } else if (!showForm) {
+    setEntries([{ ...emptyEntry }])
+  }
+  setShowForm(!showForm)
+}}
             className="text-xs tracking-widest uppercase px-4 py-2 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors"
           >
             {showForm ? 'Cancel' : 'Update'}
@@ -217,6 +225,25 @@ export default function NetWorthTracker() {
           </div>
         </div>
       )}
-    </div>
+    {snapshots.length > 1 && (
+  <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+    <h3 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Net Worth Over Time</h3>
+    <ResponsiveContainer width="100%" height={200}>
+      <LineChart data={[...snapshots].reverse().map(s => ({
+        date: new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+        total: s.total
+      }))}>
+        <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `£${(v/1000).toFixed(0)}k`} />
+        <Tooltip
+          contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }}
+          labelStyle={{ color: '#9ca3af' }}
+          formatter={v => [`£${v.toLocaleString('en-GB')}`, 'Net Worth']}
+        />
+        <Line type="monotone" dataKey="total" stroke="#34d399" strokeWidth={2} dot={{ fill: '#34d399', r: 3 }} />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+)}</div>
   )
 }
