@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import NetWorthTracker from './components/NetWorthTracker'
 
 function App() {
   const [activeTab, setActiveTab] = useState('finance')
@@ -38,9 +39,7 @@ function App() {
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {activeTab === 'finance' && (
-          <div className="text-gray-400">Finance module coming soon</div>
-        )}
+   {activeTab === 'finance' && <NetWorthTracker />}
         {activeTab === 'productivity' && (
           <div className="text-gray-400">Productivity module coming soon</div>
         )}
