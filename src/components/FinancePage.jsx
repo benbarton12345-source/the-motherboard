@@ -724,6 +724,7 @@ export default function FinancePage() {
             {snapshots.map((s, i) => {
               const prior = snapshots[i + 1]
               const delta = prior ? s.total - prior.total : null
+              const deltaPct = delta !== null && prior.total ? (delta / prior.total) * 100 : null
               const sCash = s.entries.filter(e => e.type === 'Cash').reduce((sum, e) => sum + entryToGBP(e, rate), 0)
               const sInvested = s.entries.filter(e => e.type === 'Investments' || e.type === 'Crypto').reduce((sum, e) => sum + entryToGBP(e, rate), 0)
 
@@ -737,7 +738,7 @@ export default function FinancePage() {
                     <div className="text-sm text-white">{format(convert(sCash, 'GBP'))}</div>
                     <div className="text-sm text-white">{format(convert(sInvested, 'GBP'))}</div>
                     <div className={`text-sm font-medium ${delta === null ? 'text-gray-600' : delta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {delta === null ? '—' : `${delta >= 0 ? '+' : '-'}${format(convert(Math.abs(delta), 'GBP'))}`}
+                      {delta === null ? '—' : `${delta >= 0 ? '+' : '-'}${format(convert(Math.abs(delta), 'GBP'))}${deltaPct !== null ? ` (${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%)` : ''}`}
                     </div>
                     <div className="flex gap-3">
                       <button
