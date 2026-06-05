@@ -17,7 +17,7 @@ const TARGET = 1_500_000
 
 const PRIORITY_COLOURS = {
   HOT: 'text-red-400 border-red-400',
-  WARM: 'text-[#00ff88] border-[#00ff88]',
+  WARM: 'text-emerald-400 border-emerald-400',
   COOL: 'text-blue-400 border-blue-400',
 }
 
@@ -34,31 +34,6 @@ function getWeekStart() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function SLabel({ n, title }) {
-  return (
-    <p className="font-mono text-[10px] tracking-[0.18em] text-[#3a3a3a] uppercase mb-3">
-      {String(n).padStart(2, '0')} // {title}
-    </p>
-  )
-}
-
-function Card({ children, className = '' }) {
-  return (
-    <div className={`bg-[#0f0f0f] border border-[#1c1c1c] rounded-xl p-4 ${className}`}>
-      {children}
-    </div>
-  )
-}
-
-function Stat({ label, value, valueClass = 'text-white' }) {
-  return (
-    <div>
-      <div className="font-mono text-[9px] text-[#3a3a3a] uppercase tracking-wider mb-0.5">{label}</div>
-      <div className={`font-mono text-sm font-bold ${valueClass}`}>{value}</div>
-    </div>
-  )
-}
-
 export default function HomePage() {
   const { convert, format } = useCurrency()
 
@@ -66,30 +41,24 @@ export default function HomePage() {
   const [snapshots, setSnapshots] = useState([])
   const [budgetEntries, setBudgetEntries] = useState([])
 
-  // Habits — loaded from Supabase, reset daily by date key
   const [habits, setHabits] = useState(Array(6).fill(false))
   const [habitsLoaded, setHabitsLoaded] = useState(false)
 
-  // Tasks — persisted to Supabase indefinitely
   const [tasks, setTasks] = useState([])
   const [newTask, setNewTask] = useState('')
   const [newPriority, setNewPriority] = useState('WARM')
 
-  // Weekly review — one row per week, auto-saved
   const [review, setReview] = useState({ wins: '', slipped: '', openLoops: '', next3: '' })
   const [reviewLoaded, setReviewLoaded] = useState(false)
 
-  // Focus text stays in localStorage — it's ephemeral, daily intent
   const [focus, setFocus] = useState(() => localStorage.getItem('mb_focus') || '')
   useEffect(() => { localStorage.setItem('mb_focus', focus) }, [focus])
 
-  // Clock
   useEffect(() => {
     const t = setInterval(() => setClock(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
 
-  // Net worth snapshots
   useEffect(() => {
     supabase
       .from('net_worth_snapshots')
@@ -98,7 +67,6 @@ export default function HomePage() {
       .then(({ data }) => { if (data) setSnapshots(data) })
   }, [])
 
-  // Current month budget
   useEffect(() => {
     const now = new Date()
     const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
@@ -111,7 +79,6 @@ export default function HomePage() {
       .then(({ data }) => { if (data) setBudgetEntries(data) })
   }, [])
 
-  // Load today's habits
   useEffect(() => {
     supabase
       .from('habit_logs')
@@ -124,7 +91,6 @@ export default function HomePage() {
       })
   }, [])
 
-  // Load all tasks
   useEffect(() => {
     supabase
       .from('tasks')
@@ -133,7 +99,6 @@ export default function HomePage() {
       .then(({ data }) => { if (data) setTasks(data) })
   }, [])
 
-  // Load this week's review
   useEffect(() => {
     supabase
       .from('weekly_reviews')
@@ -151,7 +116,6 @@ export default function HomePage() {
       })
   }, [])
 
-  // Auto-save weekly review (debounced 800ms)
   useEffect(() => {
     if (!reviewLoaded) return
     const timer = setTimeout(() => {
@@ -169,7 +133,6 @@ export default function HomePage() {
     return () => clearTimeout(timer)
   }, [review, reviewLoaded])
 
-  // Toggle a habit and immediately upsert today's row
   function toggleHabit(i) {
     if (!habitsLoaded) return
     setHabits(prev => {
@@ -182,7 +145,6 @@ export default function HomePage() {
     })
   }
 
-  // Tasks — optimistic updates for toggle and delete
   async function addTask() {
     if (!newTask.trim()) return
     const text = newTask.trim()
@@ -209,12 +171,10 @@ export default function HomePage() {
 
   // Derived: net worth
   const latest = snapshots[0]
+  const prev = snapshots[1]
 
-  const thirtyDaysAgo = new Date(clock)
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-  const prevSnapshot = snapshots.find(s => new Date(s.date) <= thirtyDaysAgo)
-  const delta30 = latest && prevSnapshot ? latest.total - prevSnapshot.total : null
-  const delta30pct = delta30 !== null && prevSnapshot ? (delta30 / prevSnapshot.total) * 100 : null
+  const monthDelta = latest && prev ? latest.total - prev.total : null
+  const monthDeltaPct = monthDelta !== null && prev ? (monthDelta / prev.total) * 100 : null
 
   const sparkData = [...snapshots]
     .sort((a, b) => new Date(a.date) - new Date(b.date))
@@ -233,9 +193,8 @@ export default function HomePage() {
   const progress = latest ? Math.min((latest.total / TARGET) * 100, 100) : 0
 
   let projectedYears = null
-  if (latest && delta30 && delta30 > 0) {
-    const remaining = TARGET - latest.total
-    projectedYears = (remaining / (delta30 * 12)).toFixed(1)
+  if (latest && monthDelta && monthDelta > 0) {
+    projectedYears = ((TARGET - latest.total) / (monthDelta * 12)).toFixed(1)
   }
 
   // Derived: budget
@@ -246,7 +205,7 @@ export default function HomePage() {
   const saved = totalInc - totalExp
   const saveRate = totalInc > 0 ? (saved / totalInc) * 100 : 0
 
-  // Clock displays
+  // Clock
   const perthTime = clock.toLocaleTimeString('en-GB', {
     timeZone: 'Australia/Perth', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
   })
@@ -273,104 +232,104 @@ export default function HomePage() {
   const targetDisplay = format(convert(TARGET, 'GBP'))
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4">
+    <div className="flex flex-col lg:flex-row gap-6">
 
       {/* LEFT COLUMN */}
-      <div className="lg:w-[220px] shrink-0 space-y-3">
+      <div className="lg:w-[220px] shrink-0 space-y-6">
 
-        {/* 01 // OPERATOR */}
-        <Card>
-          <SLabel n={1} title="operator" />
-          <div className="font-syne text-white font-bold text-lg leading-tight mb-0.5">Ben Barton</div>
-          <div className="font-mono text-[11px] text-[#555] mb-4">Operator · Perth, AU</div>
+        {/* OPERATOR */}
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Operator</h2>
+          <div className="text-lg font-bold text-white mb-0.5">Ben Barton</div>
+          <div className="text-xs text-gray-500 mb-4">Perth, AU</div>
           <div className="flex gap-2 mb-4">
-            <div className="flex-1 bg-[#161616] rounded-lg px-3 py-2 text-center">
-              <div className="font-mono text-[9px] text-[#3a3a3a] uppercase tracking-wider mb-1">Week</div>
-              <div className="font-mono text-base font-bold text-white">{weekNum}</div>
+            <div className="flex-1 bg-gray-800 rounded p-3 text-center">
+              <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Week</div>
+              <div className="text-base font-bold text-white">{weekNum}</div>
             </div>
-            <div className="flex-1 bg-[#161616] rounded-lg px-3 py-2 text-center">
-              <div className="font-mono text-[9px] text-[#3a3a3a] uppercase tracking-wider mb-1">Score</div>
-              <div className="font-mono text-base font-bold text-[#00ff88]">{habitsScore}/6</div>
+            <div className="flex-1 bg-gray-800 rounded p-3 text-center">
+              <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Score</div>
+              <div className="text-base font-bold text-emerald-400">{habitsScore}/6</div>
             </div>
           </div>
-          <div className="font-mono text-[9px] text-[#3a3a3a] uppercase tracking-wider mb-1.5">Focus today</div>
+          <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Focus today</div>
           <input
             value={focus}
             onChange={e => setFocus(e.target.value)}
             placeholder="What matters today..."
-            className="w-full bg-[#161616] border border-[#1c1c1c] rounded-lg px-3 py-2 font-mono text-xs text-white placeholder-[#2e2e2e] focus:outline-none focus:border-[#00ff88] transition-colors"
+            className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
           />
-        </Card>
+        </div>
 
-        {/* 02 // FINANCE PULSE */}
-        <Card>
-          <SLabel n={2} title="finance pulse" />
-          <div className="font-mono text-2xl font-bold text-white mb-1">{nwDisplay}</div>
-          {delta30 !== null ? (
-            <div className={`font-mono text-xs mb-3 ${delta30 >= 0 ? 'text-[#00ff88]' : 'text-red-400'}`}>
-              {delta30 >= 0 ? '+' : ''}{format(convert(Math.abs(delta30), 'GBP'))}
-              {delta30pct !== null && (
-                <span className="text-[#444] ml-1">({delta30pct >= 0 ? '+' : ''}{delta30pct.toFixed(1)}%)</span>
-              )}
-              <span className="text-[#333] ml-1">30d</span>
+        {/* NET WORTH */}
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Net Worth</h2>
+          <div className="text-4xl font-bold text-white mb-2">{nwDisplay}</div>
+          {monthDelta !== null && (
+            <div className="mb-2">
+              <span className={`text-sm font-medium ${monthDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {monthDelta >= 0 ? '+' : ''}{format(convert(Math.abs(monthDelta), 'GBP'))}
+                {' '}({monthDeltaPct >= 0 ? '+' : ''}{monthDeltaPct.toFixed(1)}%)
+              </span>
             </div>
-          ) : (
-            <div className="font-mono text-xs text-[#333] mb-3">No comparison data yet</div>
+          )}
+          {prev && (
+            <div className="text-xs text-gray-500 mb-3">
+              Last month: {format(convert(prev.total, 'GBP'))}
+            </div>
           )}
           {sparkData.length > 1 && (
-            <div className="-mx-1">
-              <ResponsiveContainer width="100%" height={44}>
-                <LineChart data={sparkData}>
-                  <Line type="monotone" dataKey="v" stroke="#00ff88" strokeWidth={1.5} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer width="100%" height={44}>
+              <LineChart data={sparkData}>
+                <Line type="monotone" dataKey="v" stroke="#34d399" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
           )}
-        </Card>
+        </div>
 
-        {/* 03 // FREEDOM FIGURE */}
-        <Card>
-          <SLabel n={3} title="freedom figure" />
-          <div className="font-mono text-[10px] text-[#444] mb-2">Target: {targetDisplay}</div>
-          <div className="w-full bg-[#1a1a1a] rounded-full h-1.5 mb-3">
+        {/* FREEDOM FIGURE */}
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm tracking-widest uppercase text-gray-400">Freedom Figure</h2>
+            <span className="text-xs text-gray-500">Target: {targetDisplay}</span>
+          </div>
+          <div className="w-full bg-gray-800 rounded-full h-2 mb-2">
             <div
-              className="h-1.5 rounded-full bg-[#00ff88] transition-all"
+              className="bg-emerald-400 h-2 rounded-full transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="font-mono text-2xl font-bold text-white mb-1">{progress.toFixed(1)}%</div>
-          <div className="font-mono text-[11px] text-[#555] mb-2">
-            {nwDisplay} of {targetDisplay}
-          </div>
+          <div className="text-xs text-gray-500 mb-1">{progress.toFixed(1)}% of target</div>
+          <div className="text-sm text-white font-medium">{nwDisplay} of {targetDisplay}</div>
           {projectedYears && (
-            <div className="font-mono text-[10px] text-[#3a3a3a]">≈ {projectedYears} yrs at current rate</div>
+            <div className="text-xs text-gray-500 mt-1">≈ {projectedYears} yrs at current rate</div>
           )}
-        </Card>
+        </div>
       </div>
 
       {/* CENTRE COLUMN */}
-      <div className="flex-1 min-w-0 space-y-3">
+      <div className="flex-1 min-w-0 space-y-6">
 
-        {/* 04 // SESSION */}
-        <Card>
-          <SLabel n={4} title="session" />
-          <div className="font-syne text-xs text-[#444] tracking-[0.15em] uppercase mb-2">{greeting}, Ben</div>
-          <div className="font-mono text-5xl font-bold text-white tracking-tighter leading-none mb-2">{perthTime}</div>
-          <div className="font-mono text-[11px] text-[#555] mb-1">{dateStr}</div>
-          <div className="font-mono text-[10px] text-[#333] mb-4">UK · {ukTime}</div>
-          <div className="font-mono text-[9px] text-[#3a3a3a] uppercase tracking-wider mb-1.5">Today I will</div>
+        {/* SESSION */}
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Session</h2>
+          <div className="text-xs text-gray-500 uppercase tracking-widest mb-2">{greeting}, Ben</div>
+          <div className="text-4xl font-bold text-white tracking-tight leading-none mb-2">{perthTime}</div>
+          <div className="text-sm text-gray-400 mb-1">{dateStr}</div>
+          <div className="text-xs text-gray-500 mb-4">UK · {ukTime}</div>
+          <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Today I will</div>
           <input
             value={focus}
             onChange={e => setFocus(e.target.value)}
             placeholder="Set your intention for today..."
-            className="w-full bg-[#161616] border border-[#1c1c1c] rounded-lg px-3 py-2 font-mono text-sm text-white placeholder-[#2e2e2e] focus:outline-none focus:border-[#00ff88] transition-colors"
+            className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
           />
-        </Card>
+        </div>
 
-        {/* 05 // HABITS */}
-        <Card>
-          <SLabel n={5} title="habits" />
-          <div className="space-y-2.5 mb-4">
+        {/* HABITS */}
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Habits</h2>
+          <div className="space-y-3 mb-4">
             {HABIT_LIST.map((h, i) => (
               <button
                 key={i}
@@ -378,42 +337,42 @@ export default function HomePage() {
                 className="w-full flex items-center gap-3 text-left group"
               >
                 <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                  habits[i] ? 'bg-[#00ff88] border-[#00ff88]' : 'border-[#2e2e2e] group-hover:border-[#444]'
+                  habits[i] ? 'bg-emerald-400 border-emerald-400' : 'border-gray-700 group-hover:border-gray-500'
                 }`}>
                   {habits[i] && (
-                    <svg className="w-2.5 h-2.5 text-black" viewBox="0 0 10 10" fill="none">
+                    <svg className="w-2.5 h-2.5 text-gray-950" viewBox="0 0 10 10" fill="none">
                       <polyline points="1.5,5 4,7.5 8.5,2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
                 </div>
-                <span className={`font-mono text-xs transition-colors ${
-                  habits[i] ? 'text-[#00ff88] line-through decoration-[#00ff88]/30' : 'text-[#777] group-hover:text-[#999]'
+                <span className={`text-sm transition-colors ${
+                  habits[i] ? 'text-emerald-400 line-through decoration-emerald-400/40' : 'text-gray-400 group-hover:text-white'
                 }`}>
                   {h}
                 </span>
               </button>
             ))}
           </div>
-          <div className="font-mono text-xs text-[#333]">
-            <span className="text-[#00ff88] font-bold">{habitsScore}</span> / 6 today
+          <div className="text-xs text-gray-500">
+            <span className="text-emerald-400 font-medium">{habitsScore}</span> / 6 today
           </div>
-        </Card>
+        </div>
 
-        {/* 06 // THIS WEEK */}
-        <Card>
-          <SLabel n={6} title="this week" />
+        {/* THIS WEEK */}
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">This Week</h2>
           <div className="flex gap-2 mb-4">
             <input
               value={newTask}
               onChange={e => setNewTask(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addTask()}
               placeholder="Add a goal..."
-              className="flex-1 bg-[#161616] border border-[#1c1c1c] rounded-lg px-3 py-2 font-mono text-xs text-white placeholder-[#2e2e2e] focus:outline-none focus:border-[#00ff88] transition-colors"
+              className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
             />
             <select
               value={newPriority}
               onChange={e => setNewPriority(e.target.value)}
-              className="bg-[#161616] border border-[#1c1c1c] rounded-lg px-2 py-2 font-mono text-xs text-white focus:outline-none focus:border-[#00ff88] transition-colors"
+              className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
             >
               <option value="HOT">HOT</option>
               <option value="WARM">WARM</option>
@@ -421,32 +380,32 @@ export default function HomePage() {
             </select>
             <button
               onClick={addTask}
-              className="bg-[#00ff88] text-black font-mono text-sm font-bold px-4 py-2 rounded-lg hover:bg-[#00e07a] transition-colors"
+              className="px-4 py-2 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-emerald-300 transition-colors"
             >
-              +
+              Add
             </button>
           </div>
           {tasks.length === 0 ? (
-            <div className="font-mono text-xs text-[#2e2e2e]">No goals set this week</div>
+            <div className="text-sm text-gray-600">No goals set this week</div>
           ) : (
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {tasks.map(task => (
-                <div key={task.id} className="flex items-center gap-3 group">
+                <div key={task.id} className="flex items-center gap-3 group py-1 border-b border-gray-800 last:border-0">
                   <button
                     onClick={() => toggleTask(task.id)}
                     className={`w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center transition-colors ${
-                      task.done ? 'bg-[#00ff88] border-[#00ff88]' : 'border-[#2e2e2e] hover:border-[#444]'
+                      task.done ? 'bg-emerald-400 border-emerald-400' : 'border-gray-700 hover:border-gray-500'
                     }`}
                   />
-                  <span className={`font-mono text-xs flex-1 transition-colors ${task.done ? 'line-through text-[#2e2e2e]' : 'text-[#ccc]'}`}>
+                  <span className={`text-sm flex-1 ${task.done ? 'line-through text-gray-600' : 'text-white'}`}>
                     {task.text}
                   </span>
-                  <span className={`font-mono text-[9px] border px-1.5 py-0.5 rounded tracking-widest shrink-0 ${PRIORITY_COLOURS[task.priority]}`}>
+                  <span className={`text-xs border px-1.5 py-0.5 rounded tracking-widest shrink-0 ${PRIORITY_COLOURS[task.priority]}`}>
                     {task.priority}
                   </span>
                   <button
                     onClick={() => removeTask(task.id)}
-                    className="text-[#2e2e2e] hover:text-red-400 font-mono text-base leading-none transition-colors opacity-0 group-hover:opacity-100"
+                    className="text-gray-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 text-base leading-none"
                   >
                     ×
                   </button>
@@ -454,11 +413,11 @@ export default function HomePage() {
               ))}
             </div>
           )}
-        </Card>
+        </div>
 
-        {/* 07 // WEEKLY REVIEW */}
-        <Card>
-          <SLabel n={7} title="weekly review" />
+        {/* WEEKLY REVIEW */}
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Weekly Review</h2>
           <div className="grid grid-cols-2 gap-4">
             {[
               { key: 'wins', label: 'Wins this week' },
@@ -467,26 +426,26 @@ export default function HomePage() {
               { key: 'next3', label: 'Next week top 3' },
             ].map(({ key, label }) => (
               <div key={key}>
-                <div className="font-mono text-[9px] text-[#3a3a3a] uppercase tracking-wider mb-1.5">{label}</div>
+                <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">{label}</div>
                 <textarea
                   value={review[key]}
                   onChange={e => setReview(r => ({ ...r, [key]: e.target.value }))}
                   rows={3}
                   placeholder="..."
-                  className="w-full bg-[#161616] border border-[#1c1c1c] rounded-lg px-3 py-2 font-mono text-xs text-white placeholder-[#2a2a2a] focus:outline-none focus:border-[#00ff88] resize-none transition-colors"
+                  className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-emerald-400 resize-none"
                 />
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* RIGHT COLUMN */}
-      <div className="lg:w-[200px] shrink-0 space-y-3">
+      <div className="lg:w-[200px] shrink-0 space-y-6">
 
-        {/* 08 // ASSETS */}
-        <Card>
-          <SLabel n={8} title="assets" />
+        {/* ASSETS */}
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Assets</h2>
           {latest ? (
             <div className="space-y-3">
               {CATEGORIES.filter(cat => (catTotals[cat] || 0) > 0).map(cat => {
@@ -496,64 +455,71 @@ export default function HomePage() {
                 return (
                   <div key={cat}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-mono text-[10px] text-[#555] uppercase">{cat}</span>
-                      <span className="font-mono text-[10px] text-[#555]">{pct.toFixed(0)}%</span>
+                      <span className="text-xs text-gray-400">{cat}</span>
+                      <span className="text-xs text-gray-500">{pct.toFixed(0)}%</span>
                     </div>
-                    <div className="w-full bg-[#1a1a1a] rounded-full h-1 mb-1">
-                      <div className="h-1 rounded-full bg-[#00ff88]" style={{ width: `${pct}%` }} />
+                    <div className="w-full bg-gray-800 rounded-full h-1 mb-1">
+                      <div className="bg-emerald-400 h-1 rounded-full" style={{ width: `${pct}%` }} />
                     </div>
-                    <div className="font-mono text-xs text-white">{format(val)}</div>
+                    <div className="text-xs text-white">{format(val)}</div>
                   </div>
                 )
               })}
               {CATEGORIES.every(cat => !(catTotals[cat] > 0)) && (
-                <div className="font-mono text-xs text-[#333]">No data</div>
+                <div className="text-sm text-gray-600">No data</div>
               )}
             </div>
           ) : (
-            <div className="font-mono text-xs text-[#333]">No snapshot yet</div>
+            <div className="text-sm text-gray-600">No snapshot yet</div>
           )}
-        </Card>
+        </div>
 
-        {/* 09 // BUDGET */}
-        <Card>
-          <SLabel n={9} title={`budget · ${monthShort}`} />
+        {/* BUDGET */}
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Budget · {monthShort}</h2>
           <div className="space-y-3">
-            <Stat label="Income" value={format(totalInc)} valueClass="text-[#00ff88]" />
-            <Stat label="Expenses" value={format(totalExp)} valueClass="text-red-400" />
-            <Stat
-              label="Saved"
-              value={`${saved < 0 ? '-' : ''}${format(Math.abs(saved))}`}
-              valueClass={saved >= 0 ? 'text-white' : 'text-red-400'}
-            />
             <div>
-              <div className="font-mono text-[9px] text-[#3a3a3a] uppercase tracking-wider mb-1.5">Save rate</div>
-              <div className="w-full bg-[#1a1a1a] rounded-full h-1 mb-1">
+              <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Income</div>
+              <div className="text-sm font-medium text-emerald-400">{format(totalInc)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Expenses</div>
+              <div className="text-sm font-medium text-red-400">{format(totalExp)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Saved</div>
+              <div className={`text-sm font-medium ${saved >= 0 ? 'text-white' : 'text-red-400'}`}>
+                {saved < 0 ? '-' : ''}{format(Math.abs(saved))}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Save rate</div>
+              <div className="w-full bg-gray-800 rounded-full h-1 mb-1">
                 <div
-                  className="h-1 rounded-full bg-[#00ff88]"
+                  className="bg-emerald-400 h-1 rounded-full"
                   style={{ width: `${Math.max(0, Math.min(saveRate, 100))}%` }}
                 />
               </div>
-              <div className="font-mono text-xs text-white">{saveRate > 0 ? saveRate.toFixed(0) : '0'}%</div>
+              <div className="text-xs text-gray-500">{saveRate > 0 ? saveRate.toFixed(0) : '0'}%</div>
             </div>
           </div>
-        </Card>
+        </div>
 
-        {/* 10 // TRADING */}
-        <Card>
-          <SLabel n={10} title="trading" />
-          <div className="inline-flex items-center border border-[#2a2a2a] rounded px-2 py-0.5 mb-4">
-            <span className="font-mono text-[9px] text-[#444] tracking-[0.2em]">DEMO</span>
+        {/* TRADING */}
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm tracking-widest uppercase text-gray-400">Trading</h2>
+            <span className="text-xs tracking-widest text-gray-600 border border-gray-700 rounded px-2 py-0.5">DEMO</span>
           </div>
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {['Win rate', 'P&L MTD', 'Avg R:R', 'Open trades', 'Max drawdown'].map(label => (
-              <div key={label} className="flex items-center justify-between">
-                <span className="font-mono text-[10px] text-[#444]">{label}</span>
-                <span className="font-mono text-[10px] text-[#2e2e2e]">—</span>
+              <div key={label} className="flex items-center justify-between py-1 border-b border-gray-800 last:border-0">
+                <span className="text-xs text-gray-500">{label}</span>
+                <span className="text-xs text-gray-600">—</span>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   )
