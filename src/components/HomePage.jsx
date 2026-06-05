@@ -50,6 +50,7 @@ export default function HomePage() {
 
   const [review, setReview] = useState({ wins: '', slipped: '', openLoops: '', next3: '' })
   const [reviewLoaded, setReviewLoaded] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('idle')
 
   const [focus, setFocus] = useState(() => localStorage.getItem('mb_focus') || '')
   useEffect(() => { localStorage.setItem('mb_focus', focus) }, [focus])
@@ -118,8 +119,8 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!reviewLoaded) return
-    const timer = setTimeout(() => {
-      supabase
+    const timer = setTimeout(async () => {
+      await supabase
         .from('weekly_reviews')
         .upsert({
           week_start: getWeekStart(),
@@ -128,7 +129,8 @@ export default function HomePage() {
           open_loops: review.openLoops,
           next_week_top_3: review.next3,
         }, { onConflict: 'week_start' })
-        .then()
+      setSaveStatus(s => s === 'saving' ? 'saved' : s)
+      setTimeout(() => setSaveStatus(s => s === 'saved' ? 'idle' : s), 2000)
     }, 800)
     return () => clearTimeout(timer)
   }, [review, reviewLoaded])
@@ -417,7 +419,14 @@ export default function HomePage() {
 
         {/* WEEKLY REVIEW */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Weekly Review</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm tracking-widest uppercase text-gray-400">Weekly Review</h2>
+            {saveStatus !== 'idle' && (
+              <span className="text-xs text-gray-600">
+                {saveStatus === 'saving' ? 'Saving...' : '✓ Saved'}
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-4">
             {[
               { key: 'wins', label: 'Wins this week' },
@@ -429,7 +438,10 @@ export default function HomePage() {
                 <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">{label}</div>
                 <textarea
                   value={review[key]}
-                  onChange={e => setReview(r => ({ ...r, [key]: e.target.value }))}
+                  onChange={e => {
+                    setSaveStatus('saving')
+                    setReview(r => ({ ...r, [key]: e.target.value }))
+                  }}
                   rows={3}
                   placeholder="..."
                   className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-emerald-400 resize-none"

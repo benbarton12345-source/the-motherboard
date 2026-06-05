@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import NetWorthTracker from './components/NetWorthTracker'
-import BudgetTracker from './components/BudgetTracker'
 import HomePage from './components/HomePage'
+import FinancePage from './components/FinancePage'
 import { useCurrency } from './CurrencyContext'
 
 const TABS = ['home', 'finance', 'trading', 'productivity', 'health']
@@ -68,12 +67,7 @@ function App() {
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-6 py-6">
         {activeTab === 'home' && <HomePage />}
-        {activeTab === 'finance' && (
-          <div className="space-y-10">
-            <NetWorthTracker />
-            <BudgetTracker />
-          </div>
-        )}
+        {activeTab === 'finance' && <FinancePage />}
         {activeTab === 'trading' && (
           <div className="font-mono text-sm text-[#333]">Trading module — Phase 3</div>
         )}
