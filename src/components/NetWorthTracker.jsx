@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
+import { useCurrency } from '../CurrencyContext'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 const CATEGORIES = ['Cash', 'Investments', 'Property', 'Crypto', 'Other']
-const emptyEntry = { name: '', type: 'Cash', value: '' }
+const emptyEntry = { name: '', type: 'Cash', value: '', currency: 'GBP' }
 
 export default function NetWorthTracker() {
+  const { convert, format, rate } = useCurrency()
   const [snapshots, setSnapshots] = useState([])
   const [entries, setEntries] = useState([{ ...emptyEntry }])
   const [snapshotDate, setSnapshotDate] = useState('')
@@ -24,10 +26,15 @@ export default function NetWorthTracker() {
     if (!error) setSnapshots(data)
   }
 
+  function toGBP(amount, fromCurrency) {
+    if (!rate || fromCurrency === 'GBP') return amount
+    return amount / rate
+  }
+
   async function handleSubmit() {
     setLoading(true)
     const validEntries = entries.filter(e => e.name && e.value)
-    const total = validEntries.reduce((sum, e) => sum + (parseFloat(e.value) || 0), 0)
+    const total = validEntries.reduce((sum, e) => sum + toGBP(parseFloat(e.value) || 0, e.currency || 'GBP'), 0)
     const { error } = await supabase.from('net_worth_snapshots').insert([{
       date: snapshotDate || new Date().toISOString().split('T')[0],
       entries: validEntries,
@@ -67,7 +74,7 @@ export default function NetWorthTracker() {
     ? CATEGORIES.reduce((acc, cat) => {
         acc[cat] = latest.entries
           .filter(e => e.type === cat)
-          .reduce((sum, e) => sum + parseFloat(e.value || 0), 0)
+          .reduce((sum, e) => sum + convert(parseFloat(e.value || 0), e.currency || 'GBP'), 0)
         return acc
       }, {})
     : {}
@@ -89,7 +96,7 @@ export default function NetWorthTracker() {
           <button
             onClick={() => {
               if (!showForm && latest) {
-                setEntries(latest.entries.map(e => ({ name: e.name, type: e.type, value: String(e.value) })))
+                setEntries(latest.entries.map(e => ({ name: e.name, type: e.type, value: String(e.value), currency: e.currency || 'GBP' })))
               } else if (!showForm) {
                 setEntries([{ ...emptyEntry }])
               }
@@ -101,7 +108,7 @@ export default function NetWorthTracker() {
           </button>
         </div>
         <div className="text-4xl font-bold text-white mb-4">
-          £{latest ? latest.total.toLocaleString('en-GB', { minimumFractionDigits: 0 }) : '0'}
+          {latest ? format(convert(latest.total, 'GBP')) : format(0)}
         </div>
         {latest && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
@@ -109,7 +116,7 @@ export default function NetWorthTracker() {
               <div key={cat} className="bg-gray-800 rounded p-3">
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{cat}</div>
                 <div className="text-sm text-white font-medium">
-                  £{(categoryTotals[cat] || 0).toLocaleString('en-GB')}
+                  {format(categoryTotals[cat] || 0)}
                 </div>
               </div>
             ))}
@@ -121,7 +128,7 @@ export default function NetWorthTracker() {
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm tracking-widest uppercase text-gray-400">Freedom Figure</h2>
-          <span className="text-xs text-gray-500">Target: £1,500,000</span>
+          <span className="text-xs text-gray-500">Target: {format(convert(1500000, 'GBP'))}</span>
         </div>
         <div className="w-full bg-gray-800 rounded-full h-2 mb-2">
           <div
@@ -168,7 +175,7 @@ export default function NetWorthTracker() {
           <div className="space-y-3 mb-4">
             {entries.map((entry, index) => (
               <div key={index} className="grid grid-cols-12 gap-3 items-center">
-                <div className="col-span-5">
+                <div className="col-span-4">
                   <input
                     type="text"
                     value={entry.name}
@@ -188,12 +195,22 @@ export default function NetWorthTracker() {
                     ))}
                   </select>
                 </div>
-                <div className="col-span-3">
+                <div className="col-span-2">
+                  <select
+                    value={entry.currency || 'GBP'}
+                    onChange={e => updateEntry(index, 'currency', e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
+                  >
+                    <option value="GBP">GBP</option>
+                    <option value="AUD">AUD</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
                   <input
                     type="number"
                     value={entry.value}
                     onChange={e => updateEntry(index, 'value', e.target.value)}
-                    placeholder="£0"
+                    placeholder="0"
                     className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
                   />
                 </div>
@@ -240,7 +257,7 @@ export default function NetWorthTracker() {
                     {new Date(s.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </span>
                   <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-white">£{s.total.toLocaleString('en-GB')}</span>
+                    <span className="text-sm font-medium text-white">{format(convert(s.total, 'GBP'))}</span>
                     <button
                       onClick={() => handleDelete(s.id)}
                       className="text-xs text-gray-600 hover:text-red-400 transition-colors tracking-widest uppercase"
@@ -252,7 +269,7 @@ export default function NetWorthTracker() {
                 <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
                   {s.entries.map((e, i) => (
                     <div key={i} className="text-xs text-gray-500">
-                      {e.name} — {e.type} — £{parseFloat(e.value).toLocaleString('en-GB')}
+                      {e.name} — {e.type} — {format(convert(parseFloat(e.value), e.currency || 'GBP'))}
                     </div>
                   ))}
                 </div>
