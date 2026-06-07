@@ -26,6 +26,12 @@ function entryToGBP(entry, rate) {
   return val / rate
 }
 
+function recurringToMonthlyGBP(item, rate) {
+  const monthly = toMonthly(item.amount, item.frequency)
+  if (!rate || (item.currency || 'GBP') === 'GBP') return monthly
+  return monthly / rate
+}
+
 function getMonthOptions() {
   const months = []
   const now = new Date()
@@ -43,13 +49,13 @@ function getMonthOptions() {
 
 function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
   const { convert, format } = useCurrency()
-  const [form, setForm] = useState({ name: '', amount: '', frequency: 'monthly' })
+  const [form, setForm] = useState({ name: '', amount: '', frequency: 'monthly', currency: 'GBP' })
   const [editingId, setEditingId] = useState(null)
-  const [editForm, setEditForm] = useState({ name: '', amount: '', frequency: 'monthly' })
+  const [editForm, setEditForm] = useState({ name: '', amount: '', frequency: 'monthly', currency: 'GBP' })
   const [saving, setSaving] = useState(false)
 
   const filtered = items.filter(r => r.type === type)
-  const monthlyTotal = filtered.reduce((sum, r) => sum + toMonthly(r.amount, r.frequency), 0)
+  const monthlyTotal = filtered.reduce((sum, r) => sum + convert(toMonthly(r.amount, r.frequency), r.currency || 'GBP'), 0)
   const isIncome = type === 'income'
   const accentClass = isIncome ? 'text-emerald-400' : 'text-amber-400'
   const addBtnClass = isIncome
@@ -59,15 +65,15 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
   async function handleAdd() {
     if (!form.name.trim() || !form.amount) return
     setSaving(true)
-    await onAdd({ name: form.name.trim(), type, amount: parseFloat(form.amount), frequency: form.frequency, active: true })
-    setForm({ name: '', amount: '', frequency: 'monthly' })
+    await onAdd({ name: form.name.trim(), type, amount: parseFloat(form.amount), frequency: form.frequency, currency: form.currency, active: true })
+    setForm({ name: '', amount: '', frequency: 'monthly', currency: 'GBP' })
     setSaving(false)
   }
 
   async function handleUpdate() {
     if (!editForm.name.trim() || !editForm.amount) return
     setSaving(true)
-    await onUpdate(editingId, { name: editForm.name.trim(), amount: parseFloat(editForm.amount), frequency: editForm.frequency })
+    await onUpdate(editingId, { name: editForm.name.trim(), amount: parseFloat(editForm.amount), frequency: editForm.frequency, currency: editForm.currency })
     setEditingId(null)
     setSaving(false)
   }
@@ -98,6 +104,14 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
                       className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
                     />
                     <select
+                      value={editForm.currency}
+                      onChange={e => setEditForm(f => ({ ...f, currency: e.target.value }))}
+                      className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
+                    >
+                      <option value="GBP">GBP</option>
+                      <option value="AUD">AUD</option>
+                    </select>
+                    <select
                       value={editForm.frequency}
                       onChange={e => setEditForm(f => ({ ...f, frequency: e.target.value }))}
                       className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
@@ -118,10 +132,10 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
                   </div>
                   <div className="flex items-center gap-3 ml-2 shrink-0">
                     <span className={`text-sm font-medium ${accentClass}`}>
-                      {format(convert(toMonthly(item.amount, item.frequency), 'GBP'))}/mo
+                      {format(convert(toMonthly(item.amount, item.frequency), item.currency || 'GBP'))}/mo
                     </span>
                     <button
-                      onClick={() => { setEditingId(item.id); setEditForm({ name: item.name, amount: String(item.amount), frequency: item.frequency }) }}
+                      onClick={() => { setEditingId(item.id); setEditForm({ name: item.name, amount: String(item.amount), frequency: item.frequency, currency: item.currency || 'GBP' }) }}
                       className="text-xs text-gray-600 hover:text-white transition-colors tracking-widest uppercase opacity-0 group-hover:opacity-100"
                     >Edit</button>
                     <button
@@ -154,6 +168,14 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
             className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
           />
           <select
+            value={form.currency}
+            onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
+            className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
+          >
+            <option value="GBP">GBP</option>
+            <option value="AUD">AUD</option>
+          </select>
+          <select
             value={form.frequency}
             onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}
             className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
@@ -169,7 +191,7 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
       {/* Total */}
       <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-800">
         <span className="text-xs text-gray-500 uppercase tracking-widest">Total / mo</span>
-        <span className={`text-sm font-bold ${accentClass}`}>{format(convert(monthlyTotal, 'GBP'))}</span>
+        <span className={`text-sm font-bold ${accentClass}`}>{format(monthlyTotal)}</span>
       </div>
     </div>
   )
@@ -216,16 +238,37 @@ export default function FinancePage() {
       .then(({ data }) => { if (data) setRecurringItems(data) })
   }
 
-  function fetchBudgetEntries() {
+  async function fetchBudgetEntries() {
     const start = selectedMonth
     const end = new Date(new Date(selectedMonth).getFullYear(), new Date(selectedMonth).getMonth() + 1, 1).toISOString().split('T')[0]
-    supabase.from('budget_entries').select('*').gte('month', start).lt('month', end).order('created_at', { ascending: false })
-      .then(({ data }) => { if (data) setBudgetEntries(data) })
+    const { data } = await supabase.from('budget_entries').select('*').gte('month', start).lt('month', end).order('created_at', { ascending: false })
+    const entries = data || []
+    setBudgetEntries(entries)
+    return entries
+  }
+
+  async function fetchAndSeedBudget() {
+    const entries = await fetchBudgetEntries()
+    const existingIds = new Set(entries.filter(e => e.recurring_item_id).map(e => e.recurring_item_id))
+    const missing = recurringItems.filter(r => r.active && !existingIds.has(r.id))
+    if (missing.length === 0) return
+    await supabase.from('budget_entries').insert(
+      missing.map(r => ({
+        month: selectedMonth,
+        category: 'Recurring',
+        type: r.type === 'income' ? 'income' : 'expense',
+        amount: toMonthly(r.amount, r.frequency),
+        currency: r.currency || 'GBP',
+        notes: r.name,
+        recurring_item_id: r.id,
+      }))
+    )
+    await fetchBudgetEntries()
   }
 
   useEffect(() => { fetchSnapshots() }, [])
   useEffect(() => { fetchRecurringItems() }, [])
-  useEffect(() => { fetchBudgetEntries() }, [selectedMonth])
+  useEffect(() => { fetchAndSeedBudget() }, [selectedMonth, recurringItems])
 
   // ── Recurring CRUD
   async function addRecurringItem(data) {
@@ -327,8 +370,8 @@ export default function FinancePage() {
   // ── Derived: recurring
   const activeIncome = recurringItems.filter(r => r.type === 'income' && r.active)
   const activeCosts = recurringItems.filter(r => (r.type === 'subscription' || r.type === 'fixed_cost') && r.active)
-  const monthlyIncome = activeIncome.reduce((sum, r) => sum + toMonthly(r.amount, r.frequency), 0)
-  const monthlyBurn = activeCosts.reduce((sum, r) => sum + toMonthly(r.amount, r.frequency), 0)
+  const monthlyIncome = activeIncome.reduce((sum, r) => sum + recurringToMonthlyGBP(r, rate), 0)
+  const monthlyBurn = activeCosts.reduce((sum, r) => sum + recurringToMonthlyGBP(r, rate), 0)
   const runway = monthlyBurn > 0 ? totalCashGBP / monthlyBurn : null
   const recurringSaveRate = monthlyIncome > 0 ? ((monthlyIncome - monthlyBurn) / monthlyIncome) * 100 : null
 
@@ -555,18 +598,32 @@ export default function FinancePage() {
               <div className="text-sm text-gray-600">No income entries</div>
             ) : (
               <div>
-                {budgetIncome.map(e => (
-                  <div key={e.id} className="flex items-center justify-between py-2.5 border-b border-gray-800 last:border-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">{e.category}</span>
-                      {e.notes && <span className="text-sm text-gray-400">{e.notes}</span>}
+                {budgetIncome.map(e => {
+                  const isRecurring = !!e.recurring_item_id
+                  return (
+                    <div key={e.id} className="flex items-center justify-between py-2.5 border-b border-gray-800 last:border-0">
+                      <div className="flex items-center gap-2">
+                        {isRecurring ? (
+                          <>
+                            <span className="text-sm text-gray-300">{e.notes}</span>
+                            <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">Recurring</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">{e.category}</span>
+                            {e.notes && <span className="text-sm text-gray-400">{e.notes}</span>}
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-emerald-400">{format(convert(parseFloat(e.amount), e.currency || 'GBP'))}</span>
+                        {!isRecurring && (
+                          <button onClick={() => deleteBudgetEntry(e.id)} className="text-xs text-gray-600 hover:text-red-400 transition-colors uppercase tracking-widest">Del</button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-emerald-400">{format(convert(parseFloat(e.amount), e.currency || 'GBP'))}</span>
-                      <button onClick={() => deleteBudgetEntry(e.id)} className="text-xs text-gray-600 hover:text-red-400 transition-colors uppercase tracking-widest">Del</button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
@@ -606,18 +663,32 @@ export default function FinancePage() {
               <div className="text-sm text-gray-600">No expense entries</div>
             ) : (
               <div>
-                {budgetExpenses.map(e => (
-                  <div key={e.id} className="flex items-center justify-between py-2.5 border-b border-gray-800 last:border-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">{e.category}</span>
-                      {e.notes && <span className="text-sm text-gray-400">{e.notes}</span>}
+                {budgetExpenses.map(e => {
+                  const isRecurring = !!e.recurring_item_id
+                  return (
+                    <div key={e.id} className="flex items-center justify-between py-2.5 border-b border-gray-800 last:border-0">
+                      <div className="flex items-center gap-2">
+                        {isRecurring ? (
+                          <>
+                            <span className="text-sm text-gray-300">{e.notes}</span>
+                            <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">Recurring</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">{e.category}</span>
+                            {e.notes && <span className="text-sm text-gray-400">{e.notes}</span>}
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-red-400">{format(convert(parseFloat(e.amount), e.currency || 'GBP'))}</span>
+                        {!isRecurring && (
+                          <button onClick={() => deleteBudgetEntry(e.id)} className="text-xs text-gray-600 hover:text-red-400 transition-colors uppercase tracking-widest">Del</button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-red-400">{format(convert(parseFloat(e.amount), e.currency || 'GBP'))}</span>
-                      <button onClick={() => deleteBudgetEntry(e.id)} className="text-xs text-gray-600 hover:text-red-400 transition-colors uppercase tracking-widest">Del</button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
