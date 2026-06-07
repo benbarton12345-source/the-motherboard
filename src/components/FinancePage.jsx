@@ -37,9 +37,10 @@ function getMonthOptions() {
   const now = new Date()
   for (let i = 0; i < 12; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
     months.push({
       label: d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
-      value: d.toISOString().split('T')[0],
+      value,
     })
   }
   return months
@@ -170,7 +171,7 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
             value={form.amount}
             onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
             placeholder="Amount"
-            className="w-20 min-w-0 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
+            className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
           />
           <select
             value={form.currency}
@@ -242,7 +243,8 @@ export default function FinancePage() {
 
   async function fetchBudgetEntries() {
     const start = selectedMonth
-    const end = new Date(new Date(selectedMonth).getFullYear(), new Date(selectedMonth).getMonth() + 1, 1).toISOString().split('T')[0]
+    const [y, m] = selectedMonth.split('-').map(Number)
+    const end = `${m === 12 ? y + 1 : y}-${String(m % 12 + 1).padStart(2, '0')}-01`
     const { data } = await supabase.from('budget_entries').select('*').gte('month', start).lt('month', end).order('created_at', { ascending: false })
     const entries = data || []
     setBudgetEntries(entries)

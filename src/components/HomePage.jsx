@@ -70,8 +70,10 @@ export default function HomePage() {
 
   useEffect(() => {
     const now = new Date()
-    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0]
+    const y = now.getFullYear()
+    const m = now.getMonth() + 1
+    const start = `${y}-${String(m).padStart(2, '0')}-01`
+    const end = `${m === 12 ? y + 1 : y}-${String(m % 12 + 1).padStart(2, '0')}-01`
     supabase
       .from('budget_entries')
       .select('*')
