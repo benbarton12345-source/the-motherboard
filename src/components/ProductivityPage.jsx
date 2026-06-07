@@ -84,6 +84,7 @@ export default function ProductivityPage() {
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [taskForm, setTaskForm] = useState({ text: '', priority: 'MEDIUM', add_to_cal: false })
   const [taskSaving, setTaskSaving] = useState(false)
+  const [taskFormError, setTaskFormError] = useState('')
 
   // ── Week summary state
   const [weekTasks, setWeekTasks] = useState([])
@@ -215,37 +216,44 @@ export default function ProductivityPage() {
   async function addDailyTask() {
     if (!taskForm.text.trim()) return
     setTaskSaving(true)
-    const insertDate = selectedDate  // capture before any async gap
-    const { data: taskData, error: taskError } = await supabase.from('tasks').insert([{
-      text: taskForm.text.trim(),
-      priority: taskForm.priority,
-      done: false,
-      task_date: insertDate,
-    }]).select().single()
-    if (taskError) {
-      console.error('addDailyTask insert failed:', taskError)
-      setTaskSaving(false)
-      return
-    }
-    if (taskData) {
-      setDailyTasks(prev => [...prev, taskData])
-      if (insertDate >= currentWeekMonStr && insertDate <= currentWeekSunStr) {
-        setWeekTasks(prev => [...prev, taskData])
-      }
-    }
-    if (taskForm.add_to_cal) {
-      const { data: evData } = await supabase.from('events').insert([{
-        name: taskForm.text.trim(),
-        date: selectedDate,
-        time: null,
-        type: 'personal',
-        add_to_gcal: false,
+    setTaskFormError('')
+    const insertDate = selectedDate
+    try {
+      const { data: taskData, error: taskError } = await supabase.from('tasks').insert([{
+        text: taskForm.text.trim(),
+        priority: taskForm.priority,
+        done: false,
+        task_date: insertDate,
       }]).select().single()
-      if (evData) setEvents(prev => [...prev, evData])
+      if (taskError) {
+        console.error('addDailyTask:', taskError)
+        setTaskFormError(taskError.message || 'Save failed — check console for details')
+        return
+      }
+      if (taskData) {
+        setDailyTasks(prev => [...prev, taskData])
+        if (insertDate >= currentWeekMonStr && insertDate <= currentWeekSunStr) {
+          setWeekTasks(prev => [...prev, taskData])
+        }
+      }
+      if (taskForm.add_to_cal) {
+        const { data: evData } = await supabase.from('events').insert([{
+          name: taskForm.text.trim(),
+          date: selectedDate,
+          time: null,
+          type: 'personal',
+          add_to_gcal: false,
+        }]).select().single()
+        if (evData) setEvents(prev => [...prev, evData])
+      }
+      setTaskForm({ text: '', priority: 'MEDIUM', add_to_cal: false })
+      setShowTaskForm(false)
+    } catch (e) {
+      console.error('addDailyTask unexpected:', e)
+      setTaskFormError('Unexpected error — check console')
+    } finally {
+      setTaskSaving(false)
     }
-    setTaskForm({ text: '', priority: 'MEDIUM', add_to_cal: false })
-    setShowTaskForm(false)
-    setTaskSaving(false)
   }
 
   async function toggleDailyTask(id) {
@@ -687,9 +695,14 @@ export default function ProductivityPage() {
                 <input type="checkbox" checked={taskForm.add_to_cal} onChange={e => setTaskForm(f => ({ ...f, add_to_cal: e.target.checked }))} className="accent-emerald-400" />
                 Also add as calendar event
               </label>
+              {taskFormError && (
+                <div className="text-xs text-red-400 mt-1">{taskFormError}</div>
+              )}
               <div className="flex gap-3 pt-1">
-                <button onClick={addDailyTask} disabled={taskSaving || !taskForm.text.trim()} className={btnSaveCls}>Save</button>
-                <button onClick={() => setShowTaskForm(false)} className="text-xs text-gray-500 hover:text-white tracking-widest uppercase transition-colors">Cancel</button>
+                <button onClick={addDailyTask} disabled={taskSaving || !taskForm.text.trim()} className={btnSaveCls}>
+                  {taskSaving ? 'Saving…' : 'Save'}
+                </button>
+                <button onClick={() => { setShowTaskForm(false); setTaskFormError('') }} className="text-xs text-gray-500 hover:text-white tracking-widest uppercase transition-colors">Cancel</button>
               </div>
             </div>
           ) : (
