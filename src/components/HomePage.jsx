@@ -16,9 +16,9 @@ const CATEGORIES = ['Cash', 'Investments', 'Property', 'Crypto', 'Other']
 const TARGET = 1_500_000
 
 const PRIORITY_COLOURS = {
-  HOT: 'text-red-400 border-red-400',
-  WARM: 'text-emerald-400 border-emerald-400',
-  COOL: 'text-blue-400 border-blue-400',
+  HIGH: 'text-red-400 border-red-400',
+  MEDIUM: 'text-amber-400 border-amber-400',
+  LOW: 'text-blue-400 border-blue-400',
 }
 
 function getLocalDateString() {
@@ -58,7 +58,7 @@ export default function HomePage() {
 
   const [tasks, setTasks] = useState([])
   const [newTask, setNewTask] = useState('')
-  const [newPriority, setNewPriority] = useState('WARM')
+  const [newPriority, setNewPriority] = useState('MEDIUM')
   const [tasksSavedAt, setTasksSavedAt] = useState(null)
 
   const [review, setReview] = useState({
@@ -467,9 +467,9 @@ export default function HomePage() {
               onChange={e => setNewPriority(e.target.value)}
               className={inputCls}
             >
-              <option value="HOT">HOT</option>
-              <option value="WARM">WARM</option>
-              <option value="COOL">COOL</option>
+              <option value="HIGH">HIGH</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="LOW">LOW</option>
             </select>
             <button
               onClick={addTask}

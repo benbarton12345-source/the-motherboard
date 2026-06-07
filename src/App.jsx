@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import HomePage from './components/HomePage'
 import FinancePage from './components/FinancePage'
+import ProductivityPage from './components/ProductivityPage'
 import { useCurrency } from './CurrencyContext'
 
 const TABS = ['home', 'finance', 'trading', 'productivity', 'health']
@@ -71,9 +72,7 @@ function App() {
         {activeTab === 'trading' && (
           <div className="font-mono text-sm text-[#333]">Trading module — Phase 3</div>
         )}
-        {activeTab === 'productivity' && (
-          <div className="font-mono text-sm text-[#333]">Productivity module — Phase 2</div>
-        )}
+        {activeTab === 'productivity' && <ProductivityPage />}
         {activeTab === 'health' && (
           <div className="font-mono text-sm text-[#333]">Health module — Phase 4</div>
         )}

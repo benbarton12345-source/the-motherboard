@@ -163,10 +163,22 @@ HOME · FINANCE · TRADING · PRODUCTIVITY · HEALTH
 - Home page — full three-column layout with all ten sections
 - Habits, tasks, and weekly review persisted to Supabase
 - Finance page complete rebuild with five sections (see Finance Page below)
+- Currency selection (GBP/AUD) on recurring items; amounts convert correctly via CurrencyContext
+- Monthly budget auto-populated from active recurring items on first load each month; RECURRING badge; no delete on recurring entries; inline edit to override amount/category/notes for that month only
+- Timezone bug fixed — month date strings now built from local date components, not toISOString()
 
 ### Phase 2 — Productivity
 
-Home page foundation versions of all four features are built (habits, tasks, weekly review, session focus). The dedicated Productivity tab is still to be built with deeper functionality:
+#### Home page (complete as of 7 June 2026)
+
+- Editable habits list — EDIT mode in Habits card; rename, delete, add habits; persists to `habit_definitions` table; seeds six defaults on first load
+- Save button on This Week — stamps `saved_at` on all tasks; shows "Saved [date]" confirmation
+- Seal Week button on Weekly Review — writes `sealed_at`; button replaced by "Sealed [date]" once sealed; auto-save continues without overwriting seal
+- Weekly review questions replaced with five goal-specific fields: What went well, One challenge I overcame, One thing I can improve next week, Consistency score 1–10 (number input), One thing I am proud of
+- Removed Focus Today (Operator card) and Today I Will (Session card) — will revisit in Productivity tab
+
+#### Productivity tab (to build)
+
 - Streak logic and habit history visualisation
 - Expanded task management (due dates, projects)
 - Weekly review history and trends
@@ -213,14 +225,17 @@ File: `src/components/FinancePage.jsx`
 ### Section 3 — Recurring items (3 columns)
 - Subscriptions | Fixed Costs | Income Sources
 - Each card: list with name, frequency badge, monthly-equivalent amount; add/edit/delete; monthly total
+- Currency field (GBP/AUD) on each item — amounts convert via CurrencyContext
 - Uses `recurring_items` table (type: subscription / fixed_cost / income)
 
 ### Section 4 — Monthly Budget
 - Month selector dropdown (rolling 12 months)
 - Summary stats: Income, Expenses, Saved, Save Rate
 - Expected recurring income shown for comparison in Income stat
-- Two-column entry lists (Income / Expenses) with add forms and delete
-- Uses existing `budget_entries` table
+- On first load for a given month, active recurring items are auto-inserted as budget entries (income sources → Income column; subscriptions + fixed costs → Expenses column)
+- Auto-populated entries show a RECURRING badge; no delete button; Edit button opens inline form to override amount, category, and notes for that month without affecting the recurring item
+- Manual one-off entries can still be added and deleted as before
+- Uses `budget_entries` table with `recurring_item_id` FK to track origin
 
 ### Section 5 — Snapshot History
 - Table columns: Period, Net Worth, Cash, Invested, Δ vs Prior (value + percentage e.g. +£6,269 (+6.4%))
@@ -238,12 +253,13 @@ File: `src/components/FinancePage.jsx`
 | Table | Purpose |
 |---|---|
 | `net_worth_snapshots` | date, entries (jsonb array of {name, type, value, currency}), total (GBP) |
-| `budget_entries` | month, category, type (income/expense), amount, currency, notes |
-| `habit_logs` | date (unique), habits (jsonb array of 6 booleans) |
-| `tasks` | text, priority (HOT/WARM/COOL), done boolean |
-| `weekly_reviews` | week_start (unique Monday date), wins, slipped, open_loops, next_week_top_3 |
-| `recurring_items` | name, type (subscription/fixed_cost/income), amount, frequency, active boolean |
-| `recurring_overrides` | recurring_item_id, month (date), amount, note — overrides for a specific month |
+| `budget_entries` | month, category, type (income/expense), amount, currency, notes, recurring_item_id (FK, nullable) |
+| `habit_definitions` | position, label — editable ordered list of habits; seeded with 6 defaults on first load |
+| `habit_logs` | date (unique), habits (jsonb array of booleans, length matches habit_definitions count) |
+| `tasks` | text, priority (HOT/WARM/COOL), done boolean, saved_at timestamptz |
+| `weekly_reviews` | week_start (unique Monday date), went_well, challenge_overcome, improve_next_week, consistency_score (int 1–10), proud_of, sealed_at timestamptz |
+| `recurring_items` | name, type (subscription/fixed_cost/income), amount, frequency, currency (GBP/AUD), active boolean |
+| `recurring_overrides` | recurring_item_id, month (date), amount, note — planned, not yet built |
 
 Snapshot `total` is always stored in GBP. Individual entry `value` fields are stored in their original currency. Display conversion is view-layer only via `convert(amount, fromCurrency)` from CurrencyContext.
 
@@ -276,7 +292,7 @@ All data persists via Supabase across sessions and devices. Do not use localStor
 
 ---
 
-## Current State (as of 5 June 2026)
+## Current State (as of 7 June 2026)
 
 ### Phase 1 — Complete
 
@@ -290,24 +306,32 @@ Everything in Phase 1 is built and deployed.
 
 **Home page**
 - Three-column layout matching the agreed brief
-- Operator card, Net Worth card (sparkline, m/m delta), Freedom Figure progress bar
-- Session card with focus input (localStorage)
-- Habits — six checkboxes, daily reset, persists to `habit_logs` in Supabase
-- This Week — task list with HOT/WARM/COOL priorities, persists to `tasks` in Supabase
-- Weekly Review — four text fields, auto-saves to `weekly_reviews` in Supabase (800ms debounce), Saving.../✓ Saved indicator
+- Operator card (week number, habits score), Net Worth card (sparkline, m/m delta), Freedom Figure progress bar
+- Session card (clock, date, Perth/UK time)
+- Habits — editable list from `habit_definitions`; daily checkboxes reset at midnight; persists to `habit_logs`
+- This Week — task list with HOT/WARM/COOL priorities, Save button with timestamp; persists to `tasks`
+- Weekly Review — five goal-specific fields, auto-save (800ms debounce), Seal Week button; persists to `weekly_reviews`
 - Assets, Budget, and Trading snapshot cards in right column
 
 **Finance page**
-- Full rebuild as `FinancePage.jsx` replacing the original NetWorthTracker + BudgetTracker
+- Full rebuild as `FinancePage.jsx`
 - Summary cards: Net Worth, Runway, Income/mo, Burn/mo
 - Liquid Cash and Invested Assets cards with sparklines and per-account breakdown
-- Recurring items: Subscriptions, Fixed Costs, Income Sources — full add/edit/delete CRUD, monthly total
-- Monthly Budget redesigned — two-column layout, summary stats, expected recurring income comparison
+- Recurring items: Subscriptions, Fixed Costs, Income Sources — full add/edit/delete CRUD, per-item currency, monthly total
+- Monthly Budget — auto-populated from recurring items on first load; RECURRING badge; inline edit override; manual entries add/delete; month selector
 - Snapshot History table — Period, Net Worth, Cash, Invested, Δ vs Prior (value + % change), inline edit per row, new snapshot form
 
-### Next Up — Phase 2
+### Phase 2 — Home page work complete
 
-Dedicated Productivity tab. The home page has working versions of habits, tasks, and weekly review already. The tab needs deeper functionality: streak logic, habit history, expanded task management with due dates, weekly review history and trends.
+All home page productivity features are built and live. The dedicated Productivity tab is next.
+
+### Next Up — Productivity Tab
+
+Build `ProductivityPage.jsx` as the dedicated Productivity tab with deeper functionality than the home page cards:
+- Streak logic and habit history visualisation
+- Expanded task management (due dates, projects, filtering)
+- Weekly review history and trends
+- Session planning tools
 
 ---
 
