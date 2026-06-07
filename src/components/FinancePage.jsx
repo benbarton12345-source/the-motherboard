@@ -229,6 +229,8 @@ export default function FinancePage() {
   const [incomeForm, setIncomeForm] = useState({ category: INCOME_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' })
   const [expenseForm, setExpenseForm] = useState({ category: EXPENSE_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' })
   const [budgetLoading, setBudgetLoading] = useState(false)
+  const [editingBudgetId, setEditingBudgetId] = useState(null)
+  const [editBudgetForm, setEditBudgetForm] = useState({ amount: '', category: '', notes: '' })
 
   // ── Fetchers
   function fetchSnapshots() {
@@ -347,6 +349,18 @@ export default function FinancePage() {
   async function deleteBudgetEntry(id) {
     await supabase.from('budget_entries').delete().eq('id', id)
     fetchBudgetEntries()
+  }
+
+  async function updateBudgetEntry(id) {
+    setBudgetLoading(true)
+    await supabase.from('budget_entries').update({
+      amount: parseFloat(editBudgetForm.amount),
+      category: editBudgetForm.category,
+      notes: editBudgetForm.notes || null,
+    }).eq('id', id)
+    setEditingBudgetId(null)
+    await fetchBudgetEntries()
+    setBudgetLoading(false)
   }
 
   // ── Derived: net worth
@@ -604,27 +618,48 @@ export default function FinancePage() {
               <div>
                 {budgetIncome.map(e => {
                   const isRecurring = !!e.recurring_item_id
+                  const isEditing = editingBudgetId === e.id
                   return (
-                    <div key={e.id} className="flex items-center justify-between py-2.5 border-b border-gray-800 last:border-0">
-                      <div className="flex items-center gap-2">
-                        {isRecurring ? (
-                          <>
-                            <span className="text-sm text-gray-300">{e.notes}</span>
-                            <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">Recurring</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">{e.category}</span>
-                            {e.notes && <span className="text-sm text-gray-400">{e.notes}</span>}
-                          </>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium text-emerald-400">{format(convert(parseFloat(e.amount), e.currency || 'GBP'))}</span>
-                        {!isRecurring && (
-                          <button onClick={() => deleteBudgetEntry(e.id)} className="text-xs text-gray-600 hover:text-red-400 transition-colors uppercase tracking-widest">Del</button>
-                        )}
-                      </div>
+                    <div key={e.id} className="border-b border-gray-800 last:border-0">
+                      {isEditing ? (
+                        <div className="py-3 space-y-2">
+                          <div className="flex gap-2">
+                            <select value={editBudgetForm.category} onChange={ev => setEditBudgetForm(f => ({ ...f, category: ev.target.value }))} className={`flex-1 ${inputCls}`}>
+                              {INCOME_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                          </div>
+                          <input type="number" value={editBudgetForm.amount} onChange={ev => setEditBudgetForm(f => ({ ...f, amount: ev.target.value }))} placeholder="Amount" className={`w-full ${inputCls}`} />
+                          <input value={editBudgetForm.notes} onChange={ev => setEditBudgetForm(f => ({ ...f, notes: ev.target.value }))} placeholder="Notes (optional)" className={`w-full ${inputCls}`} />
+                          <div className="flex gap-3">
+                            <button onClick={() => updateBudgetEntry(e.id)} disabled={budgetLoading || !editBudgetForm.amount} className="px-3 py-1.5 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-emerald-300 transition-colors disabled:opacity-50">Save</button>
+                            <button onClick={() => setEditingBudgetId(null)} className="text-xs text-gray-500 hover:text-white tracking-widest uppercase transition-colors">Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between py-2.5 group">
+                          <div className="flex items-center gap-2">
+                            {isRecurring ? (
+                              <>
+                                <span className="text-sm text-gray-300">{e.notes}</span>
+                                <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">Recurring</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">{e.category}</span>
+                                {e.notes && <span className="text-sm text-gray-400">{e.notes}</span>}
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-emerald-400">{format(convert(parseFloat(e.amount), e.currency || 'GBP'))}</span>
+                            {isRecurring ? (
+                              <button onClick={() => { setEditingBudgetId(e.id); setEditBudgetForm({ amount: String(e.amount), category: e.category, notes: e.notes || '' }) }} className="text-xs text-gray-600 hover:text-white transition-colors uppercase tracking-widest opacity-0 group-hover:opacity-100">Edit</button>
+                            ) : (
+                              <button onClick={() => deleteBudgetEntry(e.id)} className="text-xs text-gray-600 hover:text-red-400 transition-colors uppercase tracking-widest opacity-0 group-hover:opacity-100">Del</button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -669,27 +704,48 @@ export default function FinancePage() {
               <div>
                 {budgetExpenses.map(e => {
                   const isRecurring = !!e.recurring_item_id
+                  const isEditing = editingBudgetId === e.id
                   return (
-                    <div key={e.id} className="flex items-center justify-between py-2.5 border-b border-gray-800 last:border-0">
-                      <div className="flex items-center gap-2">
-                        {isRecurring ? (
-                          <>
-                            <span className="text-sm text-gray-300">{e.notes}</span>
-                            <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">Recurring</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">{e.category}</span>
-                            {e.notes && <span className="text-sm text-gray-400">{e.notes}</span>}
-                          </>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium text-red-400">{format(convert(parseFloat(e.amount), e.currency || 'GBP'))}</span>
-                        {!isRecurring && (
-                          <button onClick={() => deleteBudgetEntry(e.id)} className="text-xs text-gray-600 hover:text-red-400 transition-colors uppercase tracking-widest">Del</button>
-                        )}
-                      </div>
+                    <div key={e.id} className="border-b border-gray-800 last:border-0">
+                      {isEditing ? (
+                        <div className="py-3 space-y-2">
+                          <div className="flex gap-2">
+                            <select value={editBudgetForm.category} onChange={ev => setEditBudgetForm(f => ({ ...f, category: ev.target.value }))} className={`flex-1 ${inputCls}`}>
+                              {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                          </div>
+                          <input type="number" value={editBudgetForm.amount} onChange={ev => setEditBudgetForm(f => ({ ...f, amount: ev.target.value }))} placeholder="Amount" className={`w-full ${inputCls}`} />
+                          <input value={editBudgetForm.notes} onChange={ev => setEditBudgetForm(f => ({ ...f, notes: ev.target.value }))} placeholder="Notes (optional)" className={`w-full ${inputCls}`} />
+                          <div className="flex gap-3">
+                            <button onClick={() => updateBudgetEntry(e.id)} disabled={budgetLoading || !editBudgetForm.amount} className="px-3 py-1.5 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-emerald-300 transition-colors disabled:opacity-50">Save</button>
+                            <button onClick={() => setEditingBudgetId(null)} className="text-xs text-gray-500 hover:text-white tracking-widest uppercase transition-colors">Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between py-2.5 group">
+                          <div className="flex items-center gap-2">
+                            {isRecurring ? (
+                              <>
+                                <span className="text-sm text-gray-300">{e.notes}</span>
+                                <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">Recurring</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">{e.category}</span>
+                                {e.notes && <span className="text-sm text-gray-400">{e.notes}</span>}
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-red-400">{format(convert(parseFloat(e.amount), e.currency || 'GBP'))}</span>
+                            {isRecurring ? (
+                              <button onClick={() => { setEditingBudgetId(e.id); setEditBudgetForm({ amount: String(e.amount), category: e.category, notes: e.notes || '' }) }} className="text-xs text-gray-600 hover:text-white transition-colors uppercase tracking-widest opacity-0 group-hover:opacity-100">Edit</button>
+                            ) : (
+                              <button onClick={() => deleteBudgetEntry(e.id)} className="text-xs text-gray-600 hover:text-red-400 transition-colors uppercase tracking-widest opacity-0 group-hover:opacity-100">Del</button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
