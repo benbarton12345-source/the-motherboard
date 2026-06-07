@@ -165,12 +165,12 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
             value={form.amount}
             onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
             placeholder="Amount"
-            className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
+            className="w-20 min-w-0 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
           />
           <select
             value={form.currency}
             onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
+            className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
           >
             <option value="GBP">GBP</option>
             <option value="AUD">AUD</option>
@@ -178,14 +178,14 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
           <select
             value={form.frequency}
             onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
+            className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded px-2 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
           >
             {Object.entries(FREQ_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
+          <button onClick={handleAdd} disabled={saving || !form.name.trim() || !form.amount} className={addBtnClass}>
+            + Add
+          </button>
         </div>
-        <button onClick={handleAdd} disabled={saving || !form.name.trim() || !form.amount} className={addBtnClass}>
-          + Add
-        </button>
       </div>
 
       {/* Total */}
