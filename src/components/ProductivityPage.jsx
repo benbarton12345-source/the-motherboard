@@ -94,7 +94,7 @@ export default function ProductivityPage() {
   const [recurringTasks, setRecurringTasks] = useState([])
   const [recurringLogs, setRecurringLogs] = useState([])
   const [showRecurringForm, setShowRecurringForm] = useState(false)
-  const [recurringForm, setRecurringForm] = useState({ name: '', frequency: 'daily', priority: 'MEDIUM' })
+  const [recurringForm, setRecurringForm] = useState({ name: '', frequency: 'daily', priority: 'MEDIUM', schedule: false, calendar_day_of_week: 0, calendar_day_of_month: 1 })
 
   // ── Computed values (re-evaluated each render)
   const todayStr = localDate()
@@ -215,14 +215,21 @@ export default function ProductivityPage() {
   async function addDailyTask() {
     if (!taskForm.text.trim()) return
     setTaskSaving(true)
-    const { data: taskData } = await supabase.from('tasks').insert([{
+    const insertDate = selectedDate  // capture before any async gap
+    const { data: taskData, error: taskError } = await supabase.from('tasks').insert([{
       text: taskForm.text.trim(),
       priority: taskForm.priority,
-      task_date: selectedDate,
+      done: false,
+      task_date: insertDate,
     }]).select().single()
+    if (taskError) {
+      console.error('addDailyTask insert failed:', taskError)
+      setTaskSaving(false)
+      return
+    }
     if (taskData) {
       setDailyTasks(prev => [...prev, taskData])
-      if (selectedDate >= currentWeekMonStr && selectedDate <= currentWeekSunStr) {
+      if (insertDate >= currentWeekMonStr && insertDate <= currentWeekSunStr) {
         setWeekTasks(prev => [...prev, taskData])
       }
     }
@@ -260,18 +267,28 @@ export default function ProductivityPage() {
 
   async function addRecurringTask() {
     if (!recurringForm.name.trim()) return
-    const { data } = await supabase.from('recurring_tasks').insert([{
+    const payload = {
       name: recurringForm.name.trim(),
       frequency: recurringForm.frequency,
       priority: recurringForm.priority,
-    }]).select().single()
+      active: true,
+    }
+    if (recurringForm.schedule && recurringForm.frequency === 'weekly') {
+      payload.calendar_day_of_week = recurringForm.calendar_day_of_week
+    }
+    if (recurringForm.schedule && recurringForm.frequency === 'monthly') {
+      payload.calendar_day_of_month = recurringForm.calendar_day_of_month
+    }
+    const { data, error } = await supabase.from('recurring_tasks').insert([payload]).select().single()
+    if (error) { console.error('addRecurringTask:', error); return }
     if (data) setRecurringTasks(prev => [...prev, data])
-    setRecurringForm({ name: '', frequency: 'daily', priority: 'MEDIUM' })
+    setRecurringForm({ name: '', frequency: 'daily', priority: 'MEDIUM', schedule: false, calendar_day_of_week: 0, calendar_day_of_month: 1 })
     setShowRecurringForm(false)
   }
 
-  async function toggleRecurringDone(task) {
-    const key = task.frequency === 'daily' ? todayStr
+  // dateStr is the specific day being viewed; falls back to today for Section 3 toggles
+  async function toggleRecurringDone(task, dateStr) {
+    const key = task.frequency === 'daily' ? (dateStr || todayStr)
       : task.frequency === 'weekly' ? currentWeekMonStr
       : monthStartStr
     const isDone = recurringLogs.some(l => l.task_id === task.id && l.completed_date === key)
@@ -279,8 +296,9 @@ export default function ProductivityPage() {
       await supabase.from('recurring_task_logs').delete().eq('task_id', task.id).eq('completed_date', key)
       setRecurringLogs(prev => prev.filter(l => !(l.task_id === task.id && l.completed_date === key)))
     } else {
-      const { data } = await supabase.from('recurring_task_logs')
+      const { data, error } = await supabase.from('recurring_task_logs')
         .insert([{ task_id: task.id, completed_date: key }]).select().single()
+      if (error) console.error('toggleRecurringDone:', error)
       if (data) setRecurringLogs(prev => [...prev, data])
     }
   }
@@ -302,12 +320,56 @@ export default function ProductivityPage() {
     return events.filter(e => e.date === dayStr)
   }
 
+  // Recurring tasks with a calendar schedule that fall on a given day
+  function getAutoEventsForDay(dayStr) {
+    return recurringTasks.filter(task => {
+      if (task.frequency === 'weekly') {
+        return task.calendar_day_of_week !== null && task.calendar_day_of_week !== undefined
+          && isRecurringDueOnDate(task, dayStr)
+      }
+      if (task.frequency === 'monthly') {
+        return task.calendar_day_of_month !== null && task.calendar_day_of_month !== undefined
+          && isRecurringDueOnDate(task, dayStr)
+      }
+      return false
+    })
+  }
+
   function getGoalCount(goalId) {
     return goalLogs.find(l => l.goal_id === goalId)?.count || 0
   }
 
   function isRecurringDone(task) {
     const key = task.frequency === 'daily' ? todayStr
+      : task.frequency === 'weekly' ? currentWeekMonStr
+      : monthStartStr
+    return recurringLogs.some(l => l.task_id === task.id && l.completed_date === key)
+  }
+
+  // Whether a recurring task is scheduled to appear on a given date
+  function isRecurringDueOnDate(task, dateStr) {
+    if (task.frequency === 'daily') return true
+    if (task.frequency === 'weekly') {
+      const dow = task.calendar_day_of_week
+      if (dow === null || dow === undefined) return true // no schedule set: appear every day
+      const [y, m, d] = dateStr.split('-').map(Number)
+      // JS getDay(): 0=Sun…6=Sat  →  DB convention: 0=Mon…6=Sun
+      const jsDay = new Date(y, m - 1, d).getDay()
+      const dbDay = (jsDay + 6) % 7
+      return dbDay === dow
+    }
+    if (task.frequency === 'monthly') {
+      const dom = task.calendar_day_of_month
+      const d = Number(dateStr.split('-')[2])
+      if (dom === null || dom === undefined) return d === 1 // no schedule set: appear on 1st
+      return d === dom
+    }
+    return false
+  }
+
+  // Completion check for a specific viewed date (used in daily tasks panel)
+  function isRecurringDoneOnDate(task, dateStr) {
+    const key = task.frequency === 'daily' ? dateStr
       : task.frequency === 'weekly' ? currentWeekMonStr
       : monthStartStr
     return recurringLogs.some(l => l.task_id === task.id && l.completed_date === key)
@@ -320,13 +382,13 @@ export default function ProductivityPage() {
     return { label: 'Due this month', cls: 'text-amber-400' }
   }
 
-  // Recurring tasks surfaced in today's daily tasks list (all undone tasks for current period)
-  const todayDueRecurring = selectedDate === todayStr
-    ? recurringTasks.filter(t => !isRecurringDone(t))
-    : []
+  // Recurring tasks due on the selected date that haven't been completed for that period
+  const selectedDueRecurring = recurringTasks.filter(t =>
+    isRecurringDueOnDate(t, selectedDate) && !isRecurringDoneOnDate(t, selectedDate)
+  )
 
   // IDs already shown in the daily tasks section — don't duplicate in upcoming
-  const shownRecurringIds = new Set(todayDueRecurring.map(t => t.id))
+  const shownRecurringIds = new Set(selectedDueRecurring.map(t => t.id))
 
   const upcomingItems = [
     ...events
@@ -383,6 +445,7 @@ export default function ProductivityPage() {
               const dayStr = localDate(day)
               const isToday = dayStr === todayStr
               const dayEvents = eventsForDay(dayStr)
+              const autoEvents = getAutoEventsForDay(dayStr)
               return (
                 <div key={i} className={`rounded p-1.5 min-h-[90px] ${isToday ? 'bg-gray-800/60' : ''}`}>
                   <div className="text-xs text-gray-600 mb-0.5">{DAY_LABELS[i]}</div>
@@ -400,6 +463,15 @@ export default function ProductivityPage() {
                         onClick={() => deleteEvent(e.id)}
                         className="absolute top-0 right-0.5 text-gray-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 text-sm leading-tight"
                       >×</button>
+                    </div>
+                  ))}
+                  {autoEvents.map(t => (
+                    <div
+                      key={`auto-${t.id}`}
+                      className="text-xs px-1.5 py-1 mb-1 rounded border-l-2 bg-gray-800 border-purple-400 leading-tight"
+                    >
+                      <span className="text-purple-400 text-[10px] tracking-wider uppercase">Recurring </span>
+                      <span className="text-gray-400">{t.name}</span>
                     </div>
                   ))}
                 </div>
@@ -560,15 +632,15 @@ export default function ProductivityPage() {
             </div>
           )}
 
-          {/* Recurring tasks due in the current period, shown when viewing today */}
-          {todayDueRecurring.length > 0 && (
+          {/* Recurring tasks due on the selected date */}
+          {selectedDueRecurring.length > 0 && (
             <div className="space-y-1 mb-4">
-              {todayDueRecurring.map(task => {
-                const done = isRecurringDone(task)
+              {selectedDueRecurring.map(task => {
+                const done = isRecurringDoneOnDate(task, selectedDate)
                 return (
                   <div key={`rec-${task.id}`} className="flex items-center gap-3 group py-2 border-b border-gray-800 last:border-0">
                     <button
-                      onClick={() => toggleRecurringDone(task)}
+                      onClick={() => toggleRecurringDone(task, selectedDate)}
                       className={`w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center transition-colors ${
                         done ? 'bg-emerald-400 border-emerald-400' : 'border-gray-700 hover:border-gray-500'
                       }`}
@@ -590,7 +662,7 @@ export default function ProductivityPage() {
             </div>
           )}
 
-          {dailyTasks.length === 0 && todayDueRecurring.length === 0 && !showTaskForm && (
+          {dailyTasks.length === 0 && selectedDueRecurring.length === 0 && !showTaskForm && (
             <div className="text-sm text-gray-600 mb-4">No tasks for this day</div>
           )}
 
@@ -703,7 +775,7 @@ export default function ProductivityPage() {
                 className={`flex-1 ${inputCls}`}
                 autoFocus
               />
-              <select value={recurringForm.frequency} onChange={e => setRecurringForm(f => ({ ...f, frequency: e.target.value }))} className={inputCls}>
+              <select value={recurringForm.frequency} onChange={e => setRecurringForm(f => ({ ...f, frequency: e.target.value, schedule: false }))} className={inputCls}>
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
@@ -714,6 +786,45 @@ export default function ProductivityPage() {
                 <option value="LOW">Low</option>
               </select>
             </div>
+            {(recurringForm.frequency === 'weekly' || recurringForm.frequency === 'monthly') && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={recurringForm.schedule}
+                    onChange={e => setRecurringForm(f => ({ ...f, schedule: e.target.checked }))}
+                    className="accent-emerald-400"
+                  />
+                  Schedule on calendar
+                </label>
+                {recurringForm.schedule && recurringForm.frequency === 'weekly' && (
+                  <select
+                    value={recurringForm.calendar_day_of_week}
+                    onChange={e => setRecurringForm(f => ({ ...f, calendar_day_of_week: Number(e.target.value) }))}
+                    className={inputCls}
+                  >
+                    <option value={0}>Monday</option>
+                    <option value={1}>Tuesday</option>
+                    <option value={2}>Wednesday</option>
+                    <option value={3}>Thursday</option>
+                    <option value={4}>Friday</option>
+                    <option value={5}>Saturday</option>
+                    <option value={6}>Sunday</option>
+                  </select>
+                )}
+                {recurringForm.schedule && recurringForm.frequency === 'monthly' && (
+                  <select
+                    value={recurringForm.calendar_day_of_month}
+                    onChange={e => setRecurringForm(f => ({ ...f, calendar_day_of_month: Number(e.target.value) }))}
+                    className={inputCls}
+                  >
+                    {Array.from({ length: 31 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>{i + 1}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
             <button onClick={addRecurringTask} disabled={!recurringForm.name.trim()} className={btnSaveCls}>Save</button>
           </div>
         )}
