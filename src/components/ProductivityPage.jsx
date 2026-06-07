@@ -22,8 +22,16 @@ function addDays(d, n) {
   return r
 }
 
+// String-based day shift — avoids UTC-parse risk on date-only strings
+function shiftDate(dateStr, n) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const r = new Date(y, m - 1, d + n)
+  return localDate(r)
+}
+
 function fmtDay(dateStr) {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
 function getMonthStart() {
@@ -312,6 +320,14 @@ export default function ProductivityPage() {
     return { label: 'Due this month', cls: 'text-amber-400' }
   }
 
+  // Recurring tasks surfaced in today's daily tasks list (all undone tasks for current period)
+  const todayDueRecurring = selectedDate === todayStr
+    ? recurringTasks.filter(t => !isRecurringDone(t))
+    : []
+
+  // IDs already shown in the daily tasks section — don't duplicate in upcoming
+  const shownRecurringIds = new Set(todayDueRecurring.map(t => t.id))
+
   const upcomingItems = [
     ...events
       .filter(e => e.date >= todayStr && e.date <= todayPlus7Str)
@@ -320,7 +336,7 @@ export default function ProductivityPage() {
       .filter(g => getGoalCount(g.id) < g.target_count)
       .map(g => ({ key: `goal-${g.id}`, label: g.name, badge: 'GOAL', badgeCls: 'text-purple-400', sub: `${getGoalCount(g.id)}/${g.target_count}` })),
     ...recurringTasks
-      .filter(t => !isRecurringDone(t))
+      .filter(t => !isRecurringDone(t) && !shownRecurringIds.has(t.id))
       .map(t => ({ key: `rec-${t.id}`, label: t.name, badge: t.frequency.toUpperCase(), badgeCls: 'text-purple-400', sub: recurringStatus(t).label })),
   ]
 
@@ -499,7 +515,7 @@ export default function ProductivityPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setSelectedDate(localDate(addDays(new Date(selectedDate + 'T00:00:00'), -1)))}
+                onClick={() => setSelectedDate(shiftDate(selectedDate, -1))}
                 className="text-gray-500 hover:text-white transition-colors text-xl leading-none"
               >‹</button>
               <div>
@@ -509,7 +525,7 @@ export default function ProductivityPage() {
                 </div>
               </div>
               <button
-                onClick={() => setSelectedDate(localDate(addDays(new Date(selectedDate + 'T00:00:00'), 1)))}
+                onClick={() => setSelectedDate(shiftDate(selectedDate, 1))}
                 className="text-gray-500 hover:text-white transition-colors text-xl leading-none"
               >›</button>
             </div>
@@ -544,7 +560,37 @@ export default function ProductivityPage() {
             </div>
           )}
 
-          {dailyTasks.length === 0 && !showTaskForm && (
+          {/* Recurring tasks due in the current period, shown when viewing today */}
+          {todayDueRecurring.length > 0 && (
+            <div className="space-y-1 mb-4">
+              {todayDueRecurring.map(task => {
+                const done = isRecurringDone(task)
+                return (
+                  <div key={`rec-${task.id}`} className="flex items-center gap-3 group py-2 border-b border-gray-800 last:border-0">
+                    <button
+                      onClick={() => toggleRecurringDone(task)}
+                      className={`w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center transition-colors ${
+                        done ? 'bg-emerald-400 border-emerald-400' : 'border-gray-700 hover:border-gray-500'
+                      }`}
+                    >
+                      {done && (
+                        <svg className="w-2 h-2 text-gray-950" viewBox="0 0 10 10" fill="none">
+                          <polyline points="1.5,5 4,7.5 8.5,2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </button>
+                    <span className={`text-sm flex-1 ${done ? 'line-through text-gray-600' : 'text-white'}`}>{task.name}</span>
+                    <span className="text-xs border px-1.5 py-0.5 rounded tracking-widest shrink-0 text-purple-400 border-purple-400">RECURRING</span>
+                    <span className={`text-xs border px-1.5 py-0.5 rounded tracking-widest shrink-0 ${PRIORITY_BADGE[task.priority] || PRIORITY_BADGE.MEDIUM}`}>
+                      {task.priority}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {dailyTasks.length === 0 && todayDueRecurring.length === 0 && !showTaskForm && (
             <div className="text-sm text-gray-600 mb-4">No tasks for this day</div>
           )}
 
