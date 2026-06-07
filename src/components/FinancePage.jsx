@@ -152,13 +152,18 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
 
       {/* Add form */}
       <div className="space-y-2 pt-4 border-t border-gray-800">
-        <input
-          value={form.name}
-          onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-          onKeyDown={e => e.key === 'Enter' && handleAdd()}
-          placeholder="Name"
-          className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
-        />
+        <div className="flex gap-2">
+          <input
+            value={form.name}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            onKeyDown={e => e.key === 'Enter' && handleAdd()}
+            placeholder="Name"
+            className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
+          />
+          <button onClick={handleAdd} disabled={saving || !form.name.trim() || !form.amount} className={addBtnClass}>
+            + Add
+          </button>
+        </div>
         <div className="flex gap-2">
           <input
             type="number"
@@ -182,9 +187,6 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
           >
             {Object.entries(FREQ_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
-          <button onClick={handleAdd} disabled={saving || !form.name.trim() || !form.amount} className={addBtnClass}>
-            + Add
-          </button>
         </div>
       </div>
 
