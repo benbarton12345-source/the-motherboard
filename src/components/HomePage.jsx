@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import { useCurrency } from '../CurrencyContext'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
+import TodaysTasks from './TodaysTasks'
 
 const DEFAULT_HABITS = [
   '10k steps',
@@ -14,12 +15,6 @@ const DEFAULT_HABITS = [
 
 const CATEGORIES = ['Cash', 'Investments', 'Property', 'Crypto', 'Other']
 const TARGET = 1_500_000
-
-const PRIORITY_COLOURS = {
-  HIGH: 'text-red-400 border-red-400',
-  MEDIUM: 'text-amber-400 border-amber-400',
-  LOW: 'text-blue-400 border-blue-400',
-}
 
 function getLocalDateString() {
   const d = new Date()
@@ -55,11 +50,6 @@ export default function HomePage() {
   // Habit log (today's checkboxes)
   const [habits, setHabits] = useState([])
   const [habitsLoaded, setHabitsLoaded] = useState(false)
-
-  const [tasks, setTasks] = useState([])
-  const [newTask, setNewTask] = useState('')
-  const [newPriority, setNewPriority] = useState('MEDIUM')
-  const [tasksSavedAt, setTasksSavedAt] = useState(null)
 
   const [review, setReview] = useState({
     wentWell: '', challengeOvercome: '', improveNextWeek: '', consistencyScore: '', proudOf: '',
@@ -111,17 +101,6 @@ export default function HomePage() {
       .then(({ data }) => {
         if (data?.habits) setHabits(data.habits)
         setHabitsLoaded(true)
-      })
-  }, [])
-
-  useEffect(() => {
-    supabase.from('tasks').select('*').order('created_at', { ascending: true })
-      .then(({ data }) => {
-        if (data) {
-          setTasks(data)
-          const latest = data.map(t => t.saved_at).filter(Boolean).sort().pop()
-          if (latest) setTasksSavedAt(latest)
-        }
       })
   }, [])
 
@@ -201,35 +180,6 @@ export default function HomePage() {
     if (!newHabitLabel.trim()) return
     setEditingDefs(d => [...d, { label: newHabitLabel.trim() }])
     setNewHabitLabel('')
-  }
-
-  // ── Task functions
-
-  async function addTask() {
-    if (!newTask.trim()) return
-    const text = newTask.trim()
-    setNewTask('')
-    const { data } = await supabase.from('tasks').insert([{ text, priority: newPriority }]).select().single()
-    if (data) setTasks(t => [...t, data])
-  }
-
-  async function toggleTask(id) {
-    const task = tasks.find(t => t.id === id)
-    if (!task) return
-    setTasks(t => t.map(t2 => t2.id === id ? { ...t2, done: !t2.done } : t2))
-    await supabase.from('tasks').update({ done: !task.done }).eq('id', id)
-  }
-
-  async function removeTask(id) {
-    setTasks(t => t.filter(t2 => t2.id !== id))
-    await supabase.from('tasks').delete().eq('id', id)
-  }
-
-  async function saveTaskList() {
-    if (tasks.length === 0) return
-    const now = new Date().toISOString()
-    await supabase.from('tasks').update({ saved_at: now }).in('id', tasks.map(t => t.id))
-    setTasksSavedAt(now)
   }
 
   // ── Review functions
@@ -451,67 +401,8 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* THIS WEEK */}
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">This Week</h2>
-          <div className="flex gap-2 mb-4">
-            <input
-              value={newTask}
-              onChange={e => setNewTask(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addTask()}
-              placeholder="Add a goal..."
-              className={`flex-1 ${inputCls}`}
-            />
-            <select
-              value={newPriority}
-              onChange={e => setNewPriority(e.target.value)}
-              className={inputCls}
-            >
-              <option value="HIGH">HIGH</option>
-              <option value="MEDIUM">MEDIUM</option>
-              <option value="LOW">LOW</option>
-            </select>
-            <button
-              onClick={addTask}
-              className="px-4 py-2 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-emerald-300 transition-colors"
-            >
-              Add
-            </button>
-          </div>
-          {tasks.length === 0 ? (
-            <div className="text-sm text-gray-600 mb-4">No goals set this week</div>
-          ) : (
-            <div className="space-y-3 mb-4">
-              {tasks.map(task => (
-                <div key={task.id} className="flex items-center gap-3 group py-1 border-b border-gray-800 last:border-0">
-                  <button
-                    onClick={() => toggleTask(task.id)}
-                    className={`w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center transition-colors ${
-                      task.done ? 'bg-emerald-400 border-emerald-400' : 'border-gray-700 hover:border-gray-500'
-                    }`}
-                  />
-                  <span className={`text-sm flex-1 ${task.done ? 'line-through text-gray-600' : 'text-white'}`}>{task.text}</span>
-                  <span className={`text-xs border px-1.5 py-0.5 rounded tracking-widest shrink-0 ${PRIORITY_COLOURS[task.priority]}`}>{task.priority}</span>
-                  <button
-                    onClick={() => removeTask(task.id)}
-                    className="text-gray-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 text-base leading-none"
-                  >×</button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="flex items-center gap-4 pt-2 border-t border-gray-800">
-            <button
-              onClick={saveTaskList}
-              className="text-xs tracking-widest uppercase px-3 py-1.5 border border-gray-700 text-gray-400 rounded hover:border-emerald-400 hover:text-emerald-400 transition-colors"
-            >
-              Save
-            </button>
-            {tasksSavedAt && (
-              <span className="text-xs text-gray-600">Saved {fmtDate(tasksSavedAt)}</span>
-            )}
-          </div>
-        </div>
+        {/* TODAY'S TASKS */}
+        <TodaysTasks compact={true} />
 
         {/* WEEKLY REVIEW */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">

@@ -34,7 +34,7 @@ Purpose: personal operating system combining finance, productivity, and health i
 - Typography: JetBrains Mono for numbers and labels, Syne for headings
 - Three-column grid layout (see Home Layout section below)
 - Section labels follow the pattern: `01 // SECTION NAME`
-- Status tags: HOT / WARM / COOL with colour coding (red / green / blue)
+- Priority tags: HIGH / MEDIUM / LOW with colour coding (red / amber / blue)
 - Mobile-first responsive — primary use on mobile, also laptop and iPad
 - Personal and premium, not generic
 
@@ -72,7 +72,6 @@ All free tier. No paid services until explicitly decided.
 
 **01 // OPERATOR**
 - Name, role, location
-- Focus today (editable text)
 - Streak counter
 - Week number
 
@@ -94,31 +93,23 @@ All free tier. No paid services until explicitly decided.
 - Greeting with name
 - Live clock (Perth / UK timezone aware)
 - Date
-- "Today I will" focus input (localStorage)
 
 **05 // HABITS**
-- Six daily habits (manual checkboxes, resets at midnight local time)
-- Daily score out of 6
-- Habits:
-  1. 10k steps (manual now, Apple Health via Health Auto Export later)
-  2. Gratitude — write one thing
-  3. 10 mins reading
-  4. Log mood
-  5. Morning gym / walk
-  6. No phone before 8am
+- Editable list of daily habits (add, rename, delete via EDIT mode)
+- Daily score out of habit count
+- Persists to `habit_definitions` table; seeded with 6 defaults on first load
+- Checkboxes reset at midnight local time; state persists to `habit_logs`
 
 **06 // THIS WEEK**
 - Weekly task/goal list
-- Priority tags: HOT / WARM / COOL
+- Priority tags: HIGH / MEDIUM / LOW
 - Add / complete / delete functionality
+- Save button stamps `saved_at` on all tasks
 
 **07 // WEEKLY REVIEW**
-- Wins this week
-- What slipped
-- Open loops
-- Next week top 3
+- Five goal-specific fields: What went well, One challenge I overcame, One thing I can improve next week, Consistency score 1–10, One thing I am proud of
 - Auto-saves on change (debounced, 800ms)
-- Saving... / ✓ Saved indicator
+- Seal Week button writes `sealed_at`; once sealed auto-save does not overwrite
 
 ### Right Column (200px) — Data at a Glance
 
@@ -174,15 +165,43 @@ HOME · FINANCE · TRADING · PRODUCTIVITY · HEALTH
 - Editable habits list — EDIT mode in Habits card; rename, delete, add habits; persists to `habit_definitions` table; seeds six defaults on first load
 - Save button on This Week — stamps `saved_at` on all tasks; shows "Saved [date]" confirmation
 - Seal Week button on Weekly Review — writes `sealed_at`; button replaced by "Sealed [date]" once sealed; auto-save continues without overwriting seal
-- Weekly review questions replaced with five goal-specific fields: What went well, One challenge I overcame, One thing I can improve next week, Consistency score 1–10 (number input), One thing I am proud of
-- Removed Focus Today (Operator card) and Today I Will (Session card) — will revisit in Productivity tab
+- Weekly review questions replaced with five goal-specific fields: What went well, One challenge I overcame, One thing I can improve next week, Consistency score 1–10, One thing I am proud of
+- Removed Focus Today (Operator card) and Today I Will (Session card)
+- Priority tags changed from HOT/WARM/COOL to HIGH/MEDIUM/LOW across the entire app; tasks table constraint updated; existing data migrated
 
-#### Productivity tab (to build)
+#### Productivity tab (built 7 June 2026, partially broken — see Known Issues)
 
-- Streak logic and habit history visualisation
-- Expanded task management (due dates, projects)
-- Weekly review history and trends
-- Session planning tools
+- **Section 1 — Weekly Calendar + Weekly Goals**
+  - Week strip Mon–Sun with prev/next navigation; today highlighted emerald
+  - Events stored in `events` table (name, date, time, type, add_to_gcal); type colour-codes left border: personal=green, work=blue, social=amber, recurring=purple
+  - Recurring tasks with a calendar schedule auto-populate as purple read-only blocks on their scheduled days
+  - Weekly goals with name and target_count; count tracked in `weekly_goal_logs` per week; +/− buttons; progress bar green/amber/red
+
+- **Section 2 — Daily Tasks + Upcoming + Week Summary**
+  - Daily tasks anchored to selected date (prev/next day nav); tasks stored in `tasks` table with `task_date` column
+  - Recurring tasks due on the selected date surface in the daily view with RECURRING badge; filtered by schedule logic
+  - Upcoming panel: events next 7 days, unmet weekly goals, undone recurring tasks; de-duplicated against daily view
+  - Week summary: tasks done/total, habit score, goals hit — all with progress bars
+
+- **Section 3 — Recurring Tasks**
+  - Daily / Weekly / Monthly columns
+  - Each task: checkbox to mark done for current period, status label, priority badge
+  - Add form: name, frequency, priority, optional "Schedule on calendar" toggle
+  - Weekly tasks: day-of-week dropdown (Mon=0 … Sun=6, stored as `calendar_day_of_week`)
+  - Monthly tasks: day-of-month dropdown (1–31, stored as `calendar_day_of_month`)
+  - Completion tracked in `recurring_task_logs` with key = today (daily), week_start (weekly), month_start (monthly)
+
+#### Productivity tab — Known Issues (as of 7 June 2026)
+
+- **Daily tasks not saving** — Supabase schema cache does not recognise `task_date` column despite the column existing in the database. Error: `"Could not find the 'task_date' column of 'tasks' in the schema cache."` First fix to try: run `NOTIFY pgrst, 'reload schema';` in Supabase SQL editor. Investigate further if that fails.
+
+#### Productivity tab — Next Session Priorities
+
+1. Fix daily tasks saving (task_date schema cache issue)
+2. Add a dedicated Today's Tasks panel separate from the add task form — current UX is confusing; completing tasks and adding tasks should be in separate areas
+3. Add delete buttons to tasks in all sections — currently missing
+4. Define and enforce recurring task reset logic — daily resets at midnight, weekly resets on Monday, monthly resets on 1st of month
+5. Begin modal migration — build a shared Modal component first, then migrate Finance page, then Home, then Productivity
 
 ### Phase 3 — Trading Analytics
 
@@ -231,7 +250,6 @@ File: `src/components/FinancePage.jsx`
 ### Section 4 — Monthly Budget
 - Month selector dropdown (rolling 12 months)
 - Summary stats: Income, Expenses, Saved, Save Rate
-- Expected recurring income shown for comparison in Income stat
 - On first load for a given month, active recurring items are auto-inserted as budget entries (income sources → Income column; subscriptions + fixed costs → Expenses column)
 - Auto-populated entries show a RECURRING badge; no delete button; Edit button opens inline form to override amount, category, and notes for that month without affecting the recurring item
 - Manual one-off entries can still be added and deleted as before
@@ -256,12 +274,19 @@ File: `src/components/FinancePage.jsx`
 | `budget_entries` | month, category, type (income/expense), amount, currency, notes, recurring_item_id (FK, nullable) |
 | `habit_definitions` | position, label — editable ordered list of habits; seeded with 6 defaults on first load |
 | `habit_logs` | date (unique), habits (jsonb array of booleans, length matches habit_definitions count) |
-| `tasks` | text, priority (HOT/WARM/COOL), done boolean, saved_at timestamptz |
+| `tasks` | text, priority (HIGH/MEDIUM/LOW), done boolean, saved_at timestamptz, task_date date |
 | `weekly_reviews` | week_start (unique Monday date), went_well, challenge_overcome, improve_next_week, consistency_score (int 1–10), proud_of, sealed_at timestamptz |
 | `recurring_items` | name, type (subscription/fixed_cost/income), amount, frequency, currency (GBP/AUD), active boolean |
-| `recurring_overrides` | recurring_item_id, month (date), amount, note — planned, not yet built |
+| `events` | name, date, time, type (personal/work/social/recurring), add_to_gcal boolean, created_at |
+| `weekly_goals` | name, target_count, active boolean, created_at |
+| `weekly_goal_logs` | goal_id (FK), week_start date, count int, updated_at — unique on (goal_id, week_start) |
+| `recurring_tasks` | name, frequency (daily/weekly/monthly), priority (HIGH/MEDIUM/LOW), active boolean, calendar_day_of_week int (0=Mon…6=Sun), calendar_day_of_month int (1–31), created_at |
+| `recurring_task_logs` | task_id (FK), completed_date date, created_at — unique on (task_id, completed_date) |
 
 Snapshot `total` is always stored in GBP. Individual entry `value` fields are stored in their original currency. Display conversion is view-layer only via `convert(amount, fromCurrency)` from CurrencyContext.
+
+### Timezone note
+All date strings must be built from local date components (e.g. `` `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01` ``). Never use `toISOString().split('T')[0]` — this produces a UTC date which shifts by one day in Perth (UTC+8). String-based date arithmetic via `shiftDate(dateStr, n)` is the correct pattern.
 
 ---
 
@@ -309,7 +334,7 @@ Everything in Phase 1 is built and deployed.
 - Operator card (week number, habits score), Net Worth card (sparkline, m/m delta), Freedom Figure progress bar
 - Session card (clock, date, Perth/UK time)
 - Habits — editable list from `habit_definitions`; daily checkboxes reset at midnight; persists to `habit_logs`
-- This Week — task list with HOT/WARM/COOL priorities, Save button with timestamp; persists to `tasks`
+- This Week — task list with HIGH/MEDIUM/LOW priorities, Save button with timestamp; persists to `tasks`
 - Weekly Review — five goal-specific fields, auto-save (800ms debounce), Seal Week button; persists to `weekly_reviews`
 - Assets, Budget, and Trading snapshot cards in right column
 
@@ -317,21 +342,27 @@ Everything in Phase 1 is built and deployed.
 - Full rebuild as `FinancePage.jsx`
 - Summary cards: Net Worth, Runway, Income/mo, Burn/mo
 - Liquid Cash and Invested Assets cards with sparklines and per-account breakdown
-- Recurring items: Subscriptions, Fixed Costs, Income Sources — full add/edit/delete CRUD, per-item currency, monthly total
+- Recurring items: Subscriptions, Fixed Costs, Income Sources — full add/edit/delete CRUD, per-item currency (GBP/AUD), monthly total
 - Monthly Budget — auto-populated from recurring items on first load; RECURRING badge; inline edit override; manual entries add/delete; month selector
 - Snapshot History table — Period, Net Worth, Cash, Invested, Δ vs Prior (value + % change), inline edit per row, new snapshot form
 
-### Phase 2 — Home page work complete
+### Phase 2 — Home page complete, Productivity tab partially built
 
-All home page productivity features are built and live. The dedicated Productivity tab is next.
+**Home page** — all improvements complete and live.
 
-### Next Up — Productivity Tab
+**Productivity tab** — built but daily tasks are broken due to a Supabase schema cache issue with the `task_date` column. All other sections (calendar, weekly goals, upcoming, week summary, recurring tasks) are functional.
 
-Build `ProductivityPage.jsx` as the dedicated Productivity tab with deeper functionality than the home page cards:
-- Streak logic and habit history visualisation
-- Expanded task management (due dates, projects, filtering)
-- Weekly review history and trends
-- Session planning tools
+### Known Issues
+
+- **Daily tasks not saving** — Supabase schema cache does not recognise `task_date` column. Error: `"Could not find the 'task_date' column of 'tasks' in the schema cache."` First fix: run `NOTIFY pgrst, 'reload schema';` in Supabase SQL editor.
+
+### Next Session
+
+1. Fix daily tasks saving (schema cache issue)
+2. Add dedicated Today's Tasks panel with separate add and complete areas
+3. Add delete buttons to tasks across all sections
+4. Enforce recurring task reset logic (daily/weekly/monthly)
+5. Begin modal migration — shared Modal component, then Finance → Home → Productivity
 
 ---
 
@@ -344,3 +375,5 @@ Build `ProductivityPage.jsx` as the dedicated Productivity tab with deeper funct
 - When adding new Supabase tables, provide the SQL separately so I can run it in the Supabase dashboard
 - Commit message style: plain English, lowercase, descriptive (e.g. `add per-entry currency selection to net worth tracker`)
 - Finance page visual tokens are the source of truth for styling — see Design Direction above
+- Priority tags are HIGH/MEDIUM/LOW everywhere — never use HOT/WARM/COOL
+- Date strings must always use local date components — never toISOString() — see Timezone note above
