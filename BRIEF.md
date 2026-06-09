@@ -169,39 +169,48 @@ HOME · FINANCE · TRADING · PRODUCTIVITY · HEALTH
 - Removed Focus Today (Operator card) and Today I Will (Session card)
 - Priority tags changed from HOT/WARM/COOL to HIGH/MEDIUM/LOW across the entire app; tasks table constraint updated; existing data migrated
 
-#### Productivity tab (built 7 June 2026, partially broken — see Known Issues)
+#### Home page (updated 8 June 2026)
+
+- This Week card replaced with TodaysTasks component (compact view, max 6 items shown with overflow count)
+
+#### Productivity tab (complete as of 8 June 2026)
+
+Full rebuild of the Productivity page and task system on 8 June 2026. Old `events`, `recurring_tasks`, and `recurring_task_logs` tables dropped. Tasks table extended into a unified system — see Supabase Tables below.
 
 - **Section 1 — Weekly Calendar + Weekly Goals**
   - Week strip Mon–Sun with prev/next navigation; today highlighted emerald
-  - Events stored in `events` table (name, date, time, type, add_to_gcal); type colour-codes left border: personal=green, work=blue, social=amber, recurring=purple
-  - Recurring tasks with a calendar schedule auto-populate as purple read-only blocks on their scheduled days
+  - Only timed tasks (task_time set) appear as blocks in calendar columns; green border = regular task, purple border = recurring definition
+  - Recurring definitions with task_time auto-populate on their scheduled day
+  - A single "+ Add Task" button opens the shared AddTaskModal
   - Weekly goals with name and target_count; count tracked in `weekly_goal_logs` per week; +/− buttons; progress bar green/amber/red
 
-- **Section 2 — Daily Tasks + Upcoming + Week Summary**
-  - Daily tasks anchored to selected date (prev/next day nav); tasks stored in `tasks` table with `task_date` column
-  - Recurring tasks due on the selected date surface in the daily view with RECURRING badge; filtered by schedule logic
-  - Upcoming panel: events next 7 days, unmet weekly goals, undone recurring tasks; de-duplicated against daily view
-  - Week summary: tasks done/total, habit score, goals hit — all with progress bars
+- **Section 2 — Today's Tasks + Week Summary**
+  - Today's Tasks uses the shared TodaysTasks component (same as Home page)
+  - Shows: regular tasks with task_date = today, plus recurring definitions due today that have no completed instance for today
+  - Sorted by time first, then priority
+  - Each task: checkbox to complete, snooze button (→ tomorrow, sets snoozed_from = today), delete button
+  - Recurring tasks show ↻ REC badge; snoozed tasks show SNOOZED badge
+  - Completing a recurring task creates a completed instance row with recurrence_parent_id = def.id and task_date = today
+  - Unchecking a completed instance deletes the instance row (restores to uncompleted)
+  - Week summary: tasks done/total, habit score (from habit_logs, last 7 days), goals hit — progress bars plus streak count
 
-- **Section 3 — Recurring Tasks**
-  - Daily / Weekly / Monthly columns
-  - Each task: checkbox to mark done for current period, status label, priority badge
-  - Add form: name, frequency, priority, optional "Schedule on calendar" toggle
-  - Weekly tasks: day-of-week dropdown (Mon=0 … Sun=6, stored as `calendar_day_of_week`)
-  - Monthly tasks: day-of-month dropdown (1–31, stored as `calendar_day_of_month`)
-  - Completion tracked in `recurring_task_logs` with key = today (daily), week_start (weekly), month_start (monthly)
+- **Section 3 — Recurring Task Definitions**
+  - Lists all is_recurring = true tasks grouped by daily / weekly / monthly
+  - Each row: name, schedule label, time (if set), priority badge; Edit and Del buttons on hover
+  - Edit opens AddTaskModal pre-populated with lockRecurring = true (can't toggle recurring off)
+  - Delete: first unlinks completed instances (sets recurrence_parent_id = null to preserve history), then deletes the definition
+  - "+ Add Recurring" opens AddTaskModal with is_recurring pre-enabled
+  - When a def is added/edited/deleted, TodaysTasks remounts via a React key increment to stay in sync
 
-#### Productivity tab — Known Issues (as of 7 June 2026)
+#### Shared components (added 8 June 2026)
 
-- **Daily tasks not saving** — Supabase schema cache does not recognise `task_date` column despite the column existing in the database. Error: `"Could not find the 'task_date' column of 'tasks' in the schema cache."` First fix to try: run `NOTIFY pgrst, 'reload schema';` in Supabase SQL editor. Investigate further if that fails.
+- **`src/components/Modal.jsx`** — reusable overlay: bg-black/60 full-screen, bg-gray-900 border border-gray-800 rounded-lg max-w-md centred, header with title and × close, scrollable content area, Save/Cancel footer. Props: title, onClose, onSave, saveLabel, saveDisabled, saving, children.
+- **`src/components/AddTaskModal.jsx`** — unified add/edit form using Modal. Fields: task name, date, time (optional), priority, recurring toggle (with frequency, day-of-week, day-of-month selectors when enabled), add-to-calendar checkbox. Props: title, onClose, onSave, initial (pre-populate), saving, lockRecurring (disables the recurring toggle for editing defs).
+- **`src/components/TodaysTasks.jsx`** — self-contained today's tasks card. Fetches its own data (regular tasks for today + all recurring defs). Handles toggle, snooze, delete, and add via AddTaskModal. Props: compact (boolean — caps list at 6 with overflow count, hides snooze button).
 
-#### Productivity tab — Next Session Priorities
+#### Modal-first interaction pattern (established 8 June 2026)
 
-1. Fix daily tasks saving (task_date schema cache issue)
-2. Add a dedicated Today's Tasks panel separate from the add task form — current UX is confusing; completing tasks and adding tasks should be in separate areas
-3. Add delete buttons to tasks in all sections — currently missing
-4. Define and enforce recurring task reset logic — daily resets at midnight, weekly resets on Monday, monthly resets on 1st of month
-5. Begin modal migration — build a shared Modal component first, then migrate Finance page, then Home, then Productivity
+All future form interactions across the app should use the shared Modal component, not inline forms. This is the established standard. Next migration targets: Finance page (subscriptions, fixed costs, income sources, snapshot entry), then Home page (habits edit). Do not add new inline forms.
 
 ### Phase 3 — Trading Analytics
 
@@ -274,14 +283,26 @@ File: `src/components/FinancePage.jsx`
 | `budget_entries` | month, category, type (income/expense), amount, currency, notes, recurring_item_id (FK, nullable) |
 | `habit_definitions` | position, label — editable ordered list of habits; seeded with 6 defaults on first load |
 | `habit_logs` | date (unique), habits (jsonb array of booleans, length matches habit_definitions count) |
-| `tasks` | text, priority (HIGH/MEDIUM/LOW), done boolean, saved_at timestamptz, task_date date |
+| `tasks` | text, priority (HIGH/MEDIUM/LOW), done boolean, saved_at timestamptz, task_date date (nullable), task_time time (nullable), is_recurring boolean, recurrence_frequency text (daily/weekly/monthly), recurrence_day_of_week int (0=Mon…6=Sun), recurrence_day_of_month int (1–31), recurrence_parent_id uuid FK→tasks(id) ON DELETE CASCADE, snoozed_from date, add_to_cal boolean |
 | `weekly_reviews` | week_start (unique Monday date), went_well, challenge_overcome, improve_next_week, consistency_score (int 1–10), proud_of, sealed_at timestamptz |
 | `recurring_items` | name, type (subscription/fixed_cost/income), amount, frequency, currency (GBP/AUD), active boolean |
-| `events` | name, date, time, type (personal/work/social/recurring), add_to_gcal boolean, created_at |
 | `weekly_goals` | name, target_count, active boolean, created_at |
-| `weekly_goal_logs` | goal_id (FK), week_start date, count int, updated_at — unique on (goal_id, week_start) |
-| `recurring_tasks` | name, frequency (daily/weekly/monthly), priority (HIGH/MEDIUM/LOW), active boolean, calendar_day_of_week int (0=Mon…6=Sun), calendar_day_of_month int (1–31), created_at |
-| `recurring_task_logs` | task_id (FK), completed_date date, created_at — unique on (task_id, completed_date) |
+| `weekly_goal_logs` | goal_id (FK→weekly_goals), week_start date, count int, updated_at — unique on (goal_id, week_start) |
+
+### Unified task system (as of 8 June 2026)
+
+The `tasks` table handles all task types. There are two row kinds:
+
+- **Regular task** — `is_recurring = false`, has `task_date`. Created by the user for a specific date. Can be snoozed (task_date → tomorrow, snoozed_from → today).
+- **Recurring definition** — `is_recurring = true`, no `task_date`. Defines a recurrence rule. Never appears directly in the daily list.
+- **Completed instance** — `is_recurring = false`, has `task_date` (the completion date), `recurrence_parent_id` points to the definition. Created when a user completes a recurring def for a given day. Deleting it un-completes the recurring task for that day.
+
+Recurrence logic (applied in JS, not DB):
+- Daily: always due
+- Weekly: `recurrence_day_of_week` must match JS `(getDay() + 6) % 7` (0=Mon…6=Sun)
+- Monthly: `recurrence_day_of_month`, with fallback to last day of month if the set day exceeds month length
+
+When a recurring definition is deleted: first update all completed instances to set `recurrence_parent_id = null` (preserves history), then delete the definition.
 
 Snapshot `total` is always stored in GBP. Individual entry `value` fields are stored in their original currency. Display conversion is view-layer only via `convert(amount, fromCurrency)` from CurrencyContext.
 
@@ -346,23 +367,21 @@ Everything in Phase 1 is built and deployed.
 - Monthly Budget — auto-populated from recurring items on first load; RECURRING badge; inline edit override; manual entries add/delete; month selector
 - Snapshot History table — Period, Net Worth, Cash, Invested, Δ vs Prior (value + % change), inline edit per row, new snapshot form
 
-### Phase 2 — Home page complete, Productivity tab partially built
+### Phase 2 — Complete as of 8 June 2026
 
-**Home page** — all improvements complete and live.
+**Home page** — all improvements complete and live, including TodaysTasks compact view replacing This Week card.
 
-**Productivity tab** — built but daily tasks are broken due to a Supabase schema cache issue with the `task_date` column. All other sections (calendar, weekly goals, upcoming, week summary, recurring tasks) are functional.
+**Productivity tab** — full rebuild complete. Unified task system, modal-first pattern, all sections functional.
 
 ### Known Issues
 
-- **Daily tasks not saving** — Supabase schema cache does not recognise `task_date` column. Error: `"Could not find the 'task_date' column of 'tasks' in the schema cache."` First fix: run `NOTIFY pgrst, 'reload schema';` in Supabase SQL editor.
+None currently known.
 
 ### Next Session
 
-1. Fix daily tasks saving (schema cache issue)
-2. Add dedicated Today's Tasks panel with separate add and complete areas
-3. Add delete buttons to tasks across all sections
-4. Enforce recurring task reset logic (daily/weekly/monthly)
-5. Begin modal migration — shared Modal component, then Finance → Home → Productivity
+1. Test the full task system on the live app — verify adding tasks, completing recurring tasks, snooze, delete, and recurring def CRUD all work correctly. Fix anything broken before proceeding.
+2. Finance page modal migration — move subscriptions, fixed costs, income sources, and snapshot entry forms into modals using the shared Modal component. Do not change any data logic, only the interaction layer.
+3. Home page modal migration — habits edit mode and weekly review into modals (lower priority than Finance).
 
 ---
 
@@ -377,3 +396,5 @@ Everything in Phase 1 is built and deployed.
 - Finance page visual tokens are the source of truth for styling — see Design Direction above
 - Priority tags are HIGH/MEDIUM/LOW everywhere — never use HOT/WARM/COOL
 - Date strings must always use local date components — never toISOString() — see Timezone note above
+- All new form interactions must use the shared Modal component at `src/components/Modal.jsx` — no new inline forms. See Modal-first interaction pattern above.
+- The unified task system uses `is_recurring` to distinguish definitions from regular tasks — see Unified task system above before touching any task-related code

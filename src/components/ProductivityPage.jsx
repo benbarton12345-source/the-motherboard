@@ -84,10 +84,14 @@ export default function ProductivityPage() {
   const [habitLogs, setHabitLogs] = useState([])
   const [habitDefsCount, setHabitDefsCount] = useState(0)
 
+  // Upcoming tasks
+  const [upcomingTasks, setUpcomingTasks] = useState([])
+
   // Add/edit modal
   const [showModal, setShowModal] = useState(false)
   const [modalInitial, setModalInitial] = useState({})
   const [editingDefId, setEditingDefId] = useState(null)
+  const [editingTaskId, setEditingTaskId] = useState(null)
   const [saving, setSaving] = useState(false)
 
   // Refreshes TodaysTasks when recurring defs change (remounts the component)
@@ -96,6 +100,8 @@ export default function ProductivityPage() {
   // ── Computed ────────────────────────────────────────────────────────────────
 
   const todayStr = localDate()
+  const tomorrowStr = shiftDate(todayStr, 1)
+  const in7DaysStr = shiftDate(todayStr, 7)
   const realWeekMon = getWeekMonday(0)
   const currentWeekMonStr = localDate(realWeekMon)
   const currentWeekSunStr = localDate(addDays(realWeekMon, 6))
@@ -122,6 +128,9 @@ export default function ProductivityPage() {
     const thirtyDaysAgo = shiftDate(todayStr, -30)
     supabase.from('habit_logs').select('*').gte('date', thirtyDaysAgo)
       .then(({ data }) => { if (data) setHabitLogs(data) })
+    supabase.from('tasks').select('*').eq('is_recurring', false)
+      .gte('task_date', tomorrowStr).lte('task_date', in7DaysStr)
+      .then(({ data }) => { if (data) setUpcomingTasks(data) })
   }, [])
 
   useEffect(() => {
@@ -195,6 +204,27 @@ export default function ProductivityPage() {
     if (!form.text.trim()) return
     setSaving(true)
     try {
+      if (editingTaskId) {
+        const payload = {
+          text: form.text.trim(),
+          priority: form.priority,
+          task_date: form.date || todayStr,
+          task_time: form.time || null,
+        }
+        const { data } = await supabase.from('tasks').update(payload).eq('id', editingTaskId).select().single()
+        if (data) {
+          setUpcomingTasks(prev => prev.map(t => t.id === editingTaskId ? data : t))
+          if (data.task_time) {
+            setCalendarTasks(prev => {
+              const exists = prev.some(t => t.id === data.id)
+              return exists ? prev.map(t => t.id === data.id ? data : t) : [...prev, data]
+            })
+          }
+          if (data.task_date === todayStr) setTodaysKey(k => k + 1)
+        }
+        closeModal()
+        return
+      }
       if (editingDefId) {
         // Update existing recurring def
         const payload = {
@@ -291,9 +321,23 @@ export default function ProductivityPage() {
     setShowModal(true)
   }
 
+  function openEditTask(task) {
+    setEditingTaskId(task.id)
+    setEditingDefId(null)
+    setModalInitial({
+      text: task.text,
+      date: task.task_date || todayStr,
+      time: task.task_time || '',
+      priority: task.priority,
+      is_recurring: false,
+    })
+    setShowModal(true)
+  }
+
   function closeModal() {
     setShowModal(false)
     setEditingDefId(null)
+    setEditingTaskId(null)
     setModalInitial({})
   }
 
@@ -337,6 +381,34 @@ export default function ProductivityPage() {
     }
     return ''
   }
+
+  // ── Upcoming items ──────────────────────────────────────────────────────────
+
+  const upcomingItems = (() => {
+    const regular = upcomingTasks
+      .filter(t => !t.recurrence_parent_id)
+      .map(t => ({ ...t, _type: 'task', _date: t.task_date }))
+
+    const recurringOccurrences = []
+    for (const def of recurringDefs) {
+      let cur = tomorrowStr
+      while (cur <= in7DaysStr) {
+        if (isRecurringDueOnDate(def, cur)) {
+          recurringOccurrences.push({ ...def, _type: 'recurring', _date: cur })
+        }
+        cur = shiftDate(cur, 1)
+      }
+    }
+
+    return [...regular, ...recurringOccurrences].sort((a, b) => {
+      if (a._date !== b._date) return a._date.localeCompare(b._date)
+      const aTime = a.task_time || ''
+      const bTime = b.task_time || ''
+      if (aTime && !bTime) return -1
+      if (!aTime && bTime) return 1
+      return aTime.localeCompare(bTime)
+    })
+  })()
 
   // ── Shared classes ──────────────────────────────────────────────────────────
 
@@ -388,16 +460,18 @@ export default function ProductivityPage() {
                   {allBlocks.map((block, bi) => (
                     <div
                       key={`${block._type}-${block.id}-${bi}`}
-                      className={`text-xs px-1.5 py-1 mb-1 rounded border-l-2 bg-gray-800 leading-tight ${
+                      className={`text-xs px-1.5 py-1 mb-1 rounded border-l-2 bg-gray-800 leading-tight overflow-hidden ${
                         block._type === 'recurring' ? 'border-purple-400' : 'border-emerald-400'
                       }`}
                     >
-                      <span className={`text-[10px] ${block._type === 'recurring' ? 'text-purple-400' : 'text-gray-500'}`}>
-                        {block.task_time.slice(0, 5)}{' '}
-                      </span>
-                      <span className={block._type === 'recurring' ? 'text-gray-400' : 'text-gray-300'}>
-                        {block.text}
-                      </span>
+                      <div className="flex items-center gap-0.5 min-w-0">
+                        <span className={`text-[10px] shrink-0 ${block._type === 'recurring' ? 'text-purple-400' : 'text-gray-500'}`}>
+                          {block.task_time.slice(0, 5)}
+                        </span>
+                        <span className={`truncate ${block._type === 'recurring' ? 'text-gray-400' : 'text-gray-300'}`}>
+                          {block.text}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -474,10 +548,47 @@ export default function ProductivityPage() {
         </div>
       </div>
 
-      {/* ── Section 2: Today's Tasks + Week Summary ───────────────────────── */}
+      {/* ── Section 2: Today's Tasks + Upcoming + Week Summary ───────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          <TodaysTasks key={todaysKey} />
+        <TodaysTasks key={todaysKey} />
+
+        {/* Upcoming */}
+        <div className={cardCls}>
+          <h2 className={`${labelCls} mb-4`}>Upcoming</h2>
+          {upcomingItems.length === 0 ? (
+            <div className="text-sm text-gray-600">No upcoming tasks</div>
+          ) : (
+            <div>
+              {upcomingItems.map((item, idx) => (
+                <div
+                  key={`${item._type}-${item.id}-${item._date}-${idx}`}
+                  className="group flex items-start gap-2 py-2 border-b border-gray-800 last:border-0"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-white truncate">{item.text}</div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-xs text-gray-500 shrink-0">{fmtDay(item._date)}</span>
+                      {item.task_time && (
+                        <span className="text-xs text-gray-500 shrink-0">{item.task_time.slice(0, 5)}</span>
+                      )}
+                      {item._type === 'recurring' && (
+                        <span className="text-[10px] border px-1 py-px rounded tracking-widest text-purple-400 border-purple-400 shrink-0">↻ REC</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={`text-xs border px-1.5 py-0.5 rounded tracking-widest ${PRIORITY_BADGE[item.priority] || PRIORITY_BADGE.MEDIUM}`}>
+                      {item.priority}
+                    </span>
+                    <button
+                      onClick={() => item._type === 'recurring' ? openEditDef(item) : openEditTask(item)}
+                      className="text-gray-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100 text-xs uppercase tracking-widest"
+                    >Edit</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Week Summary */}
@@ -559,9 +670,9 @@ export default function ProductivityPage() {
                           <span className={`text-xs border px-1.5 py-0.5 rounded tracking-widest shrink-0 ${PRIORITY_BADGE[def.priority] || PRIORITY_BADGE.MEDIUM}`}>
                             {def.priority}
                           </span>
-                          <div className="flex gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => openEditDef(def)} className="text-gray-600 hover:text-white transition-colors text-xs uppercase tracking-widest">Edit</button>
-                            <button onClick={() => deleteDef(def)} className="text-gray-700 hover:text-red-400 transition-colors text-xs uppercase tracking-widest">Del</button>
+                          <div className="flex gap-2 shrink-0">
+                            <button onClick={() => openEditDef(def)} className="text-gray-600 hover:text-white transition-colors text-xs uppercase tracking-widest opacity-0 group-hover:opacity-100">Edit</button>
+                            <button onClick={() => deleteDef(def)} className="text-gray-700 hover:text-red-400 transition-colors text-xs uppercase tracking-widest opacity-0 group-hover:opacity-100">Del</button>
                           </div>
                         </div>
                       ))}
@@ -576,7 +687,7 @@ export default function ProductivityPage() {
 
       {showModal && (
         <AddTaskModal
-          title={editingDefId ? 'Edit Recurring Task' : (modalInitial.is_recurring ? 'Add Recurring Task' : 'Add Task')}
+          title={editingDefId ? 'Edit Recurring Task' : editingTaskId ? 'Edit Task' : (modalInitial.is_recurring ? 'Add Recurring Task' : 'Add Task')}
           onClose={closeModal}
           onSave={handleModalSave}
           initial={modalInitial}

@@ -386,7 +386,7 @@ export default function HomePage() {
                         </svg>
                       )}
                     </div>
-                    <span className={`text-sm transition-colors ${
+                    <span className={`text-sm transition-colors truncate min-w-0 ${
                       (habits[i] ?? false) ? 'text-emerald-400 line-through decoration-emerald-400/40' : 'text-gray-400 group-hover:text-white'
                     }`}>
                       {def.label}

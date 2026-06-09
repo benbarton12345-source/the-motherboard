@@ -489,8 +489,8 @@ export default function FinancePage() {
             <div>
               {cashEntries.map((e, i) => (
                 <div key={i} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
-                  <span className="text-sm text-gray-400">{e.name}</span>
-                  <span className="text-sm text-white font-medium">{format(convert(parseFloat(e.value || 0), e.currency || 'GBP'))}</span>
+                  <span className="text-sm text-gray-400 truncate min-w-0 flex-1 mr-2">{e.name}</span>
+                  <span className="text-sm text-white font-medium shrink-0">{format(convert(parseFloat(e.value || 0), e.currency || 'GBP'))}</span>
                 </div>
               ))}
             </div>
@@ -517,11 +517,11 @@ export default function FinancePage() {
             <div>
               {investedEntries.map((e, i) => (
                 <div key={i} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-400">{e.name}</span>
-                    <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">{e.type}</span>
+                  <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+                    <span className="text-sm text-gray-400 truncate min-w-0">{e.name}</span>
+                    <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider shrink-0">{e.type}</span>
                   </div>
-                  <span className="text-sm text-white font-medium">{format(convert(parseFloat(e.value || 0), e.currency || 'GBP'))}</span>
+                  <span className="text-sm text-white font-medium shrink-0">{format(convert(parseFloat(e.value || 0), e.currency || 'GBP'))}</span>
                 </div>
               ))}
             </div>
@@ -637,20 +637,20 @@ export default function FinancePage() {
                         </div>
                       ) : (
                         <div className="flex items-center justify-between py-2.5 group">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
                             {isRecurring ? (
                               <>
-                                <span className="text-sm text-gray-300">{e.notes}</span>
-                                <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">Recurring</span>
+                                <span className="text-sm text-gray-300 truncate">{e.notes}</span>
+                                <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider shrink-0">Recurring</span>
                               </>
                             ) : (
                               <>
-                                <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">{e.category}</span>
-                                {e.notes && <span className="text-sm text-gray-400">{e.notes}</span>}
+                                <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider shrink-0">{e.category}</span>
+                                {e.notes && <span className="text-sm text-gray-400 truncate">{e.notes}</span>}
                               </>
                             )}
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 ml-2 shrink-0">
                             <span className="text-sm font-medium text-emerald-400">{format(convert(parseFloat(e.amount), e.currency || 'GBP'))}</span>
                             {isRecurring ? (
                               <button onClick={() => { setEditingBudgetId(e.id); setEditBudgetForm({ amount: String(e.amount), category: e.category, notes: e.notes || '' }) }} className="text-xs text-gray-600 hover:text-white transition-colors uppercase tracking-widest opacity-0 group-hover:opacity-100">Edit</button>
@@ -723,20 +723,20 @@ export default function FinancePage() {
                         </div>
                       ) : (
                         <div className="flex items-center justify-between py-2.5 group">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
                             {isRecurring ? (
                               <>
-                                <span className="text-sm text-gray-300">{e.notes}</span>
-                                <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">Recurring</span>
+                                <span className="text-sm text-gray-300 truncate">{e.notes}</span>
+                                <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider shrink-0">Recurring</span>
                               </>
                             ) : (
                               <>
-                                <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">{e.category}</span>
-                                {e.notes && <span className="text-sm text-gray-400">{e.notes}</span>}
+                                <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider shrink-0">{e.category}</span>
+                                {e.notes && <span className="text-sm text-gray-400 truncate">{e.notes}</span>}
                               </>
                             )}
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 ml-2 shrink-0">
                             <span className="text-sm font-medium text-red-400">{format(convert(parseFloat(e.amount), e.currency || 'GBP'))}</span>
                             {isRecurring ? (
                               <button onClick={() => { setEditingBudgetId(e.id); setEditBudgetForm({ amount: String(e.amount), category: e.category, notes: e.notes || '' }) }} className="text-xs text-gray-600 hover:text-white transition-colors uppercase tracking-widest opacity-0 group-hover:opacity-100">Edit</button>

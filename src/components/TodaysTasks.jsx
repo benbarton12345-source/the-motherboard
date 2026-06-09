@@ -54,6 +54,7 @@ export default function TodaysTasks({ compact = false }) {
   const [regularTasks, setRegularTasks] = useState([])
   const [recurringDefs, setRecurringDefs] = useState([])
   const [showModal, setShowModal] = useState(false)
+  const [editingItem, setEditingItem] = useState(null)
   const [saving, setSaving] = useState(false)
 
   const todayStr = localDate()
@@ -158,6 +159,39 @@ export default function TodaysTasks({ compact = false }) {
     setRegularTasks(prev => prev.filter(t => t.id !== item.id))
   }
 
+  async function handleEditSave(form) {
+    if (!form.text.trim()) return
+    setSaving(true)
+    try {
+      if (editingItem.is_recurring) {
+        const payload = {
+          text: form.text.trim(),
+          priority: form.priority,
+          recurrence_frequency: form.recurrence_frequency,
+          recurrence_day_of_week: form.recurrence_frequency === 'weekly' ? form.recurrence_day_of_week : null,
+          recurrence_day_of_month: form.recurrence_frequency === 'monthly' ? form.recurrence_day_of_month : null,
+          task_time: form.time || null,
+        }
+        const { data } = await supabase.from('tasks').update(payload).eq('id', editingItem.id).select().single()
+        if (data) setRecurringDefs(prev => prev.map(d => d.id === editingItem.id ? data : d))
+      } else {
+        const payload = {
+          text: form.text.trim(),
+          priority: form.priority,
+          task_date: form.date || todayStr,
+          task_time: form.time || null,
+        }
+        const { data } = await supabase.from('tasks').update(payload).eq('id', editingItem.id).select().single()
+        if (data) setRegularTasks(prev => prev.map(t => t.id === editingItem.id ? data : t))
+      }
+      setEditingItem(null)
+    } catch (e) {
+      console.error('TodaysTasks handleEditSave:', e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   function isDone(item) {
     if (item.is_recurring) return false
     if (item.recurrence_parent_id) return true
@@ -204,7 +238,7 @@ export default function TodaysTasks({ compact = false }) {
                 </button>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     {item.task_time && (
                       <span className="text-xs text-gray-500 shrink-0">{item.task_time.slice(0, 5)}</span>
                     )}
@@ -223,6 +257,11 @@ export default function TodaysTasks({ compact = false }) {
                 <span className={`text-xs border px-1.5 py-0.5 rounded tracking-widest shrink-0 ${PRIORITY_BADGE[item.priority] || PRIORITY_BADGE.MEDIUM}`}>
                   {item.priority}
                 </span>
+
+                <button
+                  onClick={() => setEditingItem(item)}
+                  className="text-gray-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100 text-xs uppercase tracking-widest shrink-0"
+                >Edit</button>
 
                 {canSnooze && (
                   <button
@@ -253,6 +292,31 @@ export default function TodaysTasks({ compact = false }) {
           onClose={() => setShowModal(false)}
           onSave={handleSave}
           saving={saving}
+        />
+      )}
+
+      {editingItem && (
+        <AddTaskModal
+          title={editingItem.is_recurring ? 'Edit Recurring Task' : 'Edit Task'}
+          onClose={() => setEditingItem(null)}
+          onSave={handleEditSave}
+          initial={editingItem.is_recurring ? {
+            text: editingItem.text,
+            time: editingItem.task_time || '',
+            priority: editingItem.priority,
+            is_recurring: true,
+            recurrence_frequency: editingItem.recurrence_frequency || 'daily',
+            recurrence_day_of_week: editingItem.recurrence_day_of_week ?? 0,
+            recurrence_day_of_month: editingItem.recurrence_day_of_month ?? 1,
+          } : {
+            text: editingItem.text,
+            date: editingItem.task_date || todayStr,
+            time: editingItem.task_time || '',
+            priority: editingItem.priority,
+            is_recurring: false,
+          }}
+          saving={saving}
+          lockRecurring={editingItem.is_recurring}
         />
       )}
     </div>
