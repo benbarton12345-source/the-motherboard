@@ -287,6 +287,11 @@ export default function ProductivityPage() {
     }
   }
 
+  async function deleteUpcomingTask(task) {
+    await supabase.from('tasks').delete().eq('id', task.id)
+    setUpcomingTasks(prev => prev.filter(t => t.id !== task.id))
+  }
+
   async function deleteDef(def) {
     // Unlink completed instances first so history is preserved
     await supabase.from('tasks').update({ recurrence_parent_id: null }).eq('recurrence_parent_id', def.id)
@@ -452,7 +457,7 @@ export default function ProductivityPage() {
               ].sort((a, b) => (a.task_time || '').localeCompare(b.task_time || ''))
 
               return (
-                <div key={i} className={`rounded p-1.5 min-h-[100px] ${isToday ? 'bg-gray-800/60' : ''}`}>
+                <div key={i} className={`rounded border border-gray-800 p-1.5 min-h-[100px] ${isToday ? 'bg-gray-800/60' : ''}`}>
                   <div className="text-xs text-gray-600 mb-0.5">{DAY_LABELS[i]}</div>
                   <div className={`text-sm font-bold mb-1.5 ${isToday ? 'text-emerald-400' : 'text-gray-300'}`}>
                     {day.getDate()}
@@ -584,6 +589,12 @@ export default function ProductivityPage() {
                       onClick={() => item._type === 'recurring' ? openEditDef(item) : openEditTask(item)}
                       className="text-gray-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100 text-xs uppercase tracking-widest"
                     >Edit</button>
+                    {item._type === 'task' && (
+                      <button
+                        onClick={() => deleteUpcomingTask(item)}
+                        className="text-gray-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 text-lg leading-none"
+                      >×</button>
+                    )}
                   </div>
                 </div>
               ))}
