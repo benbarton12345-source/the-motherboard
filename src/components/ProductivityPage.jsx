@@ -2,18 +2,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import TodaysTasks from './TodaysTasks'
 import AddTaskModal from './AddTaskModal'
+import { localDate, shiftDate, isRecurringDueOnDate } from '../utils/taskHelpers'
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function localDate(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function shiftDate(dateStr, n) {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const r = new Date(y, m - 1, d + n)
-  return localDate(r)
-}
+// ── Helpers (calendar/week-specific) ─────────────────────────────────────────
 
 function addDays(d, n) {
   const r = new Date(d)
@@ -33,26 +24,6 @@ function getWeekMonday(offsetWeeks = 0) {
 function fmtDay(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
   return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-}
-
-function getLastDayOfMonth(y, m) {
-  return new Date(y, m, 0).getDate()
-}
-
-function isRecurringDueOnDate(task, dateStr) {
-  if (task.recurrence_frequency === 'daily') return true
-  const [y, m, d] = dateStr.split('-').map(Number)
-  if (task.recurrence_frequency === 'weekly') {
-    const jsDay = new Date(y, m - 1, d).getDay()
-    const dbDay = (jsDay + 6) % 7
-    return dbDay === task.recurrence_day_of_week
-  }
-  if (task.recurrence_frequency === 'monthly') {
-    const dom = task.recurrence_day_of_month
-    const lastDay = getLastDayOfMonth(y, m)
-    return d === Math.min(dom, lastDay)
-  }
-  return false
 }
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -154,8 +125,13 @@ export default function ProductivityPage() {
   }
 
   function timedRecurringForDay(dayStr) {
+    const completedParentIds = new Set(
+      calendarTasks
+        .filter(t => t.task_date === dayStr && !!t.recurrence_parent_id)
+        .map(t => t.recurrence_parent_id)
+    )
     return recurringDefs
-      .filter(d => d.task_time && isRecurringDueOnDate(d, dayStr))
+      .filter(d => d.task_time && isRecurringDueOnDate(d, dayStr) && !completedParentIds.has(d.id))
       .sort((a, b) => (a.task_time || '').localeCompare(b.task_time || ''))
   }
 
@@ -213,7 +189,14 @@ export default function ProductivityPage() {
         }
         const { data } = await supabase.from('tasks').update(payload).eq('id', editingTaskId).select().single()
         if (data) {
-          setUpcomingTasks(prev => prev.map(t => t.id === editingTaskId ? data : t))
+          const inUpcomingRange = data.task_date > todayStr && data.task_date <= in7DaysStr
+          setUpcomingTasks(prev => {
+            if (inUpcomingRange) {
+              const exists = prev.some(t => t.id === data.id)
+              return exists ? prev.map(t => t.id === data.id ? data : t) : [...prev, data]
+            }
+            return prev.filter(t => t.id !== data.id)
+          })
           if (data.task_time) {
             setCalendarTasks(prev => {
               const exists = prev.some(t => t.id === data.id)
@@ -276,6 +259,9 @@ export default function ProductivityPage() {
           if (data.task_date >= currentWeekMonStr && data.task_date <= currentWeekSunStr) {
             setWeekTasks(prev => [...prev, data])
           }
+          if (data.task_date > todayStr && data.task_date <= in7DaysStr) {
+            setUpcomingTasks(prev => [...prev, data])
+          }
           if (data.task_date === todayStr) setTodaysKey(k => k + 1)
         }
       }
@@ -302,12 +288,14 @@ export default function ProductivityPage() {
 
   function openAddTask() {
     setEditingDefId(null)
+    setEditingTaskId(null)
     setModalInitial({})
     setShowModal(true)
   }
 
   function openAddRecurring() {
     setEditingDefId(null)
+    setEditingTaskId(null)
     setModalInitial({ is_recurring: true })
     setShowModal(true)
   }
@@ -555,7 +543,7 @@ export default function ProductivityPage() {
 
       {/* ── Section 2: Today's Tasks + Upcoming + Week Summary ───────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <TodaysTasks key={todaysKey} />
+        <TodaysTasks key={todaysKey} recurringDefs={recurringDefs} setRecurringDefs={setRecurringDefs} />
 
         {/* Upcoming */}
         <div className={cardCls}>

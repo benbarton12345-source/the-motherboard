@@ -1,36 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import AddTaskModal from './AddTaskModal'
-
-function localDate(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function shiftDate(dateStr, n) {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const r = new Date(y, m - 1, d + n)
-  return localDate(r)
-}
-
-function getLastDayOfMonth(y, m) {
-  return new Date(y, m, 0).getDate()
-}
-
-function isRecurringDueOnDate(task, dateStr) {
-  if (task.recurrence_frequency === 'daily') return true
-  const [y, m, d] = dateStr.split('-').map(Number)
-  if (task.recurrence_frequency === 'weekly') {
-    const jsDay = new Date(y, m - 1, d).getDay()
-    const dbDay = (jsDay + 6) % 7 // 0=Mon…6=Sun
-    return dbDay === task.recurrence_day_of_week
-  }
-  if (task.recurrence_frequency === 'monthly') {
-    const dom = task.recurrence_day_of_month
-    const lastDay = getLastDayOfMonth(y, m)
-    return d === Math.min(dom, lastDay)
-  }
-  return false
-}
+import { localDate, shiftDate, isRecurringDueOnDate } from '../utils/taskHelpers'
 
 const PRIORITY_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 }
 const PRIORITY_BADGE = {
@@ -50,23 +21,28 @@ function sortItems(items) {
   })
 }
 
-export default function TodaysTasks({ compact = false }) {
+export default function TodaysTasks({ compact = false, recurringDefs: propDefs, setRecurringDefs: propSetDefs }) {
   const [regularTasks, setRegularTasks] = useState([])
-  const [recurringDefs, setRecurringDefs] = useState([])
+  const [ownDefs, setOwnDefs] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
   const [saving, setSaving] = useState(false)
+
+  // When propDefs is provided (ProductivityPage), use shared state; otherwise manage locally (HomePage)
+  const controlled = propDefs !== undefined
+  const recurringDefs = controlled ? propDefs : ownDefs
+  const setRecurringDefs = controlled ? propSetDefs : setOwnDefs
 
   const todayStr = localDate()
   const tomorrowStr = shiftDate(todayStr, 1)
 
   async function fetchData() {
-    const [{ data: regular }, { data: defs }] = await Promise.all([
-      supabase.from('tasks').select('*').eq('is_recurring', false).eq('task_date', todayStr).order('created_at'),
-      supabase.from('tasks').select('*').eq('is_recurring', true).order('created_at'),
-    ])
+    const { data: regular } = await supabase.from('tasks').select('*').eq('is_recurring', false).eq('task_date', todayStr).order('created_at')
     if (regular) setRegularTasks(regular)
-    if (defs) setRecurringDefs(defs)
+    if (!controlled) {
+      const { data: defs } = await supabase.from('tasks').select('*').eq('is_recurring', true).order('created_at')
+      if (defs) setOwnDefs(defs)
+    }
   }
 
   useEffect(() => { fetchData() }, [])
