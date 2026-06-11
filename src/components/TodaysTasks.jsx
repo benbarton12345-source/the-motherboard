@@ -21,7 +21,7 @@ function sortItems(items) {
   })
 }
 
-export default function TodaysTasks({ compact = false, recurringDefs: propDefs, setRecurringDefs: propSetDefs }) {
+export default function TodaysTasks({ compact = false, recurringDefs: propDefs, setRecurringDefs: propSetDefs, onTaskChanged }) {
   const [regularTasks, setRegularTasks] = useState([])
   const [ownDefs, setOwnDefs] = useState([])
   const [showModal, setShowModal] = useState(false)
@@ -89,7 +89,10 @@ export default function TodaysTasks({ compact = false, recurringDefs: propDefs, 
         if (form.time) payload.task_time = form.time
         const { data, error } = await supabase.from('tasks').insert([payload]).select().single()
         if (error) { console.error('TodaysTasks insert task:', error); return }
-        if (data && data.task_date === todayStr) setRegularTasks(prev => [...prev, data])
+        if (data) {
+          if (data.task_date === todayStr) setRegularTasks(prev => [...prev, data])
+          if (onTaskChanged) onTaskChanged(data)
+        }
       }
       setShowModal(false)
     } catch (e) {
@@ -158,7 +161,14 @@ export default function TodaysTasks({ compact = false, recurringDefs: propDefs, 
           task_time: form.time || null,
         }
         const { data } = await supabase.from('tasks').update(payload).eq('id', editingItem.id).select().single()
-        if (data) setRegularTasks(prev => prev.map(t => t.id === editingItem.id ? data : t))
+        if (data) {
+          if (data.task_date === todayStr) {
+            setRegularTasks(prev => prev.map(t => t.id === editingItem.id ? data : t))
+          } else {
+            setRegularTasks(prev => prev.filter(t => t.id !== editingItem.id))
+          }
+          if (onTaskChanged) onTaskChanged(data)
+        }
       }
       setEditingItem(null)
     } catch (e) {

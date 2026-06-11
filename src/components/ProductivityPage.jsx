@@ -278,6 +278,17 @@ export default function ProductivityPage() {
     setUpcomingTasks(prev => prev.filter(t => t.id !== task.id))
   }
 
+  function handleTodaysTaskChanged(task) {
+    const inUpcomingRange = task.task_date > todayStr && task.task_date <= in7DaysStr
+    setUpcomingTasks(prev => {
+      if (inUpcomingRange) {
+        const exists = prev.some(t => t.id === task.id)
+        return exists ? prev.map(t => t.id === task.id ? task : t) : [...prev, task]
+      }
+      return prev.filter(t => t.id !== task.id)
+    })
+  }
+
   async function deleteDef(def) {
     // Unlink completed instances first so history is preserved
     await supabase.from('tasks').update({ recurrence_parent_id: null }).eq('recurrence_parent_id', def.id)
@@ -543,7 +554,7 @@ export default function ProductivityPage() {
 
       {/* ── Section 2: Today's Tasks + Upcoming + Week Summary ───────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <TodaysTasks key={todaysKey} recurringDefs={recurringDefs} setRecurringDefs={setRecurringDefs} />
+        <TodaysTasks key={todaysKey} recurringDefs={recurringDefs} setRecurringDefs={setRecurringDefs} onTaskChanged={handleTodaysTaskChanged} />
 
         {/* Upcoming */}
         <div className={cardCls}>
