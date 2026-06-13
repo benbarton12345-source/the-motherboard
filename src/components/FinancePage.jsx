@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import { useCurrency } from '../CurrencyContext'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
+import Modal from './Modal'
 
 const CATEGORIES = ['Cash', 'Investments', 'Property', 'Crypto', 'Other']
 const INCOME_CATEGORIES = ['Salary', 'Trading', 'Dividends', 'Bonus', 'Other']
@@ -46,10 +47,13 @@ function getMonthOptions() {
   return months
 }
 
+const inputCls = 'bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400'
+
 // ─── Recurring card (Subscriptions / Fixed Costs / Income Sources) ───────────
 
 function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
   const { convert, format } = useCurrency()
+  const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ name: '', amount: '', frequency: 'monthly', currency: 'GBP' })
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({ name: '', amount: '', frequency: 'monthly', currency: 'GBP' })
@@ -59,9 +63,20 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
   const monthlyTotal = filtered.reduce((sum, r) => sum + convert(toMonthly(r.amount, r.frequency), r.currency || 'GBP'), 0)
   const isIncome = type === 'income'
   const accentClass = isIncome ? 'text-emerald-400' : 'text-amber-400'
-  const addBtnClass = isIncome
-    ? 'text-xs tracking-widest uppercase px-4 py-2 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors disabled:opacity-50'
-    : 'text-xs tracking-widest uppercase px-4 py-2 border border-amber-400 text-amber-400 rounded hover:bg-amber-400 hover:text-gray-950 transition-colors disabled:opacity-50'
+  const manageBtnCls = isIncome
+    ? 'text-xs tracking-widest uppercase px-4 py-2 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors'
+    : 'text-xs tracking-widest uppercase px-4 py-2 border border-amber-400 text-amber-400 rounded hover:bg-amber-400 hover:text-gray-950 transition-colors'
+
+  function openModal() {
+    setForm({ name: '', amount: '', frequency: 'monthly', currency: 'GBP' })
+    setEditingId(null)
+    setShowModal(true)
+  }
+
+  function closeModal() {
+    setShowModal(false)
+    setEditingId(null)
+  }
 
   async function handleAdd() {
     if (!form.name.trim() || !form.amount) return
@@ -69,6 +84,7 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
     await onAdd({ name: form.name.trim(), type, amount: parseFloat(form.amount), frequency: form.frequency, currency: form.currency, active: true })
     setForm({ name: '', amount: '', frequency: 'monthly', currency: 'GBP' })
     setSaving(false)
+    closeModal()
   }
 
   async function handleUpdate() {
@@ -81,7 +97,10 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 flex flex-col">
-      <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">{title}</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm tracking-widest uppercase text-gray-400">{title}</h2>
+        <button onClick={openModal} className={manageBtnCls}>Manage</button>
+      </div>
 
       <div className="flex-1">
         {filtered.length === 0 ? (
@@ -89,113 +108,138 @@ function RecurringCard({ title, type, items, onAdd, onUpdate, onDelete }) {
         ) : (
           <div className="mb-4">
             {filtered.map(item => (
-              editingId === item.id ? (
-                <div key={item.id} className="py-3 border-b border-gray-800 space-y-2">
-                  <input
-                    value={editForm.name}
-                    onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
-                  />
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      value={editForm.amount}
-                      onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))}
-                      placeholder="Amount"
-                      className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
-                    />
-                    <select
-                      value={editForm.currency}
-                      onChange={e => setEditForm(f => ({ ...f, currency: e.target.value }))}
-                      className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
-                    >
-                      <option value="GBP">GBP</option>
-                      <option value="AUD">AUD</option>
-                    </select>
-                    <select
-                      value={editForm.frequency}
-                      onChange={e => setEditForm(f => ({ ...f, frequency: e.target.value }))}
-                      className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
-                    >
-                      {Object.entries(FREQ_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex gap-3">
-                    <button onClick={handleUpdate} disabled={saving} className="px-3 py-1.5 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-emerald-300 transition-colors disabled:opacity-50">Save</button>
-                    <button onClick={() => setEditingId(null)} className="text-xs text-gray-500 hover:text-white tracking-widest uppercase transition-colors">Cancel</button>
-                  </div>
+              <div key={item.id} className="flex items-center justify-between py-2.5 border-b border-gray-800 last:border-0">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <span className="text-sm text-white truncate">{item.name}</span>
+                  <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 tracking-wider uppercase shrink-0">{FREQ_LABELS[item.frequency]}</span>
                 </div>
-              ) : (
-                <div key={item.id} className="flex items-center justify-between py-2.5 border-b border-gray-800 last:border-0 group">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="text-sm text-white truncate">{item.name}</span>
-                    <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 tracking-wider uppercase shrink-0">{FREQ_LABELS[item.frequency]}</span>
-                  </div>
-                  <div className="flex items-center gap-3 ml-2 shrink-0">
-                    <span className={`text-sm font-medium ${accentClass}`}>
-                      {format(convert(toMonthly(item.amount, item.frequency), item.currency || 'GBP'))}/mo
-                    </span>
-                    <button
-                      onClick={() => { setEditingId(item.id); setEditForm({ name: item.name, amount: String(item.amount), frequency: item.frequency, currency: item.currency || 'GBP' }) }}
-                      className="text-xs text-gray-600 hover:text-white transition-colors tracking-widest uppercase opacity-0 group-hover:opacity-100"
-                    >Edit</button>
-                    <button
-                      onClick={() => onDelete(item.id)}
-                      className="text-xs text-gray-600 hover:text-red-400 transition-colors tracking-widest uppercase opacity-0 group-hover:opacity-100"
-                    >Del</button>
-                  </div>
-                </div>
-              )
+                <span className={`text-sm font-medium ${accentClass} shrink-0 ml-2`}>
+                  {format(convert(toMonthly(item.amount, item.frequency), item.currency || 'GBP'))}/mo
+                </span>
+              </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Add form */}
-      <div className="space-y-2 pt-4 border-t border-gray-800">
-        <div className="flex gap-2">
-          <input
-            value={form.name}
-            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-            onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            placeholder="Name"
-            className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
-          />
-          <button onClick={handleAdd} disabled={saving || !form.name.trim() || !form.amount} className={addBtnClass}>
-            + Add
-          </button>
-        </div>
-        <div className="flex gap-2">
-          <input
-            type="number"
-            value={form.amount}
-            onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-            placeholder="Amount"
-            className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
-          />
-          <select
-            value={form.currency}
-            onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
-            className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
-          >
-            <option value="GBP">GBP</option>
-            <option value="AUD">AUD</option>
-          </select>
-          <select
-            value={form.frequency}
-            onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}
-            className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded px-2 py-2 text-white text-sm focus:outline-none focus:border-emerald-400"
-          >
-            {Object.entries(FREQ_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {/* Total */}
       <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-800">
         <span className="text-xs text-gray-500 uppercase tracking-widest">Total / mo</span>
         <span className={`text-sm font-bold ${accentClass}`}>{format(monthlyTotal)}</span>
       </div>
+
+      {showModal && (
+        <Modal
+          title={title}
+          onClose={closeModal}
+          onSave={handleAdd}
+          saveLabel="Save"
+          saveDisabled={saving || !form.name.trim() || !form.amount || !!editingId}
+          saving={saving}
+        >
+          {/* Items list */}
+          {filtered.length === 0 ? (
+            <div className="text-sm text-gray-600">No items yet</div>
+          ) : (
+            <div>
+              {filtered.map(item => (
+                editingId === item.id ? (
+                  <div key={item.id} className="py-3 border-b border-gray-800 space-y-2">
+                    <input
+                      value={editForm.name}
+                      onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                      className={`w-full ${inputCls}`}
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={editForm.amount}
+                        onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))}
+                        placeholder="Amount"
+                        className={`flex-1 ${inputCls}`}
+                      />
+                      <select
+                        value={editForm.currency}
+                        onChange={e => setEditForm(f => ({ ...f, currency: e.target.value }))}
+                        className={inputCls}
+                      >
+                        <option value="GBP">GBP</option>
+                        <option value="AUD">AUD</option>
+                      </select>
+                      <select
+                        value={editForm.frequency}
+                        onChange={e => setEditForm(f => ({ ...f, frequency: e.target.value }))}
+                        className={`flex-1 ${inputCls}`}
+                      >
+                        {Object.entries(FREQ_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex gap-3">
+                      <button onClick={handleUpdate} disabled={saving} className="px-3 py-1.5 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-emerald-300 transition-colors disabled:opacity-50">Save</button>
+                      <button onClick={() => setEditingId(null)} className="text-xs text-gray-500 hover:text-white tracking-widest uppercase transition-colors">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div key={item.id} className="flex items-center justify-between py-2.5 border-b border-gray-800 last:border-0 group">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-sm text-white truncate">{item.name}</span>
+                      <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 tracking-wider uppercase shrink-0">{FREQ_LABELS[item.frequency]}</span>
+                    </div>
+                    <div className="flex items-center gap-3 ml-2 shrink-0">
+                      <span className={`text-sm font-medium ${accentClass}`}>
+                        {format(convert(toMonthly(item.amount, item.frequency), item.currency || 'GBP'))}/mo
+                      </span>
+                      <button
+                        onClick={() => { setEditingId(item.id); setEditForm({ name: item.name, amount: String(item.amount), frequency: item.frequency, currency: item.currency || 'GBP' }) }}
+                        className="text-xs text-gray-600 hover:text-white transition-colors tracking-widest uppercase opacity-0 group-hover:opacity-100"
+                      >Edit</button>
+                      <button
+                        onClick={() => onDelete(item.id)}
+                        className="text-xs text-gray-600 hover:text-red-400 transition-colors tracking-widest uppercase opacity-0 group-hover:opacity-100"
+                      >Del</button>
+                    </div>
+                  </div>
+                )
+              ))}
+            </div>
+          )}
+
+          {/* Add new form */}
+          <div className="border-t border-gray-800 pt-4 space-y-2">
+            <label className="text-sm tracking-widest uppercase text-gray-400">Add New</label>
+            <input
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              onKeyDown={e => e.key === 'Enter' && handleAdd()}
+              placeholder="Name"
+              className={`w-full ${inputCls}`}
+            />
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={form.amount}
+                onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                placeholder="Amount"
+                className={`flex-1 ${inputCls}`}
+              />
+              <select
+                value={form.currency}
+                onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
+                className={inputCls}
+              >
+                <option value="GBP">GBP</option>
+                <option value="AUD">AUD</option>
+              </select>
+              <select
+                value={form.frequency}
+                onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}
+                className={`flex-1 ${inputCls}`}
+              >
+                {Object.entries(FREQ_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }
@@ -212,20 +256,20 @@ export default function FinancePage() {
   const [budgetEntries, setBudgetEntries] = useState([])
   const [selectedMonth, setSelectedMonth] = useState(months[0].value)
 
-  // ── Snapshot add form
-  const [showSnapForm, setShowSnapForm] = useState(false)
+  // ── Snapshot modal
+  const [showSnapModal, setShowSnapModal] = useState(false)
   const [snapFormEntries, setSnapFormEntries] = useState([{ ...EMPTY_SNAP_ENTRY }])
   const [snapFormDate, setSnapFormDate] = useState('')
   const [snapFormLoading, setSnapFormLoading] = useState(false)
 
-  // ── Snapshot inline edit
+  // ── Snapshot inline edit (per row — stays inline)
   const [editingSnapId, setEditingSnapId] = useState(null)
   const [editSnapEntries, setEditSnapEntries] = useState([])
   const [editSnapLoading, setEditSnapLoading] = useState(false)
 
-  // ── Budget forms
-  const [showIncomeForm, setShowIncomeForm] = useState(false)
-  const [showExpenseForm, setShowExpenseForm] = useState(false)
+  // ── Budget modals
+  const [showIncomeEntryModal, setShowIncomeEntryModal] = useState(false)
+  const [showExpenseEntryModal, setShowExpenseEntryModal] = useState(false)
   const [incomeForm, setIncomeForm] = useState({ category: INCOME_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' })
   const [expenseForm, setExpenseForm] = useState({ category: EXPENSE_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' })
   const [budgetLoading, setBudgetLoading] = useState(false)
@@ -302,7 +346,7 @@ export default function FinancePage() {
     }])
     setSnapFormEntries([{ ...EMPTY_SNAP_ENTRY }])
     setSnapFormDate('')
-    setShowSnapForm(false)
+    setShowSnapModal(false)
     fetchSnapshots()
     setSnapFormLoading(false)
   }
@@ -337,10 +381,10 @@ export default function FinancePage() {
     }])
     if (type === 'income') {
       setIncomeForm({ category: INCOME_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' })
-      setShowIncomeForm(false)
+      setShowIncomeEntryModal(false)
     } else {
       setExpenseForm({ category: EXPENSE_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' })
-      setShowExpenseForm(false)
+      setShowExpenseEntryModal(false)
     }
     fetchBudgetEntries()
     setBudgetLoading(false)
@@ -401,8 +445,6 @@ export default function FinancePage() {
   const budgetSaved = totalBudgetIncome - totalBudgetExpenses
   const budgetSaveRate = totalBudgetIncome > 0 ? (budgetSaved / totalBudgetIncome) * 100 : null
 
-  // ── Shared input classes
-  const inputCls = 'bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400'
   const inputClsDark = 'bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400'
 
   return (
@@ -501,7 +543,7 @@ export default function FinancePage() {
 
         {/* Invested Assets */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">Invested Assets</h2>
+          <h2 className="text-sm tracking-widests uppercase text-gray-400 mb-3">Invested Assets</h2>
           <div className="text-3xl font-bold text-white mb-1">{format(convert(totalInvestedGBP, 'GBP'))}</div>
           <div className="text-xs text-gray-500 mb-4">{investedPct.toFixed(1)}% of net worth</div>
           {investedSparkData.length > 1 && (
@@ -533,9 +575,9 @@ export default function FinancePage() {
 
       {/* ── Section 3: Recurring items ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <RecurringCard title="Subscriptions" type="subscription" items={recurringItems} onAdd={addRecurringItem} onUpdate={updateRecurringItem} onDelete={deleteRecurringItem} />
-        <RecurringCard title="Fixed Costs"   type="fixed_cost"   items={recurringItems} onAdd={addRecurringItem} onUpdate={updateRecurringItem} onDelete={deleteRecurringItem} />
-        <RecurringCard title="Income Sources" type="income"      items={recurringItems} onAdd={addRecurringItem} onUpdate={updateRecurringItem} onDelete={deleteRecurringItem} />
+        <RecurringCard title="Subscriptions"  type="subscription" items={recurringItems} onAdd={addRecurringItem} onUpdate={updateRecurringItem} onDelete={deleteRecurringItem} />
+        <RecurringCard title="Fixed Costs"    type="fixed_cost"   items={recurringItems} onAdd={addRecurringItem} onUpdate={updateRecurringItem} onDelete={deleteRecurringItem} />
+        <RecurringCard title="Income Sources" type="income"       items={recurringItems} onAdd={addRecurringItem} onUpdate={updateRecurringItem} onDelete={deleteRecurringItem} />
       </div>
 
       {/* ── Section 4: Monthly Budget ─────────────────────────────────────────── */}
@@ -586,31 +628,12 @@ export default function FinancePage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm tracking-widest uppercase text-gray-400">Income</h3>
               <button
-                onClick={() => { setShowIncomeForm(f => !f); setIncomeForm({ category: INCOME_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' }) }}
+                onClick={() => { setIncomeForm({ category: INCOME_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' }); setShowIncomeEntryModal(true) }}
                 className="text-xs tracking-widest uppercase px-3 py-1.5 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors"
               >
-                {showIncomeForm ? 'Cancel' : '+ Add'}
+                + Add
               </button>
             </div>
-
-            {showIncomeForm && (
-              <div className="mb-4 p-4 bg-gray-800 rounded-lg space-y-2">
-                <div className="flex gap-2">
-                  <select value={incomeForm.category} onChange={e => setIncomeForm(f => ({ ...f, category: e.target.value }))} className={`flex-1 ${inputClsDark}`}>
-                    {INCOME_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <select value={incomeForm.currency} onChange={e => setIncomeForm(f => ({ ...f, currency: e.target.value }))} className={inputClsDark}>
-                    <option value="GBP">GBP</option>
-                    <option value="AUD">AUD</option>
-                  </select>
-                </div>
-                <input type="number" value={incomeForm.amount} onChange={e => setIncomeForm(f => ({ ...f, amount: e.target.value }))} placeholder="Amount" className={`w-full ${inputClsDark}`} />
-                <input value={incomeForm.notes} onChange={e => setIncomeForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" className={`w-full ${inputClsDark}`} />
-                <button onClick={() => addBudgetEntry('income')} disabled={budgetLoading || !incomeForm.amount} className="w-full px-3 py-2 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-emerald-300 transition-colors disabled:opacity-50">
-                  Save
-                </button>
-              </div>
-            )}
 
             {budgetIncome.length === 0 ? (
               <div className="text-sm text-gray-600">No income entries</div>
@@ -672,31 +695,12 @@ export default function FinancePage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm tracking-widest uppercase text-gray-400">Expenses</h3>
               <button
-                onClick={() => { setShowExpenseForm(f => !f); setExpenseForm({ category: EXPENSE_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' }) }}
+                onClick={() => { setExpenseForm({ category: EXPENSE_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' }); setShowExpenseEntryModal(true) }}
                 className="text-xs tracking-widest uppercase px-3 py-1.5 border border-red-400 text-red-400 rounded hover:bg-red-400 hover:text-gray-950 transition-colors"
               >
-                {showExpenseForm ? 'Cancel' : '+ Add'}
+                + Add
               </button>
             </div>
-
-            {showExpenseForm && (
-              <div className="mb-4 p-4 bg-gray-800 rounded-lg space-y-2">
-                <div className="flex gap-2">
-                  <select value={expenseForm.category} onChange={e => setExpenseForm(f => ({ ...f, category: e.target.value }))} className={`flex-1 ${inputClsDark}`}>
-                    {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <select value={expenseForm.currency} onChange={e => setExpenseForm(f => ({ ...f, currency: e.target.value }))} className={inputClsDark}>
-                    <option value="GBP">GBP</option>
-                    <option value="AUD">AUD</option>
-                  </select>
-                </div>
-                <input type="number" value={expenseForm.amount} onChange={e => setExpenseForm(f => ({ ...f, amount: e.target.value }))} placeholder="Amount" className={`w-full ${inputClsDark}`} />
-                <input value={expenseForm.notes} onChange={e => setExpenseForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" className={`w-full ${inputClsDark}`} />
-                <button onClick={() => addBudgetEntry('expense')} disabled={budgetLoading || !expenseForm.amount} className="w-full px-3 py-2 bg-red-400 text-white text-xs font-bold tracking-widest uppercase rounded hover:bg-red-300 transition-colors disabled:opacity-50">
-                  Save
-                </button>
-              </div>
-            )}
 
             {budgetExpenses.length === 0 ? (
               <div className="text-sm text-gray-600">No expense entries</div>
@@ -761,97 +765,29 @@ export default function FinancePage() {
           <h2 className="text-sm tracking-widest uppercase text-gray-400">Snapshot History</h2>
           <button
             onClick={() => {
-              if (!showSnapForm && latest) {
+              if (latest) {
                 setSnapFormEntries(latest.entries.map(e => ({ ...e, value: String(e.value) })))
-              } else if (!showSnapForm) {
+              } else {
                 setSnapFormEntries([{ ...EMPTY_SNAP_ENTRY }])
               }
-              setShowSnapForm(f => !f)
+              setSnapFormDate('')
+              setShowSnapModal(true)
             }}
             className="text-xs tracking-widest uppercase px-4 py-2 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors"
           >
-            {showSnapForm ? 'Cancel' : '+ New Snapshot'}
+            + New Snapshot
           </button>
         </div>
-
-        {/* Add snapshot form */}
-        {showSnapForm && (
-          <div className="mb-6 p-4 bg-gray-800 rounded-lg space-y-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-500 uppercase tracking-widest">New Snapshot</span>
-              <input
-                type="date"
-                value={snapFormDate}
-                onChange={e => setSnapFormDate(e.target.value)}
-                className={inputClsDark}
-              />
-            </div>
-            {snapFormEntries.map((entry, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                <div className="col-span-4">
-                  <input
-                    type="text"
-                    value={entry.name}
-                    onChange={e => { const u = [...snapFormEntries]; u[idx] = { ...u[idx], name: e.target.value }; setSnapFormEntries(u) }}
-                    placeholder="Account name"
-                    className={`w-full ${inputClsDark}`}
-                  />
-                </div>
-                <div className="col-span-3">
-                  <select
-                    value={entry.type}
-                    onChange={e => { const u = [...snapFormEntries]; u[idx] = { ...u[idx], type: e.target.value }; setSnapFormEntries(u) }}
-                    className={`w-full ${inputClsDark}`}
-                  >
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <select
-                    value={entry.currency || 'GBP'}
-                    onChange={e => { const u = [...snapFormEntries]; u[idx] = { ...u[idx], currency: e.target.value }; setSnapFormEntries(u) }}
-                    className={`w-full ${inputClsDark}`}
-                  >
-                    <option value="GBP">GBP</option>
-                    <option value="AUD">AUD</option>
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <input
-                    type="number"
-                    value={entry.value}
-                    onChange={e => { const u = [...snapFormEntries]; u[idx] = { ...u[idx], value: e.target.value }; setSnapFormEntries(u) }}
-                    placeholder="0"
-                    className={`w-full ${inputClsDark}`}
-                  />
-                </div>
-                <div className="col-span-1 flex justify-center">
-                  {snapFormEntries.length > 1 && (
-                    <button onClick={() => setSnapFormEntries(snapFormEntries.filter((_, i) => i !== idx))} className="text-gray-600 hover:text-red-400 transition-colors text-xl leading-none">×</button>
-                  )}
-                </div>
-              </div>
-            ))}
-            <div className="flex items-center gap-4 pt-1">
-              <button onClick={() => setSnapFormEntries(e => [...e, { ...EMPTY_SNAP_ENTRY }])} className="text-xs tracking-widest uppercase text-gray-500 hover:text-white transition-colors">+ Add account</button>
-              <button onClick={saveNewSnapshot} disabled={snapFormLoading} className="px-6 py-2 bg-emerald-400 text-gray-950 text-sm font-bold tracking-widest uppercase rounded hover:bg-emerald-300 transition-colors disabled:opacity-50">
-                {snapFormLoading ? 'Saving...' : 'Save Snapshot'}
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* History table */}
         {snapshots.length > 0 ? (
           <div>
-            {/* Table header */}
             <div className="grid grid-cols-6 gap-4 pb-3 border-b border-gray-800">
               {['Period', 'Net Worth', 'Cash', 'Invested', 'Δ vs Prior', ''].map(h => (
                 <div key={h} className="text-xs text-gray-500 uppercase tracking-widest">{h}</div>
               ))}
             </div>
 
-            {/* Table rows */}
             {snapshots.map((s, i) => {
               const prior = snapshots[i + 1]
               const delta = prior ? s.total - prior.total : null
@@ -891,7 +827,7 @@ export default function FinancePage() {
                     </div>
                   </div>
 
-                  {/* Inline edit form */}
+                  {/* Inline edit form (stays inline) */}
                   {editingSnapId === s.id && (
                     <div className="my-2 p-4 bg-gray-800 rounded-lg space-y-2">
                       <div className="text-xs text-gray-500 uppercase tracking-widest mb-3">
@@ -937,6 +873,151 @@ export default function FinancePage() {
           <div className="text-sm text-gray-600">No snapshots yet. Add your first snapshot above.</div>
         )}
       </div>
+
+      {/* ── Budget modals ─────────────────────────────────────────────────────── */}
+
+      {showIncomeEntryModal && (
+        <Modal
+          title="Add Income Entry"
+          onClose={() => setShowIncomeEntryModal(false)}
+          onSave={() => addBudgetEntry('income')}
+          saveLabel="Save"
+          saveDisabled={budgetLoading || !incomeForm.amount}
+          saving={budgetLoading}
+        >
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Category</label>
+              <div className="flex gap-2">
+                <select value={incomeForm.category} onChange={e => setIncomeForm(f => ({ ...f, category: e.target.value }))} className={`flex-1 ${inputCls}`}>
+                  {INCOME_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <select value={incomeForm.currency} onChange={e => setIncomeForm(f => ({ ...f, currency: e.target.value }))} className={inputCls}>
+                  <option value="GBP">GBP</option>
+                  <option value="AUD">AUD</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Amount</label>
+              <input type="number" value={incomeForm.amount} onChange={e => setIncomeForm(f => ({ ...f, amount: e.target.value }))} placeholder="Amount" className={`w-full ${inputCls}`} />
+            </div>
+            <div>
+              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Notes</label>
+              <input value={incomeForm.notes} onChange={e => setIncomeForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional" className={`w-full ${inputCls}`} />
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {showExpenseEntryModal && (
+        <Modal
+          title="Add Expense Entry"
+          onClose={() => setShowExpenseEntryModal(false)}
+          onSave={() => addBudgetEntry('expense')}
+          saveLabel="Save"
+          saveDisabled={budgetLoading || !expenseForm.amount}
+          saving={budgetLoading}
+        >
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Category</label>
+              <div className="flex gap-2">
+                <select value={expenseForm.category} onChange={e => setExpenseForm(f => ({ ...f, category: e.target.value }))} className={`flex-1 ${inputCls}`}>
+                  {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <select value={expenseForm.currency} onChange={e => setExpenseForm(f => ({ ...f, currency: e.target.value }))} className={inputCls}>
+                  <option value="GBP">GBP</option>
+                  <option value="AUD">AUD</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Amount</label>
+              <input type="number" value={expenseForm.amount} onChange={e => setExpenseForm(f => ({ ...f, amount: e.target.value }))} placeholder="Amount" className={`w-full ${inputCls}`} />
+            </div>
+            <div>
+              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Notes</label>
+              <input value={expenseForm.notes} onChange={e => setExpenseForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional" className={`w-full ${inputCls}`} />
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── New Snapshot modal ────────────────────────────────────────────────── */}
+
+      {showSnapModal && (
+        <Modal
+          title="New Snapshot"
+          onClose={() => setShowSnapModal(false)}
+          onSave={saveNewSnapshot}
+          saveLabel="Save Snapshot"
+          saveDisabled={snapFormLoading || snapFormEntries.filter(e => e.name && e.value).length === 0}
+          saving={snapFormLoading}
+        >
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Date</label>
+              <input
+                type="date"
+                value={snapFormDate}
+                onChange={e => setSnapFormDate(e.target.value)}
+                className={`w-full ${inputCls}`}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm tracking-widest uppercase text-gray-400 block">Accounts</label>
+              {snapFormEntries.map((entry, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-4">
+                    <input
+                      type="text"
+                      value={entry.name}
+                      onChange={e => { const u = [...snapFormEntries]; u[idx] = { ...u[idx], name: e.target.value }; setSnapFormEntries(u) }}
+                      placeholder="Account name"
+                      className={`w-full ${inputCls}`}
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <select
+                      value={entry.type}
+                      onChange={e => { const u = [...snapFormEntries]; u[idx] = { ...u[idx], type: e.target.value }; setSnapFormEntries(u) }}
+                      className={`w-full ${inputCls}`}
+                    >
+                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <select
+                      value={entry.currency || 'GBP'}
+                      onChange={e => { const u = [...snapFormEntries]; u[idx] = { ...u[idx], currency: e.target.value }; setSnapFormEntries(u) }}
+                      className={`w-full ${inputCls}`}
+                    >
+                      <option value="GBP">GBP</option>
+                      <option value="AUD">AUD</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      value={entry.value}
+                      onChange={e => { const u = [...snapFormEntries]; u[idx] = { ...u[idx], value: e.target.value }; setSnapFormEntries(u) }}
+                      placeholder="0"
+                      className={`w-full ${inputCls}`}
+                    />
+                  </div>
+                  <div className="col-span-1 flex justify-center">
+                    {snapFormEntries.length > 1 && (
+                      <button onClick={() => setSnapFormEntries(snapFormEntries.filter((_, i) => i !== idx))} className="text-gray-600 hover:text-red-400 transition-colors text-xl leading-none">×</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => setSnapFormEntries(e => [...e, { ...EMPTY_SNAP_ENTRY }])} className="text-xs tracking-widest uppercase text-gray-500 hover:text-white transition-colors">+ Add account</button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
     </div>
   )

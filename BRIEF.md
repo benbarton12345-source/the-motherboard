@@ -179,19 +179,22 @@ Full rebuild of the Productivity page and task system on 8 June 2026. Old `event
 
 - **Section 1 — Weekly Calendar + Weekly Goals**
   - Week strip Mon–Sun with prev/next navigation; today highlighted emerald
+  - Each day column has a faint border (`border border-gray-800 rounded`) for visual separation
   - Only timed tasks (task_time set) appear as blocks in calendar columns; green border = regular task, purple border = recurring definition
-  - Recurring definitions with task_time auto-populate on their scheduled day
+  - Calendar blocks use truncated text to prevent overflow
+  - Recurring definitions with task_time auto-populate on their scheduled day; completed instances suppress the definition block so no duplicates appear
   - A single "+ Add Task" button opens the shared AddTaskModal
   - Weekly goals with name and target_count; count tracked in `weekly_goal_logs` per week; +/− buttons; progress bar green/amber/red
 
-- **Section 2 — Today's Tasks + Week Summary**
+- **Section 2 — Today's Tasks + Upcoming + Week Summary (three-column layout)**
   - Today's Tasks uses the shared TodaysTasks component (same as Home page)
   - Shows: regular tasks with task_date = today, plus recurring definitions due today that have no completed instance for today
   - Sorted by time first, then priority
-  - Each task: checkbox to complete, snooze button (→ tomorrow, sets snoozed_from = today), delete button
+  - Each task: checkbox to complete, snooze button (→ tomorrow, sets snoozed_from = today), Edit button (opens AddTaskModal), delete button
   - Recurring tasks show ↻ REC badge; snoozed tasks show SNOOZED badge
   - Completing a recurring task creates a completed instance row with recurrence_parent_id = def.id and task_date = today
   - Unchecking a completed instance deletes the instance row (restores to uncompleted)
+  - Upcoming panel: shows next 7 days of tasks — regular tasks (task_date > today and ≤ today+7) plus projected recurring occurrences; sorted by date then time; Edit button on regular tasks (opens modal); × delete on regular tasks only
   - Week summary: tasks done/total, habit score (from habit_logs, last 7 days), goals hit — progress bars plus streak count
 
 - **Section 3 — Recurring Task Definitions**
@@ -202,11 +205,26 @@ Full rebuild of the Productivity page and task system on 8 June 2026. Old `event
   - "+ Add Recurring" opens AddTaskModal with is_recurring pre-enabled
   - When a def is added/edited/deleted, TodaysTasks remounts via a React key increment to stay in sync
 
+#### Productivity tab (stability fixes as of 9–11 June 2026)
+
+Full audit of ProductivityPage, TodaysTasks, and AddTaskModal identified state synchronisation issues and duplicate helper functions. All issues resolved:
+
+- **`src/utils/taskHelpers.js`** — shared helpers extracted: `localDate`, `shiftDate`, `getLastDayOfMonth`, `isRecurringDueOnDate`. Both ProductivityPage and TodaysTasks import from here; no duplication.
+- **Recurring def state lifted** — `recurringDefs` and `setRecurringDefs` now live in ProductivityPage and are passed as optional controlled props to TodaysTasks. When on ProductivityPage, both components share the same state so adding/editing a def in TodaysTasks is immediately reflected in the Upcoming panel and calendar. When on HomePage, TodaysTasks manages its own local copy unchanged.
+- **Calendar duplicate blocks fixed** — `timedRecurringForDay` now excludes definitions that already have a completed instance for that day, preventing double blocks.
+- **New tasks updating Upcoming immediately** — when a task is added via TodaysTasks with a future date, an `onTaskChanged` callback fires and ProductivityPage adds it to `upcomingTasks` state without a refetch.
+- **Edited tasks moving between panels correctly** — editing a task to change its date removes it from Today's Tasks if the new date is not today; adds or removes it from Upcoming based on whether the new date falls within the next 7 days.
+- **stale editingTaskId fixed** — `openAddTask` and `openAddRecurring` both clear `editingTaskId` so a prior edit session can never corrupt a subsequent add.
+- **Global text overflow fixed** — `truncate min-w-0` audit applied across Home, Finance, and Productivity pages; all cards and labels overflow cleanly.
+
+Productivity page is now considered stable.
+
 #### Shared components (added 8 June 2026)
 
 - **`src/components/Modal.jsx`** — reusable overlay: bg-black/60 full-screen, bg-gray-900 border border-gray-800 rounded-lg max-w-md centred, header with title and × close, scrollable content area, Save/Cancel footer. Props: title, onClose, onSave, saveLabel, saveDisabled, saving, children.
 - **`src/components/AddTaskModal.jsx`** — unified add/edit form using Modal. Fields: task name, date, time (optional), priority, recurring toggle (with frequency, day-of-week, day-of-month selectors when enabled), add-to-calendar checkbox. Props: title, onClose, onSave, initial (pre-populate), saving, lockRecurring (disables the recurring toggle for editing defs).
-- **`src/components/TodaysTasks.jsx`** — self-contained today's tasks card. Fetches its own data (regular tasks for today + all recurring defs). Handles toggle, snooze, delete, and add via AddTaskModal. Props: compact (boolean — caps list at 6 with overflow count, hides snooze button).
+- **`src/components/TodaysTasks.jsx`** — self-contained today's tasks card. Fetches its own data (regular tasks for today + all recurring defs). Handles toggle, snooze, delete, edit, and add via AddTaskModal. Props: compact (boolean — caps list at 6 with overflow count, hides snooze button), recurringDefs / setRecurringDefs (optional controlled props when used inside ProductivityPage), onTaskChanged (optional callback fired after any task insert or edit, used by ProductivityPage to sync upcomingTasks).
+- **`src/utils/taskHelpers.js`** — shared date and recurrence helpers used by both ProductivityPage and TodaysTasks.
 
 #### Modal-first interaction pattern (established 8 June 2026)
 
@@ -338,7 +356,7 @@ All data persists via Supabase across sessions and devices. Do not use localStor
 
 ---
 
-## Current State (as of 7 June 2026)
+## Current State (as of 11 June 2026)
 
 ### Phase 1 — Complete
 
@@ -355,7 +373,7 @@ Everything in Phase 1 is built and deployed.
 - Operator card (week number, habits score), Net Worth card (sparkline, m/m delta), Freedom Figure progress bar
 - Session card (clock, date, Perth/UK time)
 - Habits — editable list from `habit_definitions`; daily checkboxes reset at midnight; persists to `habit_logs`
-- This Week — task list with HIGH/MEDIUM/LOW priorities, Save button with timestamp; persists to `tasks`
+- TodaysTasks compact view (max 6 items) in centre column, replacing old This Week card
 - Weekly Review — five goal-specific fields, auto-save (800ms debounce), Seal Week button; persists to `weekly_reviews`
 - Assets, Budget, and Trading snapshot cards in right column
 
@@ -366,12 +384,13 @@ Everything in Phase 1 is built and deployed.
 - Recurring items: Subscriptions, Fixed Costs, Income Sources — full add/edit/delete CRUD, per-item currency (GBP/AUD), monthly total
 - Monthly Budget — auto-populated from recurring items on first load; RECURRING badge; inline edit override; manual entries add/delete; month selector
 - Snapshot History table — Period, Net Worth, Cash, Invested, Δ vs Prior (value + % change), inline edit per row, new snapshot form
+- Text overflow fixed across all Finance cards
 
-### Phase 2 — Complete as of 8 June 2026
+### Phase 2 — Complete as of 11 June 2026
 
-**Home page** — all improvements complete and live, including TodaysTasks compact view replacing This Week card.
+**Home page** — all improvements complete and live, including TodaysTasks compact view and global text overflow fixes.
 
-**Productivity tab** — full rebuild complete. Unified task system, modal-first pattern, all sections functional.
+**Productivity tab** — full rebuild complete and stable. Unified task system, modal-first pattern, all sections functional. State sync between ProductivityPage and TodaysTasks fully resolved. Productivity page is considered stable — do not refactor unless a specific bug is reported.
 
 ### Known Issues
 
@@ -379,9 +398,9 @@ None currently known.
 
 ### Next Session
 
-1. Test the full task system on the live app — verify adding tasks, completing recurring tasks, snooze, delete, and recurring def CRUD all work correctly. Fix anything broken before proceeding.
-2. Finance page modal migration — move subscriptions, fixed costs, income sources, and snapshot entry forms into modals using the shared Modal component. Do not change any data logic, only the interaction layer.
-3. Home page modal migration — habits edit mode and weekly review into modals (lower priority than Finance).
+1. Finance page modal migration — move subscriptions, fixed costs, income sources, and snapshot entry forms into modals using the shared Modal component. Do not change any data logic, only the interaction layer. All inline forms on the Finance page must be removed from page surfaces.
+2. Home page modal migration — habits edit mode and weekly review into modals. All inline forms on the Home page must be removed from page surfaces.
+3. Rule: no new inline forms anywhere in the app — all form interactions must go through the shared Modal component.
 
 ---
 
