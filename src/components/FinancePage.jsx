@@ -270,8 +270,8 @@ export default function FinancePage() {
   // ── Budget modals
   const [showIncomeEntryModal, setShowIncomeEntryModal] = useState(false)
   const [showExpenseEntryModal, setShowExpenseEntryModal] = useState(false)
-  const [incomeForm, setIncomeForm] = useState({ category: INCOME_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' })
-  const [expenseForm, setExpenseForm] = useState({ category: EXPENSE_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' })
+  const [incomeForm, setIncomeForm] = useState({ category: INCOME_CATEGORIES[0], amount: '', currency: 'GBP', name: '' })
+  const [expenseForm, setExpenseForm] = useState({ category: EXPENSE_CATEGORIES[0], amount: '', currency: 'GBP', name: '' })
   const [budgetLoading, setBudgetLoading] = useState(false)
   const [editingBudgetId, setEditingBudgetId] = useState(null)
   const [editBudgetForm, setEditBudgetForm] = useState({ amount: '', category: '', notes: '' })
@@ -377,13 +377,13 @@ export default function FinancePage() {
       type,
       amount: parseFloat(f.amount),
       currency: f.currency || 'GBP',
-      notes: f.notes || null,
+      notes: f.name || null,
     }])
     if (type === 'income') {
-      setIncomeForm({ category: INCOME_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' })
+      setIncomeForm({ category: INCOME_CATEGORIES[0], amount: '', currency: 'GBP', name: '' })
       setShowIncomeEntryModal(false)
     } else {
-      setExpenseForm({ category: EXPENSE_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' })
+      setExpenseForm({ category: EXPENSE_CATEGORIES[0], amount: '', currency: 'GBP', name: '' })
       setShowExpenseEntryModal(false)
     }
     fetchBudgetEntries()
@@ -628,7 +628,7 @@ export default function FinancePage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm tracking-widest uppercase text-gray-400">Income</h3>
               <button
-                onClick={() => { setIncomeForm({ category: INCOME_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' }); setShowIncomeEntryModal(true) }}
+                onClick={() => { setIncomeForm({ category: INCOME_CATEGORIES[0], amount: '', currency: 'GBP', name: '' }); setShowIncomeEntryModal(true) }}
                 className="text-xs tracking-widest uppercase px-3 py-1.5 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors"
               >
                 + Add
@@ -695,7 +695,7 @@ export default function FinancePage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm tracking-widest uppercase text-gray-400">Expenses</h3>
               <button
-                onClick={() => { setExpenseForm({ category: EXPENSE_CATEGORIES[0], amount: '', currency: 'GBP', notes: '' }); setShowExpenseEntryModal(true) }}
+                onClick={() => { setExpenseForm({ category: EXPENSE_CATEGORIES[0], amount: '', currency: 'GBP', name: '' }); setShowExpenseEntryModal(true) }}
                 className="text-xs tracking-widest uppercase px-3 py-1.5 border border-red-400 text-red-400 rounded hover:bg-red-400 hover:text-gray-950 transition-colors"
               >
                 + Add
@@ -887,6 +887,10 @@ export default function FinancePage() {
         >
           <div className="space-y-3">
             <div>
+              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Name</label>
+              <input value={incomeForm.name} onChange={e => setIncomeForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Freelance project" className={`w-full ${inputCls}`} />
+            </div>
+            <div>
               <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Category</label>
               <div className="flex gap-2">
                 <select value={incomeForm.category} onChange={e => setIncomeForm(f => ({ ...f, category: e.target.value }))} className={`flex-1 ${inputCls}`}>
@@ -901,10 +905,6 @@ export default function FinancePage() {
             <div>
               <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Amount</label>
               <input type="number" value={incomeForm.amount} onChange={e => setIncomeForm(f => ({ ...f, amount: e.target.value }))} placeholder="Amount" className={`w-full ${inputCls}`} />
-            </div>
-            <div>
-              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Notes</label>
-              <input value={incomeForm.notes} onChange={e => setIncomeForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional" className={`w-full ${inputCls}`} />
             </div>
           </div>
         </Modal>
@@ -921,6 +921,10 @@ export default function FinancePage() {
         >
           <div className="space-y-3">
             <div>
+              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Name</label>
+              <input value={expenseForm.name} onChange={e => setExpenseForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Grocery shop" className={`w-full ${inputCls}`} />
+            </div>
+            <div>
               <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Category</label>
               <div className="flex gap-2">
                 <select value={expenseForm.category} onChange={e => setExpenseForm(f => ({ ...f, category: e.target.value }))} className={`flex-1 ${inputCls}`}>
@@ -936,10 +940,6 @@ export default function FinancePage() {
               <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Amount</label>
               <input type="number" value={expenseForm.amount} onChange={e => setExpenseForm(f => ({ ...f, amount: e.target.value }))} placeholder="Amount" className={`w-full ${inputCls}`} />
             </div>
-            <div>
-              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Notes</label>
-              <input value={expenseForm.notes} onChange={e => setExpenseForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional" className={`w-full ${inputCls}`} />
-            </div>
           </div>
         </Modal>
       )}
@@ -951,6 +951,7 @@ export default function FinancePage() {
           title="New Snapshot"
           onClose={() => setShowSnapModal(false)}
           onSave={saveNewSnapshot}
+          maxWidth="max-w-2xl"
           saveLabel="Save Snapshot"
           saveDisabled={snapFormLoading || snapFormEntries.filter(e => e.name && e.value).length === 0}
           saving={snapFormLoading}

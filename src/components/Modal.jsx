@@ -1,7 +1,7 @@
-export default function Modal({ title, onClose, onSave, saveLabel = 'Save', saveDisabled = false, saving = false, children }) {
+export default function Modal({ title, onClose, onSave, saveLabel = 'Save', saveDisabled = false, saving = false, maxWidth = 'max-w-md', children }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-      <div className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-lg flex flex-col max-h-[90vh]">
+      <div className={`w-full ${maxWidth} bg-gray-900 border border-gray-800 rounded-lg flex flex-col max-h-[90vh]`}>
         <div className="flex items-center justify-between p-5 border-b border-gray-800 shrink-0">
           <h2 className="text-sm tracking-widest uppercase text-gray-400">{title}</h2>
           <button onClick={onClose} className="text-gray-600 hover:text-white transition-colors text-xl leading-none">×</button>
