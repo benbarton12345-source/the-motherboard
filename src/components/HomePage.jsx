@@ -3,6 +3,7 @@ import { supabase } from '../supabase'
 import { useCurrency } from '../CurrencyContext'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import TodaysTasks from './TodaysTasks'
+import Modal from './Modal'
 
 const DEFAULT_HABITS = [
   '10k steps',
@@ -29,6 +30,15 @@ function getWeekStart() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+function getWeekRange() {
+  const ws = getWeekStart()
+  const [y, m, d] = ws.split('-').map(Number)
+  const start = new Date(y, m - 1, d)
+  const end = new Date(y, m - 1, d + 6)
+  const fmt = dt => dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  return `${fmt(start)} – ${fmt(end)}`
+}
+
 function fmtDate(ts) {
   return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
@@ -42,7 +52,7 @@ export default function HomePage() {
 
   // Habit definitions
   const [habitDefs, setHabitDefs] = useState([])
-  const [habitEditMode, setHabitEditMode] = useState(false)
+  const [showHabitModal, setShowHabitModal] = useState(false)
   const [editingDefs, setEditingDefs] = useState([])
   const [newHabitLabel, setNewHabitLabel] = useState('')
   const [habitSaving, setHabitSaving] = useState(false)
@@ -57,6 +67,7 @@ export default function HomePage() {
   const [reviewLoaded, setReviewLoaded] = useState(false)
   const [saveStatus, setSaveStatus] = useState('idle')
   const [sealedAt, setSealedAt] = useState(null)
+  const [showReviewModal, setShowReviewModal] = useState(false)
 
   // ── Effects
 
@@ -155,7 +166,7 @@ export default function HomePage() {
   function enterHabitEdit() {
     setEditingDefs(habitDefs.map(d => ({ ...d })))
     setNewHabitLabel('')
-    setHabitEditMode(true)
+    setShowHabitModal(true)
   }
 
   async function saveHabitEdit() {
@@ -172,7 +183,7 @@ export default function HomePage() {
       setHabits(updated)
       await supabase.from('habit_logs').upsert({ date: getLocalDateString(), habits: updated }, { onConflict: 'date' })
     }
-    setHabitEditMode(false)
+    setShowHabitModal(false)
     setHabitSaving(false)
   }
 
@@ -196,6 +207,7 @@ export default function HomePage() {
       sealed_at: now,
     }, { onConflict: 'week_start' })
     setSealedAt(now)
+    setShowReviewModal(false)
   }
 
   // ── Derived values
@@ -248,6 +260,7 @@ export default function HomePage() {
   const targetDisplay = format(convert(TARGET, 'GBP'))
 
   const inputCls = 'bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400'
+  const textareaCls = 'w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-emerald-400 resize-none disabled:opacity-60 disabled:cursor-not-allowed'
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
@@ -329,141 +342,69 @@ export default function HomePage() {
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm tracking-widest uppercase text-gray-400">Habits</h2>
-            {!habitEditMode ? (
-              <button onClick={enterHabitEdit} className="text-xs text-gray-600 hover:text-white transition-colors uppercase tracking-widest">Edit</button>
-            ) : (
-              <div className="flex gap-3">
-                <button onClick={saveHabitEdit} disabled={habitSaving} className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors uppercase tracking-widest disabled:opacity-50">Save</button>
-                <button onClick={() => setHabitEditMode(false)} className="text-xs text-gray-600 hover:text-white transition-colors uppercase tracking-widest">Cancel</button>
-              </div>
-            )}
+            <button onClick={enterHabitEdit} className="text-xs text-gray-600 hover:text-white transition-colors uppercase tracking-widest">Edit</button>
           </div>
-
-          {habitEditMode ? (
-            <div className="space-y-2">
-              {editingDefs.map((d, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    value={d.label}
-                    onChange={e => setEditingDefs(defs => defs.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
-                    className={`flex-1 ${inputCls}`}
-                  />
-                  <button
-                    onClick={() => setEditingDefs(defs => defs.filter((_, j) => j !== i))}
-                    className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none px-1"
-                  >×</button>
+          <div className="space-y-3 mb-4">
+            {habitDefs.map((def, i) => (
+              <button
+                key={def.id}
+                onClick={() => toggleHabit(i)}
+                className="w-full flex items-center gap-3 text-left group"
+              >
+                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                  (habits[i] ?? false) ? 'bg-emerald-400 border-emerald-400' : 'border-gray-700 group-hover:border-gray-500'
+                }`}>
+                  {(habits[i] ?? false) && (
+                    <svg className="w-2.5 h-2.5 text-gray-950" viewBox="0 0 10 10" fill="none">
+                      <polyline points="1.5,5 4,7.5 8.5,2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
                 </div>
-              ))}
-              <div className="flex items-center gap-2 pt-2 border-t border-gray-800">
-                <input
-                  value={newHabitLabel}
-                  onChange={e => setNewHabitLabel(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && addHabitToEdit()}
-                  placeholder="Add habit..."
-                  className={`flex-1 ${inputCls}`}
-                />
-                <button
-                  onClick={addHabitToEdit}
-                  className="text-xs tracking-widest uppercase px-3 py-2 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors"
-                >Add</button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-3 mb-4">
-                {habitDefs.map((def, i) => (
-                  <button
-                    key={def.id}
-                    onClick={() => toggleHabit(i)}
-                    className="w-full flex items-center gap-3 text-left group"
-                  >
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                      (habits[i] ?? false) ? 'bg-emerald-400 border-emerald-400' : 'border-gray-700 group-hover:border-gray-500'
-                    }`}>
-                      {(habits[i] ?? false) && (
-                        <svg className="w-2.5 h-2.5 text-gray-950" viewBox="0 0 10 10" fill="none">
-                          <polyline points="1.5,5 4,7.5 8.5,2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </div>
-                    <span className={`text-sm transition-colors truncate min-w-0 ${
-                      (habits[i] ?? false) ? 'text-emerald-400 line-through decoration-emerald-400/40' : 'text-gray-400 group-hover:text-white'
-                    }`}>
-                      {def.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <div className="text-xs text-gray-500">
-                <span className="text-emerald-400 font-medium">{habitsScore}</span> / {habitDefs.length} today
-              </div>
-            </>
-          )}
+                <span className={`text-sm transition-colors truncate min-w-0 ${
+                  (habits[i] ?? false) ? 'text-emerald-400 line-through decoration-emerald-400/40' : 'text-gray-400 group-hover:text-white'
+                }`}>
+                  {def.label}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="text-xs text-gray-500">
+            <span className="text-emerald-400 font-medium">{habitsScore}</span> / {habitDefs.length} today
+          </div>
         </div>
 
         {/* TODAY'S TASKS */}
         <TodaysTasks compact={true} />
 
-        {/* WEEKLY REVIEW */}
+        {/* WEEKLY REVIEW — compact card */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-sm tracking-widest uppercase text-gray-400">Weekly Review</h2>
-              {sealedAt && (
-                <span className="text-xs text-gray-600">Sealed {fmtDate(sealedAt)}</span>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              {saveStatus !== 'idle' && (
-                <span className="text-xs text-gray-600">{saveStatus === 'saving' ? 'Saving...' : '✓ Saved'}</span>
-              )}
-              {!sealedAt && (
-                <button
-                  onClick={sealWeek}
-                  className="text-xs tracking-widest uppercase px-3 py-1.5 border border-gray-700 text-gray-400 rounded hover:border-emerald-400 hover:text-emerald-400 transition-colors"
-                >
-                  Seal Week
-                </button>
-              )}
-            </div>
+            <h2 className="text-sm tracking-widest uppercase text-gray-400">Weekly Review</h2>
+            {sealedAt && (
+              <span className="text-xs text-gray-600 border border-gray-700 rounded px-1.5 py-0.5 uppercase tracking-wider">Sealed</span>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { key: 'wentWell', label: 'What went well this week?' },
-              { key: 'challengeOvercome', label: 'One challenge I overcame' },
-              { key: 'improveNextWeek', label: 'One thing I can improve next week' },
-              { key: 'proudOf', label: 'One thing I am proud of' },
-            ].map(({ key, label }) => (
-              <div key={key}>
-                <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">{label}</div>
-                <textarea
-                  value={review[key]}
-                  onChange={e => { setSaveStatus('saving'); setReview(r => ({ ...r, [key]: e.target.value })) }}
-                  rows={3}
-                  placeholder="..."
-                  className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-emerald-400 resize-none"
-                />
-              </div>
-            ))}
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Consistency score 1–10</div>
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={review.consistencyScore}
-                onChange={e => {
-                  const v = e.target.value
-                  if (v === '' || (parseInt(v) >= 1 && parseInt(v) <= 10)) {
-                    setSaveStatus('saving')
-                    setReview(r => ({ ...r, consistencyScore: v }))
-                  }
-                }}
-                placeholder="1–10"
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-emerald-400"
-              />
+          <div className="space-y-2 mb-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500 uppercase tracking-widest">Week</span>
+              <span className="text-xs text-gray-400">{getWeekRange()}</span>
             </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500 uppercase tracking-widest">Score</span>
+              <span className={`text-sm font-bold ${review.consistencyScore !== '' ? 'text-white' : 'text-gray-600'}`}>
+                {review.consistencyScore !== '' ? `${review.consistencyScore}/10` : '—'}
+              </span>
+            </div>
+            {review.wentWell && (
+              <div className="text-xs text-gray-500 truncate" title={review.wentWell}>{review.wentWell}</div>
+            )}
           </div>
+          <button
+            onClick={() => setShowReviewModal(true)}
+            className="text-xs tracking-widest uppercase px-4 py-2 border border-gray-700 text-gray-400 rounded hover:border-emerald-400 hover:text-emerald-400 transition-colors"
+          >
+            {sealedAt ? 'View Review' : 'Write Review'}
+          </button>
         </div>
       </div>
 
@@ -545,6 +486,120 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* ── Edit Habits modal ──────────────────────────────────────────────────── */}
+      {showHabitModal && (
+        <Modal
+          title="Edit Habits"
+          onClose={() => setShowHabitModal(false)}
+          onSave={saveHabitEdit}
+          saveLabel="Save"
+          saveDisabled={habitSaving}
+          saving={habitSaving}
+        >
+          <div className="space-y-2">
+            {editingDefs.map((d, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  value={d.label}
+                  onChange={e => setEditingDefs(defs => defs.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                  className={`flex-1 ${inputCls}`}
+                />
+                <button
+                  onClick={() => setEditingDefs(defs => defs.filter((_, j) => j !== i))}
+                  className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none px-1"
+                >×</button>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 pt-2 border-t border-gray-800">
+            <input
+              value={newHabitLabel}
+              onChange={e => setNewHabitLabel(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addHabitToEdit()}
+              placeholder="Add habit..."
+              className={`flex-1 ${inputCls}`}
+            />
+            <button
+              onClick={addHabitToEdit}
+              className="text-xs tracking-widest uppercase px-3 py-2 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors"
+            >Add</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Weekly Review modal ────────────────────────────────────────────────── */}
+      {showReviewModal && (
+        <Modal
+          title="Weekly Review"
+          onClose={() => setShowReviewModal(false)}
+          onSave={() => setShowReviewModal(false)}
+          saveLabel="Done"
+          cancelLabel="Close"
+        >
+          <div className="space-y-4">
+            {saveStatus !== 'idle' && (
+              <div className="text-xs text-gray-500">{saveStatus === 'saving' ? 'Saving...' : '✓ Saved'}</div>
+            )}
+
+            {[
+              { key: 'wentWell', label: 'What went well this week?' },
+              { key: 'challengeOvercome', label: 'One challenge I overcame' },
+              { key: 'improveNextWeek', label: 'One thing I can improve next week' },
+              { key: 'proudOf', label: 'One thing I am proud of' },
+            ].map(({ key, label }) => (
+              <div key={key}>
+                <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">{label}</label>
+                <textarea
+                  value={review[key]}
+                  onChange={e => { if (!sealedAt) { setSaveStatus('saving'); setReview(r => ({ ...r, [key]: e.target.value })) } }}
+                  rows={3}
+                  placeholder="..."
+                  disabled={!!sealedAt}
+                  className={textareaCls}
+                />
+              </div>
+            ))}
+
+            <div>
+              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Consistency score 1–10</label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={review.consistencyScore}
+                onChange={e => {
+                  if (sealedAt) return
+                  const v = e.target.value
+                  if (v === '' || (parseInt(v) >= 1 && parseInt(v) <= 10)) {
+                    setSaveStatus('saving')
+                    setReview(r => ({ ...r, consistencyScore: v }))
+                  }
+                }}
+                placeholder="1–10"
+                disabled={!!sealedAt}
+                className={`w-full ${inputCls} disabled:opacity-60 disabled:cursor-not-allowed`}
+              />
+            </div>
+
+            {sealedAt ? (
+              <div className="text-xs text-gray-500 pt-2 border-t border-gray-800">
+                Sealed {fmtDate(sealedAt)}
+              </div>
+            ) : (
+              <div className="pt-2 border-t border-gray-800">
+                <button
+                  onClick={sealWeek}
+                  className="text-xs tracking-widest uppercase px-4 py-2 border border-gray-700 text-gray-400 rounded hover:border-emerald-400 hover:text-emerald-400 transition-colors"
+                >
+                  Seal Week
+                </button>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
     </div>
   )
 }

@@ -1,4 +1,4 @@
-export default function Modal({ title, onClose, onSave, saveLabel = 'Save', saveDisabled = false, saving = false, maxWidth = 'max-w-md', children }) {
+export default function Modal({ title, onClose, onSave, saveLabel = 'Save', saveDisabled = false, saving = false, maxWidth = 'max-w-md', cancelLabel = 'Cancel', children }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
       <div className={`w-full ${maxWidth} bg-gray-900 border border-gray-800 rounded-lg flex flex-col max-h-[90vh]`}>
@@ -17,7 +17,7 @@ export default function Modal({ title, onClose, onSave, saveLabel = 'Save', save
           >
             {saving ? 'Saving…' : saveLabel}
           </button>
-          <button onClick={onClose} className="text-xs text-gray-500 hover:text-white tracking-widest uppercase transition-colors">Cancel</button>
+          <button onClick={onClose} className="text-xs text-gray-500 hover:text-white tracking-widest uppercase transition-colors">{cancelLabel}</button>
         </div>
       </div>
     </div>
