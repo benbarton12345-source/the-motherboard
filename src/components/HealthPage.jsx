@@ -23,6 +23,15 @@ function shiftDate(dateStr, n) {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }
 
+function stripMarkdown(text) {
+  return text
+    .replace(/^#{1,6}\s*/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/^\*\s+/gm, '- ')
+    .trim()
+}
+
 function fmtShort(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
   return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
@@ -150,11 +159,14 @@ export default function HealthPage() {
 
   async function persistHealthSettings(updates) {
     const merged = { ...healthSettings, ...updates }
+    const { id: _id, ...payload } = merged
     if (settingsId) {
-      await supabase.from('health_settings').update(merged).eq('id', settingsId)
+      const { error } = await supabase.from('health_settings').update(payload).eq('id', settingsId)
+      if (error) console.error('health_settings update error:', error)
     } else {
-      const { data } = await supabase.from('health_settings').insert(merged).select().maybeSingle()
-      if (data) setSettingsId(data.id)
+      const { data, error } = await supabase.from('health_settings').insert(payload).select('id').maybeSingle()
+      if (error) console.error('health_settings insert error:', error)
+      if (data?.id) setSettingsId(data.id)
     }
     setHealthSettings(merged)
     setNutritionSettingsForm(merged)
@@ -213,7 +225,7 @@ export default function HealthPage() {
   async function saveMeal() {
     if (!mealForm.description || !mealForm.kcal) return
     setMealSaving(true)
-    await supabase.from('meal_logs').insert({
+    const { error } = await supabase.from('meal_logs').insert({
       date: localDate(),
       logged_at: mealForm.logged_at || localTime(),
       description: mealForm.description,
@@ -222,6 +234,11 @@ export default function HealthPage() {
       carbs_g: parseFloat(mealForm.carbs_g || 0),
       fat_g: parseFloat(mealForm.fat_g || 0),
     })
+    if (error) {
+      console.error('meal insert error:', error)
+      setMealSaving(false)
+      return
+    }
     setShowAddMealModal(false)
     setMealInput('')
     setMealStep('input')
@@ -267,7 +284,7 @@ export default function HealthPage() {
         }),
       })
       const result = await resp.json()
-      setMealSuggestion(result.suggestion || 'No suggestion available.')
+      setMealSuggestion(stripMarkdown(result.suggestion || 'No suggestion available.'))
     } catch {
       setMealSuggestion('Could not fetch suggestion. Check your connection.')
     }
