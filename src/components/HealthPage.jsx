@@ -101,9 +101,13 @@ export default function HealthPage() {
   const [weightRange, setWeightRange] = useState('90D')
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [showWeightTargetModal, setShowWeightTargetModal] = useState(false)
+  const [showWeightHistoryModal, setShowWeightHistoryModal] = useState(false)
   const [weightForm, setWeightForm] = useState({ date: localDate(), weight_kg: '', notes: '' })
   const [weightSaving, setWeightSaving] = useState(false)
   const [targetWeightForm, setTargetWeightForm] = useState('')
+  const [editingWeightId, setEditingWeightId] = useState(null)
+  const [editWeightForm, setEditWeightForm] = useState({ date: '', weight_kg: '', notes: '' })
+  const [editWeightSaving, setEditWeightSaving] = useState(false)
 
   // ── Health settings
   const [healthSettings, setHealthSettings] = useState(DEFAULT_SETTINGS)
@@ -192,6 +196,33 @@ export default function HealthPage() {
       weight_target_kg: targetWeightForm ? parseFloat(targetWeightForm) : null,
     })
     setShowWeightTargetModal(false)
+  }
+
+  function closeWeightHistory() {
+    if (editingWeightId) {
+      setEditingWeightId(null)
+    } else {
+      setShowWeightHistoryModal(false)
+    }
+  }
+
+  async function saveEditWeight() {
+    if (!editWeightForm.weight_kg) return
+    setEditWeightSaving(true)
+    const { error } = await supabase.from('weight_logs').update({
+      date: editWeightForm.date,
+      weight_kg: parseFloat(editWeightForm.weight_kg),
+      notes: editWeightForm.notes || null,
+    }).eq('id', editingWeightId)
+    if (error) console.error('weight_logs update error:', error)
+    await fetchWeightLogs()
+    setEditingWeightId(null)
+    setEditWeightSaving(false)
+  }
+
+  async function deleteWeightLog(id) {
+    await supabase.from('weight_logs').delete().eq('id', id)
+    await fetchWeightLogs()
   }
 
   // ── Meal CRUD
@@ -470,6 +501,12 @@ export default function HealthPage() {
                 </button>
               ))}
             </div>
+            <button
+              onClick={() => { setEditingWeightId(null); setShowWeightHistoryModal(true) }}
+              className="text-xs tracking-widest uppercase px-4 py-2 border border-gray-700 text-gray-400 rounded hover:border-gray-500 hover:text-white transition-colors"
+            >
+              View History
+            </button>
             <button
               onClick={() => { setTargetWeightForm(healthSettings.weight_target_kg != null ? String(healthSettings.weight_target_kg) : ''); setShowWeightTargetModal(true) }}
               className="text-xs tracking-widest uppercase px-4 py-2 border border-gray-700 text-gray-400 rounded hover:border-emerald-400 hover:text-emerald-400 transition-colors"
@@ -758,6 +795,68 @@ export default function HealthPage() {
               className={`w-full ${inputCls}`}
             />
           </div>
+        </Modal>
+      )}
+
+      {/* ── Weight History modal ─────────────────────────────────────────────────── */}
+      {showWeightHistoryModal && (
+        <Modal
+          title={editingWeightId ? 'Edit Entry' : 'Weight History'}
+          onClose={closeWeightHistory}
+          onSave={editingWeightId ? saveEditWeight : () => setShowWeightHistoryModal(false)}
+          saveLabel={editingWeightId ? 'Save' : 'Done'}
+          cancelLabel={editingWeightId ? 'Back' : 'Close'}
+          saving={editWeightSaving}
+          saveDisabled={editingWeightId ? (!editWeightForm.weight_kg || editWeightSaving) : false}
+          maxWidth="max-w-2xl"
+        >
+          {editingWeightId ? (
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm tracking-widests uppercase text-gray-400 block mb-1">Date</label>
+                <input type="date" value={editWeightForm.date} onChange={e => setEditWeightForm(f => ({ ...f, date: e.target.value }))} className={`w-full ${inputCls}`} />
+              </div>
+              <div>
+                <label className="text-sm tracking-widests uppercase text-gray-400 block mb-1">Weight (kg)</label>
+                <input type="number" step="0.1" value={editWeightForm.weight_kg} onChange={e => setEditWeightForm(f => ({ ...f, weight_kg: e.target.value }))} placeholder="e.g. 82.5" className={`w-full ${inputCls}`} />
+              </div>
+              <div>
+                <label className="text-sm tracking-widests uppercase text-gray-400 block mb-1">Notes</label>
+                <input value={editWeightForm.notes} onChange={e => setEditWeightForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional" className={`w-full ${inputCls}`} />
+              </div>
+            </div>
+          ) : weightLogs.length === 0 ? (
+            <div className="text-sm text-gray-600 py-4 text-center">No weight entries yet.</div>
+          ) : (
+            <div>
+              <div className="grid grid-cols-12 gap-3 pb-2 border-b border-gray-700">
+                <div className="col-span-3 text-xs text-gray-500 uppercase tracking-widest">Date</div>
+                <div className="col-span-2 text-xs text-gray-500 uppercase tracking-widest text-right">Weight</div>
+                <div className="col-span-5 text-xs text-gray-500 uppercase tracking-widest">Notes</div>
+                <div className="col-span-2" />
+              </div>
+              {weightLogs.map(log => (
+                <div key={log.id} className="grid grid-cols-12 gap-3 py-2.5 border-b border-gray-800 last:border-0 items-center group">
+                  <div className="col-span-3 text-sm text-white">{fmtShort(log.date)}</div>
+                  <div className="col-span-2 text-sm text-emerald-400 text-right font-medium">{log.weight_kg} kg</div>
+                  <div className="col-span-5 text-sm text-gray-400 truncate">{log.notes || '—'}</div>
+                  <div className="col-span-2 flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => {
+                        setEditWeightForm({ date: log.date, weight_kg: String(log.weight_kg), notes: log.notes || '' })
+                        setEditingWeightId(log.id)
+                      }}
+                      className="text-xs text-gray-500 hover:text-white transition-colors uppercase tracking-widest"
+                    >Edit</button>
+                    <button
+                      onClick={() => deleteWeightLog(log.id)}
+                      className="text-xs text-gray-500 hover:text-red-400 transition-colors uppercase tracking-widest"
+                    >Del</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Modal>
       )}
 
