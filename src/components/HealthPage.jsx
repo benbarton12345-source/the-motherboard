@@ -52,7 +52,7 @@ function getWeekDates() {
 const WEEK_DATES = getWeekDates()
 
 const DEFAULT_SETTINGS = {
-  target_weight_kg: null,
+  weight_target_kg: null,
   nutrition_mode: 'calories',
   kcal_target: 2000,
   protein_target_g: 150,
@@ -142,7 +142,7 @@ export default function HealthPage() {
 
   async function fetchMealLogs() {
     const { data } = await supabase
-      .from('meal_logs').select('*').eq('date', localDate()).order('logged_at', { ascending: true })
+      .from('meal_logs').select('*').eq('date', localDate()).order('time', { ascending: true })
     if (data) setMealLogs(data)
   }
 
@@ -153,7 +153,7 @@ export default function HealthPage() {
       const merged = { ...DEFAULT_SETTINGS, ...data }
       setHealthSettings(merged)
       setNutritionSettingsForm(merged)
-      if (data.target_weight_kg != null) setTargetWeightForm(String(data.target_weight_kg))
+      if (data.weight_target_kg != null) setTargetWeightForm(String(data.weight_target_kg))
     }
   }
 
@@ -189,7 +189,7 @@ export default function HealthPage() {
 
   async function saveWeightTarget() {
     await persistHealthSettings({
-      target_weight_kg: targetWeightForm ? parseFloat(targetWeightForm) : null,
+      weight_target_kg: targetWeightForm ? parseFloat(targetWeightForm) : null,
     })
     setShowWeightTargetModal(false)
   }
@@ -227,7 +227,7 @@ export default function HealthPage() {
     setMealSaving(true)
     const { error } = await supabase.from('meal_logs').insert({
       date: localDate(),
-      logged_at: mealForm.logged_at || localTime(),
+      time: mealForm.logged_at || localTime(),
       description: mealForm.description,
       kcal: parseFloat(mealForm.kcal),
       protein_g: parseFloat(mealForm.protein_g || 0),
@@ -251,7 +251,7 @@ export default function HealthPage() {
     if (!editMealForm.description || !editMealForm.kcal) return
     setEditMealSaving(true)
     await supabase.from('meal_logs').update({
-      logged_at: editMealForm.logged_at,
+      time: editMealForm.logged_at,
       description: editMealForm.description,
       kcal: parseFloat(editMealForm.kcal),
       protein_g: parseFloat(editMealForm.protein_g || 0),
@@ -337,8 +337,8 @@ export default function HealthPage() {
       ? parseFloat((slice.reduce((s, l) => s + l.weight_kg, 0) / slice.length).toFixed(1))
       : null
   }, [weightLogs])
-  const toTarget = currentWeight != null && healthSettings.target_weight_kg != null
-    ? parseFloat((currentWeight - healthSettings.target_weight_kg).toFixed(1))
+  const toTarget = currentWeight != null && healthSettings.weight_target_kg != null
+    ? parseFloat((currentWeight - healthSettings.weight_target_kg).toFixed(1))
     : null
 
   // ── Derived: nutrition
@@ -356,8 +356,8 @@ export default function HealthPage() {
   // ── Derived: health score (0–100)
   const healthScore = useMemo(() => {
     let weightScore = 0
-    if (currentWeight != null && healthSettings.target_weight_kg != null) {
-      const diff = Math.abs(currentWeight - healthSettings.target_weight_kg)
+    if (currentWeight != null && healthSettings.weight_target_kg != null) {
+      const diff = Math.abs(currentWeight - healthSettings.weight_target_kg)
       weightScore = Math.max(0, Math.min(100, 100 - diff * 8))
     }
     let nutritionScore = 0
@@ -366,7 +366,7 @@ export default function HealthPage() {
       nutritionScore = ratio >= 0.85 && ratio <= 1.15 ? 100 : ratio >= 0.7 && ratio <= 1.3 ? 60 : 20
     }
     return Math.round(0 * 0.30 + 0 * 0.20 + 0 * 0.20 + weightScore * 0.15 + nutritionScore * 0.15)
-  }, [currentWeight, healthSettings.target_weight_kg, totalKcal, nutritionKcalTarget])
+  }, [currentWeight, healthSettings.weight_target_kg, totalKcal, nutritionKcalTarget])
 
   const hasAnyData = weightLogs.length > 0 || mealLogs.length > 0
   const scoreColor = healthScore >= 70 ? 'text-emerald-400' : healthScore >= 40 ? 'text-amber-400' : 'text-red-400'
@@ -471,7 +471,7 @@ export default function HealthPage() {
               ))}
             </div>
             <button
-              onClick={() => { setTargetWeightForm(healthSettings.target_weight_kg != null ? String(healthSettings.target_weight_kg) : ''); setShowWeightTargetModal(true) }}
+              onClick={() => { setTargetWeightForm(healthSettings.weight_target_kg != null ? String(healthSettings.weight_target_kg) : ''); setShowWeightTargetModal(true) }}
               className="text-xs tracking-widest uppercase px-4 py-2 border border-gray-700 text-gray-400 rounded hover:border-emerald-400 hover:text-emerald-400 transition-colors"
             >
               Set Target
@@ -507,12 +507,12 @@ export default function HealthPage() {
                   tickFormatter={v => `${v}`}
                 />
                 <Tooltip content={<WeightTooltip />} />
-                {healthSettings.target_weight_kg != null && (
+                {healthSettings.weight_target_kg != null && (
                   <ReferenceLine
-                    y={healthSettings.target_weight_kg}
+                    y={healthSettings.weight_target_kg}
                     stroke="#6b7280"
                     strokeDasharray="4 4"
-                    label={{ value: `Target ${healthSettings.target_weight_kg}kg`, fill: '#6b7280', fontSize: 10, position: 'insideTopRight' }}
+                    label={{ value: `Target ${healthSettings.weight_target_kg}kg`, fill: '#6b7280', fontSize: 10, position: 'insideTopRight' }}
                   />
                 )}
                 <Line type="monotone" dataKey="weight" stroke="#34d399" strokeWidth={2} dot={false} name="Weight" />
@@ -539,7 +539,7 @@ export default function HealthPage() {
           <div className="bg-gray-800 rounded-lg p-4">
             <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Target</div>
             <div className="text-xl font-bold text-white">
-              {healthSettings.target_weight_kg != null ? `${healthSettings.target_weight_kg} kg` : '—'}
+              {healthSettings.weight_target_kg != null ? `${healthSettings.weight_target_kg} kg` : '—'}
             </div>
           </div>
           <div className="bg-gray-800 rounded-lg p-4">
@@ -652,7 +652,7 @@ export default function HealthPage() {
             </div>
             {mealLogs.map(meal => (
               <div key={meal.id} className="grid grid-cols-12 gap-2 py-2.5 border-b border-gray-800 last:border-0 items-center group">
-                <div className="col-span-1 text-xs text-gray-500 truncate">{meal.logged_at?.slice(0, 5) || '—'}</div>
+                <div className="col-span-1 text-xs text-gray-500 truncate">{meal.time?.slice(0, 5) || '—'}</div>
                 <div className="col-span-5 text-sm text-white truncate min-w-0">{meal.description}</div>
                 <div className="col-span-1 text-xs text-amber-400 text-right">{Math.round(meal.kcal || 0)}</div>
                 <div className="col-span-1 text-xs text-emerald-400 text-right">{Math.round(meal.protein_g || 0)}g</div>
@@ -668,7 +668,7 @@ export default function HealthPage() {
                         protein_g: String(meal.protein_g || ''),
                         carbs_g: String(meal.carbs_g || ''),
                         fat_g: String(meal.fat_g || ''),
-                        logged_at: meal.logged_at?.slice(0, 5) || '',
+                        logged_at: meal.time?.slice(0, 5) || '',
                       })
                       setShowEditMealModal(true)
                     }}
