@@ -189,25 +189,12 @@ export default function HealthPage() {
     try {
       const yesterday = shiftDate(localDate(), -1)
       const { data: yesterdayMeals } = await supabase.from('meal_logs').select('*').eq('date', yesterday)
-      const systemPrompt = `You are a nutrition estimator. The user describes what they ate. Yesterday's meals for reference: ${JSON.stringify(yesterdayMeals || [])}. Return JSON only — exactly these keys: description, kcal, protein_g, carbs_g, fat_g. Numbers only for the macro fields. No markdown, no explanation.`
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      const resp = await fetch('/api/estimate-meal', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-allow-browser': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 500,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: mealInput }],
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: mealInput, previousMeals: yesterdayMeals || [] }),
       })
-      const result = await resp.json()
-      const text = result.content?.[0]?.text?.trim() || '{}'
-      const parsed = JSON.parse(text)
+      const parsed = await resp.json()
       setMealForm({
         description: parsed.description || mealInput,
         kcal: parsed.kcal != null ? String(Math.round(parsed.kcal)) : '',
@@ -268,35 +255,21 @@ export default function HealthPage() {
   async function suggestMeal() {
     setMealSuggesting(true)
     setMealSuggestion('')
-    const remaining = {
-      kcal: Math.max(0, nutritionKcalTarget - totalKcal),
-      protein_g: Math.max(0, proteinTarget - totalProtein),
-      carbs_g: Math.max(0, carbsTarget - totalCarbs),
-      fat_g: Math.max(0, fatTarget - totalFat),
-    }
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      const resp = await fetch('/api/suggest-meal', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-allow-browser': 'true',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 500,
-          system: 'You are a nutrition advisor. Suggest one practical, simple meal based on remaining daily macro targets. Give a concrete meal with a brief description and estimated macros. 3–4 sentences max.',
-          messages: [{
-            role: 'user',
-            content: `Remaining today — Calories: ${remaining.kcal} kcal, Protein: ${remaining.protein_g}g, Carbs: ${remaining.carbs_g}g, Fat: ${remaining.fat_g}g. Suggest a meal.`,
-          }],
+          remainingKcal: Math.max(0, nutritionKcalTarget - totalKcal),
+          remainingProtein: Math.max(0, proteinTarget - totalProtein),
+          remainingCarbs: Math.max(0, carbsTarget - totalCarbs),
+          remainingFat: Math.max(0, fatTarget - totalFat),
         }),
       })
       const result = await resp.json()
-      setMealSuggestion(result.content?.[0]?.text || 'No suggestion available.')
+      setMealSuggestion(result.suggestion || 'No suggestion available.')
     } catch {
-      setMealSuggestion('Could not fetch suggestion. Check your connection and API key.')
+      setMealSuggestion('Could not fetch suggestion. Check your connection.')
     }
     setMealSuggesting(false)
   }
@@ -467,16 +440,7 @@ export default function HealthPage() {
       {/* ── Section 2: Weight tracker ────────────────────────────────────────────── */}
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm tracking-widest uppercase text-gray-400">Weight</h2>
-            <button
-              onClick={() => { setTargetWeightForm(healthSettings.target_weight_kg != null ? String(healthSettings.target_weight_kg) : ''); setShowWeightTargetModal(true) }}
-              className="text-gray-600 hover:text-white transition-colors"
-              title="Set target weight"
-            >
-              <GearIcon />
-            </button>
-          </div>
+          <h2 className="text-sm tracking-widest uppercase text-gray-400">Weight</h2>
           <div className="flex items-center gap-3">
             <div className="flex items-center bg-gray-800 rounded p-0.5">
               {['30D', '90D', 'All'].map(r => (
@@ -489,6 +453,12 @@ export default function HealthPage() {
                 </button>
               ))}
             </div>
+            <button
+              onClick={() => { setTargetWeightForm(healthSettings.target_weight_kg != null ? String(healthSettings.target_weight_kg) : ''); setShowWeightTargetModal(true) }}
+              className="text-xs tracking-widest uppercase px-4 py-2 border border-gray-700 text-gray-400 rounded hover:border-emerald-400 hover:text-emerald-400 transition-colors"
+            >
+              Set Target
+            </button>
             <button
               onClick={() => { setWeightForm({ date: localDate(), weight_kg: '', notes: '' }); setShowWeightModal(true) }}
               className="text-xs tracking-widest uppercase px-4 py-2 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors"
