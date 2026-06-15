@@ -228,7 +228,18 @@ Productivity page is now considered stable.
 
 #### Modal-first interaction pattern (established 8 June 2026)
 
-All future form interactions across the app should use the shared Modal component, not inline forms. This is the established standard. Next migration targets: Finance page (subscriptions, fixed costs, income sources, snapshot entry), then Home page (habits edit). Do not add new inline forms.
+All future form interactions across the app should use the shared Modal component, not inline forms. This is the established standard. Do not add new inline forms anywhere in the app.
+
+#### Finance page modal migration (complete as of 13 June 2026)
+
+All inline forms on the Finance page moved into modals. Cards now show read-only data only — all add/edit/delete interactions go through the shared Modal component. Affected areas: Subscriptions, Fixed Costs, Income Sources (each uses a single "Manage" modal with inline edit + add new section), Monthly Budget income/expense entries, and New Snapshot. Budget entry modals include a Name field that saves to the `notes` column. Snapshot modal uses `maxWidth="max-w-2xl"` to accommodate the 12-column account grid.
+
+Modal component extended with two new props: `maxWidth` (default `'max-w-md'`) and `cancelLabel` (default `'Cancel'`).
+
+#### Home page modal migration (complete as of 13 June 2026)
+
+- **Habits edit mode** — EDIT button on the Habits card now opens a Modal titled "Edit Habits". The Habits card always shows read-only checklist only. No inline edit mode remains on the page surface.
+- **Weekly Review** — always-visible textarea form replaced with a compact summary card showing the week date range, consistency score, truncated wins preview, and Sealed badge. "Write Review" button opens a Modal with all five fields. Auto-save (800ms debounce) continues to fire. Seal Week button lives inside the modal. Once sealed, button becomes "View Review" and fields are read-only. `saveLabel="Done"`, `cancelLabel="Close"` — both footer buttons close the modal.
 
 ### Phase 3 — Trading Analytics
 
@@ -241,16 +252,47 @@ Metrics:
 
 ### Phase 4 — Health & Performance
 
-#### Apple Health
+#### Health page (complete as of 13 June 2026)
+
+File: `src/components/HealthPage.jsx`
+
+**Section 1 — Summary cards**
+Four cards: Health Score (weighted composite, 0–100), Steps Today (Apple Health placeholder), Sleep Last Night (Apple Health placeholder), HRV (Apple Health placeholder). Steps/sleep/HRV show "Apple Health" badge until data is connected. Health score weights: Sleep 30%, Steps 20%, HRV 20%, Weight trend 15%, Nutrition 15%.
+
+**Section 2 — Weight tracker**
+- Recharts `LineChart` with two series: actual weight (emerald line) and 7-day moving average (dashed grey). Target weight shown as a dashed `ReferenceLine` when set.
+- Range toggle: 30D / 90D / All
+- Stat cards: Current, 7-Day Avg, Target, To Target
+- Buttons in card header: View History | Set Target | + Log Weight
+- **Log Weight modal** — Date, Weight (kg), Notes fields; inserts to `weight_logs`
+- **Set Target modal** — single weight input; persists to `health_settings.weight_target_kg`
+- **View History modal** (`max-w-2xl`) — table of all entries (Date, Weight, Notes, Edit/Delete per row). Clicking Edit switches the modal to an edit form; Back returns to the list. Delete removes the row and refreshes chart and stat cards immediately.
+
+**Section 3 — Nutrition**
+- Daily macro tracking — logs meals for today from `meal_logs`
+- Macro progress bars: Calories, Protein, Carbs, Fat vs targets
+- Two-step AI meal entry: describe meal → AI estimates macros → review/adjust → save
+- Meal suggestion button — AI suggests a meal based on remaining daily targets
+- Meal list for today with hover edit/delete; Edit opens a pre-populated edit modal
+- Nutrition settings modal — two modes: Calories (set kcal target + macro % split) or Macros (set g directly); derived targets calculated and persisted
+- Targets and settings persist to `health_settings` table
+
+**Section 4 — Weekly breakdown**
+Table showing each day of the current week with total calories and macros logged.
+
+#### AI integration (Anthropic API)
+
+Two Vercel serverless functions handle all Anthropic API calls. The API key is server-side only (`process.env.ANTHROPIC_API_KEY`, no `VITE_` prefix, never in the browser bundle).
+
+- **`api/estimate-meal.js`** — POST `{ description, previousMeals }` → returns `{ description, kcal, protein_g, carbs_g, fat_g }`. Model: `claude-sonnet-4-6`, max_tokens 500. Includes yesterday's meals as context. Returns JSON only.
+- **`api/suggest-meal.js`** — POST `{ remainingKcal, remainingProtein, remainingCarbs, remainingFat }` → returns `{ suggestion }`. Returns plain text (markdown stripped before display).
+
+#### Apple Health (planned)
 Integration via Health Auto Export (third-party app, pushes to webhook/Supabase on a schedule).
+Metrics to connect: steps, sleep, HRV, workouts, running progress.
 
-Metrics: steps, mood, sleep, HRV, weight, workouts, running progress
-
-#### Nutrition
-- Daily nutrition logging with macro tracking (calories, protein, carbs, fat)
-- Telegram bot capture — send a message to a bot describing a meal, bot parses it and writes to Supabase via a webhook/function
-- Dashboard card showing daily totals vs targets, weekly averages, and a simple macro breakdown chart
-- Targets: configurable per-user (calories, protein goal etc.)
+#### Telegram meal logging (planned)
+Send a message to a Telegram bot describing a meal; bot parses it and writes to `meal_logs` via a webhook/serverless function.
 
 ---
 
@@ -306,6 +348,17 @@ File: `src/components/FinancePage.jsx`
 | `recurring_items` | name, type (subscription/fixed_cost/income), amount, frequency, currency (GBP/AUD), active boolean |
 | `weekly_goals` | name, target_count, active boolean, created_at |
 | `weekly_goal_logs` | goal_id (FK→weekly_goals), week_start date, count int, updated_at — unique on (goal_id, week_start) |
+| `weight_logs` | date (NOT NULL), weight_kg (NOT NULL), notes (nullable), created_at |
+| `meal_logs` | date (NOT NULL), time (nullable — column is `time`, not `logged_at`), description (NOT NULL), kcal, protein_g, carbs_g, fat_g, created_at |
+| `health_settings` | weight_target_kg (nullable), sleep_target_hours (default 8), steps_target (default 10000), nutrition_mode (default 'calories'), kcal_target (default 2000), protein_target_g (default 150), carbs_target_g (default 200), fat_target_g (default 70), protein_pct (default 30), carbs_pct (default 40), fat_pct (default 30) — single row, no user_id |
+
+### Health table notes
+
+- All three health tables have RLS disabled — anon key has full read/write access.
+- `health_settings` is a single-row table. The code reads with `.limit(1).maybeSingle()` and tracks the row's `id` in `settingsId` state to decide insert vs update. The `persistHealthSettings` function strips `id` from the update payload to avoid primary key conflicts.
+- `meal_logs` time column is named `time` (not `logged_at`). The frontend form state uses `logged_at` internally but maps to `time` on insert/update.
+- `health_settings` column for weight target is `weight_target_kg` (not `target_weight_kg`). All code references use `weight_target_kg`.
+- The nutrition columns (`nutrition_mode`, `kcal_target`, etc.) must exist in `health_settings` or all writes will fail with PGRST204 — they are always included in the insert/update payload.
 
 ### Unified task system (as of 8 June 2026)
 
@@ -356,7 +409,7 @@ All data persists via Supabase across sessions and devices. Do not use localStor
 
 ---
 
-## Current State (as of 11 June 2026)
+## Current State (as of 13 June 2026)
 
 ### Phase 1 — Complete
 
@@ -372,25 +425,31 @@ Everything in Phase 1 is built and deployed.
 - Three-column layout matching the agreed brief
 - Operator card (week number, habits score), Net Worth card (sparkline, m/m delta), Freedom Figure progress bar
 - Session card (clock, date, Perth/UK time)
-- Habits — editable list from `habit_definitions`; daily checkboxes reset at midnight; persists to `habit_logs`
+- Habits — editable list from `habit_definitions`; daily checkboxes reset at midnight; persists to `habit_logs`; edit mode now in a Modal
 - TodaysTasks compact view (max 6 items) in centre column, replacing old This Week card
-- Weekly Review — five goal-specific fields, auto-save (800ms debounce), Seal Week button; persists to `weekly_reviews`
+- Weekly Review — compact summary card with "Write Review" / "View Review" modal; five goal-specific fields, auto-save (800ms debounce), Seal Week button inside modal; persists to `weekly_reviews`
 - Assets, Budget, and Trading snapshot cards in right column
 
 **Finance page**
 - Full rebuild as `FinancePage.jsx`
 - Summary cards: Net Worth, Runway, Income/mo, Burn/mo
 - Liquid Cash and Invested Assets cards with sparklines and per-account breakdown
-- Recurring items: Subscriptions, Fixed Costs, Income Sources — full add/edit/delete CRUD, per-item currency (GBP/AUD), monthly total
-- Monthly Budget — auto-populated from recurring items on first load; RECURRING badge; inline edit override; manual entries add/delete; month selector
-- Snapshot History table — Period, Net Worth, Cash, Invested, Δ vs Prior (value + % change), inline edit per row, new snapshot form
-- Text overflow fixed across all Finance cards
+- Recurring items: Subscriptions, Fixed Costs, Income Sources — full add/edit/delete CRUD via Manage modal per card; per-item currency (GBP/AUD); monthly total
+- Monthly Budget — auto-populated from recurring items on first load; RECURRING badge; add/edit entries via modal; month selector
+- Snapshot History table — Period, Net Worth, Cash, Invested, Δ vs Prior; New Snapshot modal (`max-w-2xl`)
+- All inline forms removed; modal-first pattern throughout
 
-### Phase 2 — Complete as of 11 June 2026
+### Phase 2 — Complete as of 13 June 2026
 
-**Home page** — all improvements complete and live, including TodaysTasks compact view and global text overflow fixes.
+**Home page** — modal migration complete. Habits edit and Weekly Review both in modals. All page surfaces show read-only data only.
+
+**Finance page** — modal migration complete. All inline forms removed from page surfaces.
 
 **Productivity tab** — full rebuild complete and stable. Unified task system, modal-first pattern, all sections functional. State sync between ProductivityPage and TodaysTasks fully resolved. Productivity page is considered stable — do not refactor unless a specific bug is reported.
+
+### Phase 4 — Health page complete as of 13 June 2026
+
+Health page is built and stable. All four sections functional. AI meal estimation and suggestion working via Vercel serverless functions. Weight tracker, nutrition tracking, and settings all persisting to Supabase. View History modal allows editing and deleting past weight entries. RLS disabled on all health tables.
 
 ### Known Issues
 
@@ -398,9 +457,10 @@ None currently known.
 
 ### Next Session
 
-1. Finance page modal migration — move subscriptions, fixed costs, income sources, and snapshot entry forms into modals using the shared Modal component. Do not change any data logic, only the interaction layer. All inline forms on the Finance page must be removed from page surfaces.
-2. Home page modal migration — habits edit mode and weekly review into modals. All inline forms on the Home page must be removed from page surfaces.
-3. Rule: no new inline forms anywhere in the app — all form interactions must go through the shared Modal component.
+1. **Apple Health integration** — connect steps, sleep, and HRV data via Health Auto Export. These values feed the Summary cards (Section 1) and the Health Score calculation (currently at 0% for those three components).
+2. **Telegram bot for meal logging** — send a meal description to a bot; bot calls the Anthropic API (or reuses `api/estimate-meal.js`) and writes to `meal_logs` via webhook.
+3. **Trading tab** — plan and begin building Phase 3. Manual trade entry initially; IG API integration later.
+4. **Password gate** — consider adding a simple password gate to protect the app before sharing the URL.
 
 ---
 

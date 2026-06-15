@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 500,
-      system: 'You are a nutrition advisor. Suggest one practical, simple meal based on remaining daily macro targets. Give a concrete meal with a brief description and estimated macros. 3–4 sentences max.',
+      system: 'You are a nutrition advisor. Suggest one practical, simple meal based on remaining daily macro targets. Give a concrete meal with a brief description and estimated macros. 3–4 sentences max. Always use metric measurements — grams (g) for food weights, millilitres (ml) for liquids. Never use cups, ounces, pounds, tablespoons, or any imperial or US measurements. All portion sizes must be expressed in grams or millilitres.',
       messages: [{
         role: 'user',
         content: `Remaining today — Calories: ${remainingKcal} kcal, Protein: ${remainingProtein}g, Carbs: ${remainingCarbs}g, Fat: ${remainingFat}g. Suggest a meal.`,

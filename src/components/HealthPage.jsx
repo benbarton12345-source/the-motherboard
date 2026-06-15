@@ -37,19 +37,45 @@ function fmtShort(dateStr) {
   return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
-function getWeekDates() {
+function getWeekDatesForOffset(offset = 0) {
   const today = new Date()
   const dow = today.getDay()
   const diff = dow === 0 ? -6 : 1 - dow
+  const monday = new Date(today)
+  monday.setDate(today.getDate() + diff + offset * 7)
   return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label, i) => {
-    const d = new Date(today)
-    d.setDate(today.getDate() + diff + i)
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     return { label, dateStr, dayLabel: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) }
   })
 }
 
-const WEEK_DATES = getWeekDates()
+function macroColorCls(logged, target) {
+  if (!target || logged === 0) return 'text-gray-500'
+  const r = logged / target
+  if (r >= 0.9 && r <= 1.1) return 'text-emerald-400'
+  if ((r >= 0.6 && r < 0.9) || (r > 1.1 && r <= 1.3)) return 'text-amber-400'
+  return 'text-red-400'
+}
+
+function macroBgCls(logged, target) {
+  if (!target || logged === 0) return 'bg-gray-700'
+  const r = logged / target
+  if (r >= 0.9 && r <= 1.1) return 'bg-emerald-400'
+  if ((r >= 0.6 && r < 0.9) || (r > 1.1 && r <= 1.3)) return 'bg-amber-400'
+  return 'bg-red-400'
+}
+
+function fmtDayTitle(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  const day = dt.toLocaleDateString('en-GB', { weekday: 'short' })
+  const mon = dt.toLocaleDateString('en-GB', { month: 'short' })
+  return `${day} ${d} ${mon}`
+}
+
+const WEEK_DATES = getWeekDatesForOffset(0)
 
 const DEFAULT_SETTINGS = {
   weight_target_kg: null,
@@ -131,12 +157,28 @@ export default function HealthPage() {
   const [nutritionSettingsForm, setNutritionSettingsForm] = useState({ ...DEFAULT_SETTINGS })
   const [nutritionSettingsSaving, setNutritionSettingsSaving] = useState(false)
 
+  // ── Weekly Nutrition state
+  const [weekOffset, setWeekOffset] = useState(0)
+  const [weekMeals, setWeekMeals] = useState([])
+  const [showDayModal, setShowDayModal] = useState(false)
+  const [dayModalDate, setDayModalDate] = useState(null)
+  const [dayModalEditingId, setDayModalEditingId] = useState(null)
+  const [dayModalEditStep, setDayModalEditStep] = useState('review')
+  const [dayModalEditInput, setDayModalEditInput] = useState('')
+  const [dayModalEditForm, setDayModalEditForm] = useState({ description: '', kcal: '', protein_g: '', carbs_g: '', fat_g: '', logged_at: '' })
+  const [dayModalEditSaving, setDayModalEditSaving] = useState(false)
+  const [dayModalEditEstimating, setDayModalEditEstimating] = useState(false)
+
   // ── Fetch data on mount
   useEffect(() => {
     fetchWeightLogs()
     fetchMealLogs()
     fetchHealthSettings()
   }, [])
+
+  useEffect(() => {
+    fetchWeekMeals(weekOffset)
+  }, [weekOffset])
 
   async function fetchWeightLogs() {
     const { data } = await supabase
@@ -159,6 +201,19 @@ export default function HealthPage() {
       setNutritionSettingsForm(merged)
       if (data.weight_target_kg != null) setTargetWeightForm(String(data.weight_target_kg))
     }
+  }
+
+  async function fetchWeekMeals(offset) {
+    const dates = getWeekDatesForOffset(offset)
+    const start = dates[0].dateStr
+    const end = dates[6].dateStr
+    const { data } = await supabase
+      .from('meal_logs')
+      .select('*')
+      .gte('date', start)
+      .lte('date', end)
+      .order('time', { ascending: true })
+    if (data) setWeekMeals(data)
   }
 
   async function persistHealthSettings(updates) {
@@ -275,6 +330,7 @@ export default function HealthPage() {
     setMealStep('input')
     setMealForm({ description: '', kcal: '', protein_g: '', carbs_g: '', fat_g: '', logged_at: localTime() })
     await fetchMealLogs()
+    if (weekOffset === 0) await fetchWeekMeals(0)
     setMealSaving(false)
   }
 
@@ -292,12 +348,14 @@ export default function HealthPage() {
     setShowEditMealModal(false)
     setEditingMealId(null)
     await fetchMealLogs()
+    if (weekOffset === 0) await fetchWeekMeals(0)
     setEditMealSaving(false)
   }
 
   async function deleteMeal(id) {
     await supabase.from('meal_logs').delete().eq('id', id)
     await fetchMealLogs()
+    if (weekOffset === 0) await fetchWeekMeals(0)
   }
 
   async function suggestMeal() {
@@ -343,6 +401,78 @@ export default function HealthPage() {
     await persistHealthSettings(updates)
     setShowNutritionSettingsModal(false)
     setNutritionSettingsSaving(false)
+  }
+
+  // ── Day modal functions
+  async function estimateDayMeal() {
+    if (!dayModalEditInput.trim()) return
+    setDayModalEditEstimating(true)
+    try {
+      const yesterday = shiftDate(dayModalDate || localDate(), -1)
+      const { data: yesterdayMeals } = await supabase.from('meal_logs').select('*').eq('date', yesterday)
+      const resp = await fetch('/api/estimate-meal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: dayModalEditInput, previousMeals: yesterdayMeals || [] }),
+      })
+      const parsed = await resp.json()
+      setDayModalEditForm(f => ({
+        ...f,
+        description: parsed.description || dayModalEditInput,
+        kcal: parsed.kcal != null ? String(Math.round(parsed.kcal)) : '',
+        protein_g: parsed.protein_g != null ? String(Math.round(parsed.protein_g)) : '',
+        carbs_g: parsed.carbs_g != null ? String(Math.round(parsed.carbs_g)) : '',
+        fat_g: parsed.fat_g != null ? String(Math.round(parsed.fat_g)) : '',
+      }))
+    } catch {
+      setDayModalEditForm(f => ({ ...f, description: dayModalEditInput, kcal: '', protein_g: '', carbs_g: '', fat_g: '' }))
+    }
+    setDayModalEditStep('review')
+    setDayModalEditEstimating(false)
+  }
+
+  async function saveDayEditMeal() {
+    if (!dayModalEditForm.description || !dayModalEditForm.kcal) return
+    setDayModalEditSaving(true)
+    await supabase.from('meal_logs').update({
+      time: dayModalEditForm.logged_at || null,
+      description: dayModalEditForm.description,
+      kcal: parseFloat(dayModalEditForm.kcal),
+      protein_g: parseFloat(dayModalEditForm.protein_g || 0),
+      carbs_g: parseFloat(dayModalEditForm.carbs_g || 0),
+      fat_g: parseFloat(dayModalEditForm.fat_g || 0),
+    }).eq('id', dayModalEditingId)
+    setDayModalEditingId(null)
+    setDayModalEditStep('review')
+    await fetchWeekMeals(weekOffset)
+    if (dayModalDate === localDate()) await fetchMealLogs()
+    setDayModalEditSaving(false)
+  }
+
+  async function deleteDayMeal(id) {
+    const currentMeals = weekMealsByDate[dayModalDate] || []
+    const isLastMeal = currentMeals.length === 1
+    await supabase.from('meal_logs').delete().eq('id', id)
+    await fetchWeekMeals(weekOffset)
+    if (dayModalDate === localDate()) await fetchMealLogs()
+    if (isLastMeal) {
+      setShowDayModal(false)
+      setDayModalDate(null)
+    }
+  }
+
+  function closeDayModal() {
+    if (dayModalEditingId) {
+      if (dayModalEditStep === 'review') {
+        setDayModalEditStep('input')
+        return
+      }
+      setDayModalEditingId(null)
+      setDayModalEditStep('review')
+      return
+    }
+    setShowDayModal(false)
+    setDayModalDate(null)
   }
 
   // ── Derived: weight chart data
@@ -398,6 +528,36 @@ export default function HealthPage() {
     }
     return Math.round(0 * 0.30 + 0 * 0.20 + 0 * 0.20 + weightScore * 0.15 + nutritionScore * 0.15)
   }, [currentWeight, healthSettings.weight_target_kg, totalKcal, nutritionKcalTarget])
+
+  // ── Derived: weekly nutrition
+  const weekDates = useMemo(() => getWeekDatesForOffset(weekOffset), [weekOffset])
+  const weekMealsByDate = useMemo(() => {
+    const byDate = {}
+    weekMeals.forEach(m => {
+      if (!byDate[m.date]) byDate[m.date] = []
+      byDate[m.date].push(m)
+    })
+    return byDate
+  }, [weekMeals])
+  const weekAvg = useMemo(() => {
+    const loggedDays = weekDates.filter(d => (weekMealsByDate[d.dateStr] || []).length > 0)
+    if (loggedDays.length === 0) return null
+    const totals = loggedDays.reduce((acc, d) => {
+      const meals = weekMealsByDate[d.dateStr] || []
+      acc.kcal += meals.reduce((s, m) => s + (m.kcal || 0), 0)
+      acc.protein += meals.reduce((s, m) => s + (m.protein_g || 0), 0)
+      acc.carbs += meals.reduce((s, m) => s + (m.carbs_g || 0), 0)
+      acc.fat += meals.reduce((s, m) => s + (m.fat_g || 0), 0)
+      return acc
+    }, { kcal: 0, protein: 0, carbs: 0, fat: 0 })
+    const n = loggedDays.length
+    return {
+      kcal: Math.round(totals.kcal / n),
+      protein: Math.round(totals.protein / n),
+      carbs: Math.round(totals.carbs / n),
+      fat: Math.round(totals.fat / n),
+    }
+  }, [weekDates, weekMealsByDate])
 
   const hasAnyData = weightLogs.length > 0 || mealLogs.length > 0
   const scoreColor = healthScore >= 70 ? 'text-emerald-400' : healthScore >= 40 ? 'text-amber-400' : 'text-red-400'
@@ -720,6 +880,167 @@ export default function HealthPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* ── Weekly Nutrition card ─────────────────────────────────────────────────── */}
+      <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm tracking-widest uppercase text-gray-400">Weekly Nutrition</h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setWeekOffset(o => o - 1)}
+              className="text-gray-500 hover:text-white transition-colors px-2 py-1 text-sm"
+            >←</button>
+            <span className="text-xs text-gray-500 min-w-[120px] text-center">
+              {weekDates[0]?.dayLabel} – {weekDates[6]?.dayLabel}
+            </span>
+            <button
+              onClick={() => setWeekOffset(o => o + 1)}
+              disabled={weekOffset >= 0}
+              className="text-gray-500 hover:text-white transition-colors px-2 py-1 text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+            >→</button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[580px]">
+            <thead>
+              <tr className="border-b border-gray-800">
+                <th className="text-left text-xs text-gray-500 uppercase tracking-widest pb-2 pr-4 w-28 font-normal">Day</th>
+                <th className="text-left text-xs text-gray-500 uppercase tracking-widest pb-2 pr-4 font-normal">Calories</th>
+                <th className="text-left text-xs text-gray-500 uppercase tracking-widest pb-2 pr-4 font-normal">Protein</th>
+                <th className="text-left text-xs text-gray-500 uppercase tracking-widest pb-2 pr-4 font-normal">Carbs</th>
+                <th className="text-left text-xs text-gray-500 uppercase tracking-widest pb-2 pr-4 font-normal">Fat</th>
+                <th className="pb-2 w-16"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {weekDates.map(({ label, dateStr, dayLabel }) => {
+                const meals = weekMealsByDate[dateStr] || []
+                const hasData = meals.length > 0
+                const kcal = meals.reduce((s, m) => s + (m.kcal || 0), 0)
+                const protein = meals.reduce((s, m) => s + (m.protein_g || 0), 0)
+                const carbs = meals.reduce((s, m) => s + (m.carbs_g || 0), 0)
+                const fat = meals.reduce((s, m) => s + (m.fat_g || 0), 0)
+                const isToday = dateStr === localDate()
+
+                return (
+                  <tr key={dateStr} className={`border-b border-gray-800 last:border-0 ${isToday ? 'bg-gray-800/20' : ''}`}>
+                    <td className="py-3 pr-4">
+                      <div className="text-xs text-white">{label} <span className="text-gray-500">{dayLabel}</span></div>
+                      <div className="text-xs text-gray-600 mt-0.5">
+                        {hasData ? `${meals.length} meal${meals.length !== 1 ? 's' : ''}` : '—'}
+                      </div>
+                    </td>
+                    {hasData ? (
+                      <>
+                        <td className="py-3 pr-4 min-w-[100px]">
+                          <div className={`text-xs ${macroColorCls(kcal, nutritionKcalTarget)}`}>
+                            {Math.round(kcal)} <span className="text-gray-600">/ {nutritionKcalTarget}</span>
+                          </div>
+                          <div className="w-full bg-gray-800 rounded-full h-1 mt-1">
+                            <div className={`${macroBgCls(kcal, nutritionKcalTarget)} h-1 rounded-full`} style={{ width: `${Math.min(100, (kcal / nutritionKcalTarget) * 100)}%` }} />
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4 min-w-[90px]">
+                          <div className={`text-xs ${macroColorCls(protein, proteinTarget)}`}>
+                            {Math.round(protein)}g <span className="text-gray-600">/ {proteinTarget}g</span>
+                          </div>
+                          <div className="w-full bg-gray-800 rounded-full h-1 mt-1">
+                            <div className={`${macroBgCls(protein, proteinTarget)} h-1 rounded-full`} style={{ width: `${Math.min(100, (protein / proteinTarget) * 100)}%` }} />
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4 min-w-[90px]">
+                          <div className={`text-xs ${macroColorCls(carbs, carbsTarget)}`}>
+                            {Math.round(carbs)}g <span className="text-gray-600">/ {carbsTarget}g</span>
+                          </div>
+                          <div className="w-full bg-gray-800 rounded-full h-1 mt-1">
+                            <div className={`${macroBgCls(carbs, carbsTarget)} h-1 rounded-full`} style={{ width: `${Math.min(100, (carbs / carbsTarget) * 100)}%` }} />
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4 min-w-[80px]">
+                          <div className={`text-xs ${macroColorCls(fat, fatTarget)}`}>
+                            {Math.round(fat)}g <span className="text-gray-600">/ {fatTarget}g</span>
+                          </div>
+                          <div className="w-full bg-gray-800 rounded-full h-1 mt-1">
+                            <div className={`${macroBgCls(fat, fatTarget)} h-1 rounded-full`} style={{ width: `${Math.min(100, (fat / fatTarget) * 100)}%` }} />
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        {[0, 1, 2, 3].map(i => (
+                          <td key={i} className="py-3 pr-4 text-xs text-gray-700">—</td>
+                        ))}
+                      </>
+                    )}
+                    <td className="py-3 text-right">
+                      <button
+                        onClick={() => {
+                          if (!hasData) return
+                          setDayModalDate(dateStr)
+                          setDayModalEditingId(null)
+                          setDayModalEditStep('review')
+                          setShowDayModal(true)
+                        }}
+                        disabled={!hasData}
+                        className={`text-xs tracking-widest uppercase px-3 py-1.5 border rounded transition-colors ${
+                          hasData
+                            ? 'border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white'
+                            : 'border-gray-800 text-gray-700 cursor-not-allowed'
+                        }`}
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+
+              {/* Week average row */}
+              {weekAvg && (
+                <tr className="border-t-2 border-gray-700">
+                  <td className="py-3 pr-4">
+                    <div className="text-xs text-gray-500 uppercase tracking-widest">Avg</div>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <div className={`text-xs ${macroColorCls(weekAvg.kcal, nutritionKcalTarget)}`}>
+                      {weekAvg.kcal} <span className="text-gray-600">/ {nutritionKcalTarget}</span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-1 mt-1">
+                      <div className={`${macroBgCls(weekAvg.kcal, nutritionKcalTarget)} h-1 rounded-full`} style={{ width: `${Math.min(100, (weekAvg.kcal / nutritionKcalTarget) * 100)}%` }} />
+                    </div>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <div className={`text-xs ${macroColorCls(weekAvg.protein, proteinTarget)}`}>
+                      {weekAvg.protein}g <span className="text-gray-600">/ {proteinTarget}g</span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-1 mt-1">
+                      <div className={`${macroBgCls(weekAvg.protein, proteinTarget)} h-1 rounded-full`} style={{ width: `${Math.min(100, (weekAvg.protein / proteinTarget) * 100)}%` }} />
+                    </div>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <div className={`text-xs ${macroColorCls(weekAvg.carbs, carbsTarget)}`}>
+                      {weekAvg.carbs}g <span className="text-gray-600">/ {carbsTarget}g</span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-1 mt-1">
+                      <div className={`${macroBgCls(weekAvg.carbs, carbsTarget)} h-1 rounded-full`} style={{ width: `${Math.min(100, (weekAvg.carbs / carbsTarget) * 100)}%` }} />
+                    </div>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <div className={`text-xs ${macroColorCls(weekAvg.fat, fatTarget)}`}>
+                      {weekAvg.fat}g <span className="text-gray-600">/ {fatTarget}g</span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-1 mt-1">
+                      <div className={`${macroBgCls(weekAvg.fat, fatTarget)} h-1 rounded-full`} style={{ width: `${Math.min(100, (weekAvg.fat / fatTarget) * 100)}%` }} />
+                    </div>
+                  </td>
+                  <td></td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* ── Section 4: Weekly breakdown ──────────────────────────────────────────── */}
@@ -1060,6 +1381,134 @@ export default function HealthPage() {
               </>
             )}
           </div>
+        </Modal>
+      )}
+
+      {/* ── Day Nutrition modal ───────────────────────────────────────────────────── */}
+      {showDayModal && dayModalDate && (
+        <Modal
+          title={fmtDayTitle(dayModalDate)}
+          onClose={closeDayModal}
+          onSave={
+            dayModalEditingId
+              ? (dayModalEditStep === 'input' ? estimateDayMeal : saveDayEditMeal)
+              : () => { setShowDayModal(false); setDayModalDate(null) }
+          }
+          saveLabel={
+            dayModalEditingId
+              ? (dayModalEditStep === 'input' ? 'Estimate' : 'Save Meal')
+              : 'Done'
+          }
+          cancelLabel={dayModalEditingId ? 'Back' : 'Close'}
+          saveDisabled={
+            dayModalEditingId
+              ? (dayModalEditStep === 'input'
+                  ? (!dayModalEditInput.trim() || dayModalEditEstimating)
+                  : (!dayModalEditForm.description || !dayModalEditForm.kcal || dayModalEditSaving))
+              : false
+          }
+          saving={dayModalEditingId
+            ? (dayModalEditStep === 'input' ? dayModalEditEstimating : dayModalEditSaving)
+            : false
+          }
+          maxWidth="max-w-2xl"
+        >
+          {dayModalEditingId ? (
+            dayModalEditStep === 'input' ? (
+              <div>
+                <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">What did you eat?</label>
+                <textarea
+                  value={dayModalEditInput}
+                  onChange={e => setDayModalEditInput(e.target.value)}
+                  rows={3}
+                  placeholder="Describe the meal to re-estimate macros..."
+                  className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-emerald-400 resize-none"
+                />
+                <div className="mt-2 text-xs text-gray-600">Claude will re-estimate the macros. You can review and adjust before saving.</div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="text-xs text-gray-500">Review and adjust the values before saving.</div>
+                <div>
+                  <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Description</label>
+                  <input value={dayModalEditForm.description} onChange={e => setDayModalEditForm(f => ({ ...f, description: e.target.value }))} className={`w-full ${inputCls}`} />
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Time</label>
+                    <input type="time" value={dayModalEditForm.logged_at} onChange={e => setDayModalEditForm(f => ({ ...f, logged_at: e.target.value }))} className={`w-full ${inputCls}`} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Calories</label>
+                    <input type="number" value={dayModalEditForm.kcal} onChange={e => setDayModalEditForm(f => ({ ...f, kcal: e.target.value }))} className={`w-full ${inputCls}`} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Protein (g)</label>
+                    <input type="number" value={dayModalEditForm.protein_g} onChange={e => setDayModalEditForm(f => ({ ...f, protein_g: e.target.value }))} className={`w-full ${inputCls}`} />
+                  </div>
+                  <div>
+                    <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Carbs (g)</label>
+                    <input type="number" value={dayModalEditForm.carbs_g} onChange={e => setDayModalEditForm(f => ({ ...f, carbs_g: e.target.value }))} className={`w-full ${inputCls}`} />
+                  </div>
+                  <div>
+                    <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Fat (g)</label>
+                    <input type="number" value={dayModalEditForm.fat_g} onChange={e => setDayModalEditForm(f => ({ ...f, fat_g: e.target.value }))} className={`w-full ${inputCls}`} />
+                  </div>
+                </div>
+              </div>
+            )
+          ) : (
+            /* Meal list for the selected day */
+            (weekMealsByDate[dayModalDate] || []).length === 0 ? (
+              <div className="text-sm text-gray-600 py-4 text-center">No meals logged for this day.</div>
+            ) : (
+              <div>
+                <div className="grid grid-cols-12 gap-2 pb-2 border-b border-gray-800 mb-1">
+                  <div className="col-span-1 text-xs text-gray-500 uppercase tracking-widest">Time</div>
+                  <div className="col-span-5 text-xs text-gray-500 uppercase tracking-widest">Meal</div>
+                  <div className="col-span-1 text-xs text-gray-500 uppercase tracking-widest text-right">kcal</div>
+                  <div className="col-span-1 text-xs text-gray-500 uppercase tracking-widest text-right">P</div>
+                  <div className="col-span-1 text-xs text-gray-500 uppercase tracking-widest text-right">C</div>
+                  <div className="col-span-1 text-xs text-gray-500 uppercase tracking-widest text-right">F</div>
+                  <div className="col-span-2" />
+                </div>
+                {(weekMealsByDate[dayModalDate] || []).map(meal => (
+                  <div key={meal.id} className="grid grid-cols-12 gap-2 py-2.5 border-b border-gray-800 last:border-0 items-center group">
+                    <div className="col-span-1 text-xs text-gray-500 truncate">{meal.time?.slice(0, 5) || '—'}</div>
+                    <div className="col-span-5 text-sm text-white truncate min-w-0">{meal.description}</div>
+                    <div className="col-span-1 text-xs text-amber-400 text-right">{Math.round(meal.kcal || 0)}</div>
+                    <div className="col-span-1 text-xs text-emerald-400 text-right">{Math.round(meal.protein_g || 0)}g</div>
+                    <div className="col-span-1 text-xs text-blue-400 text-right">{Math.round(meal.carbs_g || 0)}g</div>
+                    <div className="col-span-1 text-xs text-purple-400 text-right">{Math.round(meal.fat_g || 0)}g</div>
+                    <div className="col-span-2 flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => {
+                          setDayModalEditingId(meal.id)
+                          setDayModalEditInput(meal.description)
+                          setDayModalEditForm({
+                            description: meal.description,
+                            kcal: String(meal.kcal || ''),
+                            protein_g: String(meal.protein_g || ''),
+                            carbs_g: String(meal.carbs_g || ''),
+                            fat_g: String(meal.fat_g || ''),
+                            logged_at: meal.time?.slice(0, 5) || '',
+                          })
+                          setDayModalEditStep('review')
+                        }}
+                        className="text-xs text-gray-600 hover:text-white transition-colors uppercase tracking-widest"
+                      >Edit</button>
+                      <button
+                        onClick={() => deleteDayMeal(meal.id)}
+                        className="text-xs text-gray-600 hover:text-red-400 transition-colors uppercase tracking-widest"
+                      >Del</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
         </Modal>
       )}
 
