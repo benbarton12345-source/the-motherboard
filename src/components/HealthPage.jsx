@@ -168,6 +168,7 @@ export default function HealthPage() {
   const [dayModalEditForm, setDayModalEditForm] = useState({ description: '', kcal: '', protein_g: '', carbs_g: '', fat_g: '', logged_at: '' })
   const [dayModalEditSaving, setDayModalEditSaving] = useState(false)
   const [dayModalEditEstimating, setDayModalEditEstimating] = useState(false)
+  const [dayModalAdding, setDayModalAdding] = useState(false)
 
   // ── Fetch data on mount
   useEffect(() => {
@@ -449,6 +450,27 @@ export default function HealthPage() {
     setDayModalEditSaving(false)
   }
 
+  async function saveDayNewMeal() {
+    if (!dayModalEditForm.description || !dayModalEditForm.kcal) return
+    setDayModalEditSaving(true)
+    await supabase.from('meal_logs').insert({
+      date: dayModalDate,
+      time: dayModalEditForm.logged_at || null,
+      description: dayModalEditForm.description,
+      kcal: parseFloat(dayModalEditForm.kcal),
+      protein_g: parseFloat(dayModalEditForm.protein_g || 0),
+      carbs_g: parseFloat(dayModalEditForm.carbs_g || 0),
+      fat_g: parseFloat(dayModalEditForm.fat_g || 0),
+    })
+    setDayModalAdding(false)
+    setDayModalEditStep('review')
+    setDayModalEditForm({ description: '', kcal: '', protein_g: '', carbs_g: '', fat_g: '', logged_at: '' })
+    setDayModalEditInput('')
+    await fetchWeekMeals(weekOffset)
+    if (dayModalDate === localDate()) await fetchMealLogs()
+    setDayModalEditSaving(false)
+  }
+
   async function deleteDayMeal(id) {
     const currentMeals = weekMealsByDate[dayModalDate] || []
     const isLastMeal = currentMeals.length === 1
@@ -462,6 +484,15 @@ export default function HealthPage() {
   }
 
   function closeDayModal() {
+    if (dayModalAdding) {
+      if (dayModalEditStep === 'review') {
+        setDayModalEditStep('input')
+        return
+      }
+      setDayModalAdding(false)
+      setDayModalEditStep('review')
+      return
+    }
     if (dayModalEditingId) {
       if (dayModalEditStep === 'review') {
         setDayModalEditStep('input')
@@ -1390,30 +1421,47 @@ export default function HealthPage() {
           title={fmtDayTitle(dayModalDate)}
           onClose={closeDayModal}
           onSave={
-            dayModalEditingId
-              ? (dayModalEditStep === 'input' ? estimateDayMeal : saveDayEditMeal)
+            (dayModalAdding || dayModalEditingId)
+              ? (dayModalEditStep === 'input'
+                  ? estimateDayMeal
+                  : (dayModalAdding ? saveDayNewMeal : saveDayEditMeal))
               : () => { setShowDayModal(false); setDayModalDate(null) }
           }
           saveLabel={
-            dayModalEditingId
+            (dayModalAdding || dayModalEditingId)
               ? (dayModalEditStep === 'input' ? 'Estimate' : 'Save Meal')
               : 'Done'
           }
-          cancelLabel={dayModalEditingId ? 'Back' : 'Close'}
+          cancelLabel={(dayModalAdding || dayModalEditingId) ? 'Back' : 'Close'}
           saveDisabled={
-            dayModalEditingId
+            (dayModalAdding || dayModalEditingId)
               ? (dayModalEditStep === 'input'
                   ? (!dayModalEditInput.trim() || dayModalEditEstimating)
                   : (!dayModalEditForm.description || !dayModalEditForm.kcal || dayModalEditSaving))
               : false
           }
-          saving={dayModalEditingId
+          saving={(dayModalAdding || dayModalEditingId)
             ? (dayModalEditStep === 'input' ? dayModalEditEstimating : dayModalEditSaving)
             : false
           }
+          headerAction={
+            !(dayModalAdding || dayModalEditingId) ? (
+              <button
+                onClick={() => {
+                  setDayModalAdding(true)
+                  setDayModalEditStep('input')
+                  setDayModalEditInput('')
+                  setDayModalEditForm({ description: '', kcal: '', protein_g: '', carbs_g: '', fat_g: '', logged_at: localTime() })
+                }}
+                className="text-xs tracking-widest uppercase px-3 py-1.5 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors"
+              >
+                + Add Meal
+              </button>
+            ) : null
+          }
           maxWidth="max-w-2xl"
         >
-          {dayModalEditingId ? (
+          {(dayModalAdding || dayModalEditingId) ? (
             dayModalEditStep === 'input' ? (
               <div>
                 <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">What did you eat?</label>
@@ -1421,10 +1469,10 @@ export default function HealthPage() {
                   value={dayModalEditInput}
                   onChange={e => setDayModalEditInput(e.target.value)}
                   rows={3}
-                  placeholder="Describe the meal to re-estimate macros..."
+                  placeholder={dayModalAdding ? "e.g. 'chicken breast with rice and broccoli, about 200g chicken'" : "Describe the meal to re-estimate macros..."}
                   className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-emerald-400 resize-none"
                 />
-                <div className="mt-2 text-xs text-gray-600">Claude will re-estimate the macros. You can review and adjust before saving.</div>
+                <div className="mt-2 text-xs text-gray-600">Claude will estimate the macros. You can review and adjust before saving.</div>
               </div>
             ) : (
               <div className="space-y-3">
