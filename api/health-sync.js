@@ -36,7 +36,7 @@ export default async function handler(req, res) {
 
         if (name.includes('step')) {
           row.steps = (row.steps || 0) + qty
-        } else if (name.includes('sleep')) {
+        } else if (name.includes('sleep') || name.includes('sleepanalysis')) {
           row.sleep_minutes = (row.sleep_minutes || 0) + qty * unitToMinutes
         } else if (name.includes('heart_rate_variability') || name.includes('hrv')) {
           row.hrv_ms = qty
@@ -73,6 +73,7 @@ export default async function handler(req, res) {
     if (row.steps != null) row.steps = Math.round(row.steps)
     if (row.active_calories != null) row.active_calories = Math.round(row.active_calories)
     if (row.resting_hr != null) row.resting_hr = Math.round(row.resting_hr)
+    if (row.mood_score != null) row.mood_score = Math.round(((row.mood_score + 1) / 2) * 9 + 1)
     return row
   })
 
