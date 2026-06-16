@@ -87,6 +87,13 @@ const DEFAULT_SETTINGS = {
   protein_pct: 30,
   carbs_pct: 40,
   fat_pct: 30,
+  steps_target: 10000,
+  sleep_target_hours: 8,
+}
+
+function avgField(rows, field) {
+  const vals = rows.map(r => r[field]).filter(v => v != null)
+  return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null
 }
 
 const inputCls = 'bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400'
@@ -170,11 +177,15 @@ export default function HealthPage() {
   const [dayModalEditEstimating, setDayModalEditEstimating] = useState(false)
   const [dayModalAdding, setDayModalAdding] = useState(false)
 
+  // ── Apple Health state
+  const [appleHealthLogs, setAppleHealthLogs] = useState([])
+
   // ── Fetch data on mount
   useEffect(() => {
     fetchWeightLogs()
     fetchMealLogs()
     fetchHealthSettings()
+    fetchAppleHealthLogs()
   }, [])
 
   useEffect(() => {
@@ -191,6 +202,15 @@ export default function HealthPage() {
     const { data } = await supabase
       .from('meal_logs').select('*').eq('date', localDate()).order('time', { ascending: true })
     if (data) setMealLogs(data)
+  }
+
+  async function fetchAppleHealthLogs() {
+    const { data } = await supabase
+      .from('apple_health_logs')
+      .select('*')
+      .order('date', { ascending: false })
+      .limit(14)
+    if (data) setAppleHealthLogs(data)
   }
 
   async function fetchHealthSettings() {
@@ -538,7 +558,17 @@ export default function HealthPage() {
   const totalProtein = mealLogs.reduce((s, m) => s + (m.protein_g || 0), 0)
   const totalCarbs = mealLogs.reduce((s, m) => s + (m.carbs_g || 0), 0)
   const totalFat = mealLogs.reduce((s, m) => s + (m.fat_g || 0), 0)
-  const burntKcal = 0
+  // ── Derived: Apple Health
+  const latestHealthLog = appleHealthLogs[0] || null
+  const last7Health = appleHealthLogs.slice(0, 7)
+  const prior7Health = appleHealthLogs.slice(7, 14)
+  const hrv7dAvg = avgField(last7Health, 'hrv_ms')
+  const priorHrv7dAvg = avgField(prior7Health, 'hrv_ms')
+  const hrvTrend = hrv7dAvg != null && priorHrv7dAvg != null
+    ? (hrv7dAvg > priorHrv7dAvg + 1 ? 'up' : hrv7dAvg < priorHrv7dAvg - 1 ? 'down' : 'flat')
+    : null
+
+  const burntKcal = latestHealthLog?.active_calories ?? 0
   const netKcal = totalKcal - burntKcal
   const nutritionKcalTarget = healthSettings.kcal_target || 2000
   const proteinTarget = healthSettings.protein_target_g || 150
@@ -645,34 +675,80 @@ export default function HealthPage() {
         {/* Steps */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">Steps Today</h2>
-          <div className="text-4xl font-bold text-gray-600 mb-1">—</div>
-          <div className="text-xs text-gray-600 mb-3">Target: 10,000</div>
-          <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
-            <div className="bg-gray-700 h-1.5 rounded-full" style={{ width: '0%' }} />
-          </div>
-          <ConnectBadge />
+          {latestHealthLog?.steps != null ? (
+            <>
+              <div className="text-4xl font-bold text-white mb-1">{Math.round(latestHealthLog.steps).toLocaleString()}</div>
+              <div className="text-xs text-gray-600 mb-3">Target: {healthSettings.steps_target.toLocaleString()}</div>
+              <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
+                <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: `${Math.min(100, (latestHealthLog.steps / healthSettings.steps_target) * 100)}%` }} />
+              </div>
+              <div className="text-xs text-gray-600">{fmtShort(latestHealthLog.date)}</div>
+            </>
+          ) : (
+            <>
+              <div className="text-4xl font-bold text-gray-600 mb-1">—</div>
+              <div className="text-xs text-gray-600 mb-3">Target: {healthSettings.steps_target.toLocaleString()}</div>
+              <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
+                <div className="bg-gray-700 h-1.5 rounded-full" style={{ width: '0%' }} />
+              </div>
+              <ConnectBadge />
+            </>
+          )}
         </div>
 
         {/* Sleep */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">Sleep Last Night</h2>
-          <div className="text-4xl font-bold text-gray-600 mb-1">—</div>
-          <div className="text-xs text-gray-600 mb-3">Target: 8 hrs</div>
-          <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
-            <div className="bg-gray-700 h-1.5 rounded-full" style={{ width: '0%' }} />
-          </div>
-          <ConnectBadge />
+          {latestHealthLog?.sleep_minutes != null ? (
+            <>
+              <div className="text-4xl font-bold text-white mb-1">
+                {Math.floor(latestHealthLog.sleep_minutes / 60)}h {Math.round(latestHealthLog.sleep_minutes % 60)}m
+              </div>
+              <div className="text-xs text-gray-600 mb-3">Target: {healthSettings.sleep_target_hours} hrs</div>
+              <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
+                <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: `${Math.min(100, (latestHealthLog.sleep_minutes / 60 / healthSettings.sleep_target_hours) * 100)}%` }} />
+              </div>
+              <div className="text-xs text-gray-600">{fmtShort(latestHealthLog.date)}</div>
+            </>
+          ) : (
+            <>
+              <div className="text-4xl font-bold text-gray-600 mb-1">—</div>
+              <div className="text-xs text-gray-600 mb-3">Target: {healthSettings.sleep_target_hours} hrs</div>
+              <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
+                <div className="bg-gray-700 h-1.5 rounded-full" style={{ width: '0%' }} />
+              </div>
+              <ConnectBadge />
+            </>
+          )}
         </div>
 
         {/* HRV */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">HRV</h2>
-          <div className="text-4xl font-bold text-gray-600 mb-1">—</div>
-          <div className="text-xs text-gray-600 mb-3">7-day avg: —</div>
-          <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
-            <div className="bg-gray-700 h-1.5 rounded-full" style={{ width: '0%' }} />
-          </div>
-          <ConnectBadge />
+          {latestHealthLog?.hrv_ms != null ? (
+            <>
+              <div className="text-4xl font-bold text-white mb-1">{Math.round(latestHealthLog.hrv_ms)} <span className="text-lg text-gray-500">ms</span></div>
+              <div className="text-xs text-gray-600 mb-3 flex items-center gap-1.5">
+                <span>7-day avg: {hrv7dAvg != null ? Math.round(hrv7dAvg) : '—'}</span>
+                {hrvTrend === 'up' && <span className="text-emerald-400">▲</span>}
+                {hrvTrend === 'down' && <span className="text-red-400">▼</span>}
+                {hrvTrend === 'flat' && <span className="text-gray-500">→</span>}
+              </div>
+              <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
+                <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: `${Math.min(100, (latestHealthLog.hrv_ms / 100) * 100)}%` }} />
+              </div>
+              <div className="text-xs text-gray-600">{fmtShort(latestHealthLog.date)}</div>
+            </>
+          ) : (
+            <>
+              <div className="text-4xl font-bold text-gray-600 mb-1">—</div>
+              <div className="text-xs text-gray-600 mb-3">7-day avg: —</div>
+              <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
+                <div className="bg-gray-700 h-1.5 rounded-full" style={{ width: '0%' }} />
+              </div>
+              <ConnectBadge />
+            </>
+          )}
         </div>
       </div>
 
