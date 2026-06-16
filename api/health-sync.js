@@ -68,7 +68,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No recognised metrics in payload' })
   }
 
-  const rows = dates.map(date => ({ date, ...byDate[date] }))
+  const rows = dates.map(date => {
+    const row = { date, ...byDate[date] }
+    if (row.steps != null) row.steps = Math.round(row.steps)
+    if (row.active_calories != null) row.active_calories = Math.round(row.active_calories)
+    if (row.resting_hr != null) row.resting_hr = Math.round(row.resting_hr)
+    return row
+  })
 
   const { error } = await supabase.from('apple_health_logs').upsert(rows, { onConflict: 'date' })
   if (error) {
