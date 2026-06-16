@@ -6,6 +6,8 @@ function dateKey(raw) {
   return String(raw).slice(0, 10)
 }
 
+const SLEEP_STAGES = ['inBed', 'asleepUnspecified', 'asleepCore', 'asleepDeep', 'asleepREM']
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -26,6 +28,11 @@ export default async function handler(req, res) {
     for (const metric of metrics) {
       const name = (metric.name || '').toLowerCase()
       const unitToMinutes = metric.units === 'min' ? 1 : 60
+      const isSleep = name.includes('sleep')
+
+      if (isSleep) {
+        console.log('sleepAnalysis raw entries:', JSON.stringify(metric.data))
+      }
 
       for (const entry of metric.data || []) {
         const date = dateKey(entry.date)
@@ -36,8 +43,10 @@ export default async function handler(req, res) {
 
         if (name.includes('step')) {
           row.steps = (row.steps || 0) + qty
-        } else if (name.includes('sleep') || name.includes('sleepanalysis')) {
-          row.sleep_minutes = (row.sleep_minutes || 0) + qty * unitToMinutes
+        } else if (isSleep) {
+          if (SLEEP_STAGES.includes(entry.value)) {
+            row.sleep_minutes = (row.sleep_minutes || 0) + qty * unitToMinutes
+          }
         } else if (name.includes('heart_rate_variability') || name.includes('hrv')) {
           row.hrv_ms = qty
         } else if (name.includes('resting_heart_rate')) {
