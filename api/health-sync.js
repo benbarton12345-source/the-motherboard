@@ -12,35 +12,53 @@ export default async function handler(req, res) {
   }
 
   const metrics = req.body?.data?.metrics
-  if (!Array.isArray(metrics)) {
-    console.error('health-sync: no metrics array in payload', req.body)
+  const stateOfMind = req.body?.data?.stateOfMind
+
+  if (!Array.isArray(metrics) && !Array.isArray(stateOfMind)) {
+    console.error('health-sync: no recognised data in payload', req.body)
     return res.status(400).json({ error: 'Invalid payload' })
   }
 
   const byDate = {}
+  const moodCounts = {}
 
-  for (const metric of metrics) {
-    const name = (metric.name || '').toLowerCase()
-    const unitToMinutes = metric.units === 'min' ? 1 : 60
+  if (Array.isArray(metrics)) {
+    for (const metric of metrics) {
+      const name = (metric.name || '').toLowerCase()
+      const unitToMinutes = metric.units === 'min' ? 1 : 60
 
-    for (const entry of metric.data || []) {
-      const date = dateKey(entry.date)
-      const qty = entry.qty ?? entry.asleep ?? null
-      if (!date || qty == null) continue
+      for (const entry of metric.data || []) {
+        const date = dateKey(entry.date)
+        const qty = entry.qty ?? entry.asleep ?? null
+        if (!date || qty == null) continue
+
+        const row = (byDate[date] ||= {})
+
+        if (name.includes('step')) {
+          row.steps = (row.steps || 0) + qty
+        } else if (name.includes('sleep')) {
+          row.sleep_minutes = (row.sleep_minutes || 0) + qty * unitToMinutes
+        } else if (name.includes('heart_rate_variability') || name.includes('hrv')) {
+          row.hrv_ms = qty
+        } else if (name.includes('resting_heart_rate')) {
+          row.resting_hr = qty
+        } else if (name.includes('active_energy') || name.includes('active_calorie')) {
+          row.active_calories = (row.active_calories || 0) + qty
+        }
+      }
+    }
+  }
+
+  if (Array.isArray(stateOfMind)) {
+    for (const entry of stateOfMind) {
+      const date = dateKey(entry.date || entry.start || entry.end)
+      const value = entry.valence ?? entry.value ?? entry.qty ?? entry.score
+      if (!date || value == null) continue
 
       const row = (byDate[date] ||= {})
-
-      if (name.includes('step')) {
-        row.steps = (row.steps || 0) + qty
-      } else if (name.includes('sleep')) {
-        row.sleep_minutes = (row.sleep_minutes || 0) + qty * unitToMinutes
-      } else if (name.includes('heart_rate_variability') || name.includes('hrv')) {
-        row.hrv_ms = qty
-      } else if (name.includes('resting_heart_rate')) {
-        row.resting_heart_rate = qty
-      } else if (name.includes('active_energy') || name.includes('active_calorie')) {
-        row.active_calories = (row.active_calories || 0) + qty
-      }
+      const n = (moodCounts[date] || 0) + 1
+      row.mood_score = ((row.mood_score || 0) * (n - 1) + value) / n
+      moodCounts[date] = n
     }
   }
 
@@ -50,7 +68,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No recognised metrics in payload' })
   }
 
-  const rows = dates.map(date => ({ date, ...byDate[date], updated_at: new Date().toISOString() }))
+  const rows = dates.map(date => ({ date, ...byDate[date] }))
 
   const { error } = await supabase.from('apple_health_logs').upsert(rows, { onConflict: 'date' })
   if (error) {
