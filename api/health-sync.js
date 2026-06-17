@@ -6,8 +6,6 @@ function dateKey(raw) {
   return String(raw).slice(0, 10)
 }
 
-const SLEEP_STAGES = ['inBed', 'asleepUnspecified', 'asleepCore', 'asleepDeep', 'asleepREM']
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -27,7 +25,6 @@ export default async function handler(req, res) {
   if (Array.isArray(metrics)) {
     for (const metric of metrics) {
       const name = (metric.name || '').toLowerCase()
-      const unitToMinutes = metric.units === 'min' ? 1 : 60
       const isSleep = name.includes('sleep')
 
       if (isSleep) {
@@ -36,23 +33,22 @@ export default async function handler(req, res) {
 
       for (const entry of metric.data || []) {
         const date = dateKey(entry.date)
-        const qty = entry.qty ?? entry.asleep ?? null
-        if (!date || qty == null) continue
+        if (!date) continue
 
         const row = (byDate[date] ||= {})
 
         if (name.includes('step')) {
-          row.steps = (row.steps || 0) + qty
+          if (entry.qty != null) row.steps = (row.steps || 0) + entry.qty
         } else if (isSleep) {
-          if (SLEEP_STAGES.includes(entry.value)) {
-            row.sleep_minutes = (row.sleep_minutes || 0) + qty * unitToMinutes
+          if (entry.totalSleep != null) {
+            row.sleep_minutes = Math.round(entry.totalSleep * 60)
           }
         } else if (name.includes('heart_rate_variability') || name.includes('hrv')) {
-          row.hrv_ms = qty
+          if (entry.qty != null) row.hrv_ms = entry.qty
         } else if (name.includes('resting_heart_rate')) {
-          row.resting_hr = qty
+          if (entry.qty != null) row.resting_hr = entry.qty
         } else if (name.includes('active_energy') || name.includes('active_calorie')) {
-          row.active_calories = (row.active_calories || 0) + qty
+          if (entry.qty != null) row.active_calories = (row.active_calories || 0) + entry.qty
         }
       }
     }
@@ -60,7 +56,7 @@ export default async function handler(req, res) {
 
   if (Array.isArray(stateOfMind)) {
     for (const entry of stateOfMind) {
-      const date = dateKey(entry.date || entry.start || entry.end)
+      const date = dateKey(entry.start || entry.end || entry.date)
       const value = entry.valence ?? entry.value ?? entry.qty ?? entry.score
       if (!date || value == null) continue
 
