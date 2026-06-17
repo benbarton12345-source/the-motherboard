@@ -31,6 +31,10 @@ export default async function handler(req, res) {
         console.log('health-sync sleep metric:', JSON.stringify({ name: metric.name, units: metric.units, data: metric.data }))
       }
 
+      if (name.includes('step')) {
+        console.log('health-sync step_count metric:', JSON.stringify({ name: metric.name, units: metric.units, data: metric.data }))
+      }
+
       for (const entry of metric.data || []) {
         const date = dateKey(entry.date)
         if (!date) continue
@@ -38,7 +42,10 @@ export default async function handler(req, res) {
         const row = (byDate[date] ||= {})
 
         if (name.includes('step')) {
-          if (entry.qty != null) row.steps = (row.steps || 0) + entry.qty
+          // Overwrite rather than sum — Health Auto Export sends multiple entries per day
+          // (one per hour or per source). Summing inflates the total from source overlap.
+          // Last entry wins; if logs confirm incremental non-overlapping chunks, revisit.
+          if (entry.qty != null) row.steps = entry.qty
         } else if (isSleep) {
           if (entry.totalSleep != null) {
             row.sleep_minutes = Math.round(entry.totalSleep * 60)
