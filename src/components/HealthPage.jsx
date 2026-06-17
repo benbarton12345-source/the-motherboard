@@ -560,6 +560,7 @@ export default function HealthPage() {
   const totalFat = mealLogs.reduce((s, m) => s + (m.fat_g || 0), 0)
   // ── Derived: Apple Health
   const latestHealthLog = appleHealthLogs[0] || null
+  const latestSleepLog = appleHealthLogs.find(r => r.sleep_minutes != null) || null
   const last7Health = appleHealthLogs.slice(0, 7)
   const prior7Health = appleHealthLogs.slice(7, 14)
   const hrv7dAvg = avgField(last7Health, 'hrv_ms')
@@ -704,16 +705,16 @@ export default function HealthPage() {
         {/* Sleep */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">Sleep Last Night</h2>
-          {latestHealthLog?.sleep_minutes != null ? (
+          {latestSleepLog != null ? (
             <>
               <div className="text-4xl font-bold text-white mb-1">
-                {Math.floor(latestHealthLog.sleep_minutes / 60)}h {Math.round(latestHealthLog.sleep_minutes % 60)}m
+                {Math.floor(latestSleepLog.sleep_minutes / 60)}h {Math.round(latestSleepLog.sleep_minutes % 60)}m
               </div>
               <div className="text-xs text-gray-600 mb-3">Target: {healthSettings.sleep_target_hours} hrs</div>
               <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
-                <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: `${Math.min(100, (latestHealthLog.sleep_minutes / 60 / healthSettings.sleep_target_hours) * 100)}%` }} />
+                <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: `${Math.min(100, (latestSleepLog.sleep_minutes / 60 / healthSettings.sleep_target_hours) * 100)}%` }} />
               </div>
-              <div className="text-xs text-gray-600">{fmtShort(latestHealthLog.date)}</div>
+              <div className="text-xs text-gray-600">{fmtShort(latestSleepLog.date)}</div>
             </>
           ) : (
             <>
