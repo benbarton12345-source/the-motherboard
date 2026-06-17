@@ -28,7 +28,7 @@ export default async function handler(req, res) {
       const isSleep = name.includes('sleep')
 
       if (isSleep) {
-        console.log('sleepAnalysis raw entries:', JSON.stringify(metric.data))
+        console.log('health-sync sleep metric:', JSON.stringify({ name: metric.name, units: metric.units, data: metric.data }))
       }
 
       for (const entry of metric.data || []) {

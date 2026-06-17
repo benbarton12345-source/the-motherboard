@@ -567,6 +567,11 @@ export default function HealthPage() {
   const hrvTrend = hrv7dAvg != null && priorHrv7dAvg != null
     ? (hrv7dAvg > priorHrv7dAvg + 1 ? 'up' : hrv7dAvg < priorHrv7dAvg - 1 ? 'down' : 'flat')
     : null
+  const restingHr7dAvg = avgField(last7Health, 'resting_hr')
+  const priorRestingHr7dAvg = avgField(prior7Health, 'resting_hr')
+  const restingHrTrend = restingHr7dAvg != null && priorRestingHr7dAvg != null
+    ? (restingHr7dAvg > priorRestingHr7dAvg + 1 ? 'up' : restingHr7dAvg < priorRestingHr7dAvg - 1 ? 'down' : 'flat')
+    : null
 
   const burntKcal = latestHealthLog?.active_calories ?? 0
   const netKcal = totalKcal - burntKcal
@@ -722,32 +727,50 @@ export default function HealthPage() {
           )}
         </div>
 
-        {/* HRV */}
+        {/* Heart — Resting HR + HRV */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">HRV</h2>
-          {latestHealthLog?.hrv_ms != null ? (
-            <>
-              <div className="text-4xl font-bold text-white mb-1">{Math.round(latestHealthLog.hrv_ms)} <span className="text-lg text-gray-500">ms</span></div>
-              <div className="text-xs text-gray-600 mb-3 flex items-center gap-1.5">
-                <span>7-day avg: {hrv7dAvg != null ? Math.round(hrv7dAvg) : '—'}</span>
-                {hrvTrend === 'up' && <span className="text-emerald-400">▲</span>}
-                {hrvTrend === 'down' && <span className="text-red-400">▼</span>}
-                {hrvTrend === 'flat' && <span className="text-gray-500">→</span>}
-              </div>
-              <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
-                <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: `${Math.min(100, (latestHealthLog.hrv_ms / 100) * 100)}%` }} />
-              </div>
-              <div className="text-xs text-gray-600">{fmtShort(latestHealthLog.date)}</div>
-            </>
-          ) : (
+          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">Heart</h2>
+          {latestHealthLog?.resting_hr == null && latestHealthLog?.hrv_ms == null ? (
             <>
               <div className="text-4xl font-bold text-gray-600 mb-1">—</div>
-              <div className="text-xs text-gray-600 mb-3">7-day avg: —</div>
+              <div className="text-xs text-gray-600 mb-3">Resting HR &amp; HRV</div>
               <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
                 <div className="bg-gray-700 h-1.5 rounded-full" style={{ width: '0%' }} />
               </div>
               <ConnectBadge />
             </>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Resting HR</div>
+                <div className="text-2xl font-bold text-white">
+                  {latestHealthLog?.resting_hr != null
+                    ? <>{Math.round(latestHealthLog.resting_hr)} <span className="text-base text-gray-500">bpm</span></>
+                    : <span className="text-gray-600">—</span>}
+                </div>
+                <div className="text-xs text-gray-600 flex items-center gap-1.5 mt-0.5">
+                  <span>7-day avg: {restingHr7dAvg != null ? Math.round(restingHr7dAvg) : '—'}</span>
+                  {restingHrTrend === 'up' && <span className="text-emerald-400">▲</span>}
+                  {restingHrTrend === 'down' && <span className="text-red-400">▼</span>}
+                  {restingHrTrend === 'flat' && <span className="text-gray-500">→</span>}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">HRV</div>
+                <div className="text-2xl font-bold text-white">
+                  {latestHealthLog?.hrv_ms != null
+                    ? <>{Math.round(latestHealthLog.hrv_ms)} <span className="text-base text-gray-500">ms</span></>
+                    : <span className="text-gray-600">—</span>}
+                </div>
+                <div className="text-xs text-gray-600 flex items-center gap-1.5 mt-0.5">
+                  <span>7-day avg: {hrv7dAvg != null ? Math.round(hrv7dAvg) : '—'}</span>
+                  {hrvTrend === 'up' && <span className="text-emerald-400">▲</span>}
+                  {hrvTrend === 'down' && <span className="text-red-400">▼</span>}
+                  {hrvTrend === 'flat' && <span className="text-gray-500">→</span>}
+                </div>
+              </div>
+              {latestHealthLog?.date && <div className="text-xs text-gray-600">{fmtShort(latestHealthLog.date)}</div>}
+            </div>
           )}
         </div>
       </div>
