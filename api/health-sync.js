@@ -90,12 +90,17 @@ export default async function handler(req, res) {
           if (entry.totalSleep != null) {
             row.sleep_minutes = Math.round(entry.totalSleep * 60)
           }
+          if (entry.deep != null) row.sleep_deep_minutes = Math.round(entry.deep * 60)
+          if (entry.rem != null) row.sleep_rem_minutes = Math.round(entry.rem * 60)
+          if (entry.core != null) row.sleep_core_minutes = Math.round(entry.core * 60)
+          if (entry.awake != null) row.sleep_awake_minutes = Math.round(entry.awake * 60)
         } else if (name.includes('heart_rate_variability') || name.includes('hrv')) {
           if (entry.qty != null) row.hrv_ms = entry.qty
         } else if (name.includes('resting_heart_rate')) {
           if (entry.qty != null) row.resting_hr = entry.qty
         } else if (name.includes('active_energy') || name.includes('active_calorie')) {
-          if (entry.qty != null) row.active_calories = (row.active_calories || 0) + entry.qty
+          // Health Auto Export exports active energy in kJ — divide by 4.184 to convert to kcal
+          if (entry.qty != null) row.active_calories = (row.active_calories || 0) + entry.qty / 4.184
         }
       }
     }

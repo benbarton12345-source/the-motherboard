@@ -287,9 +287,15 @@ Two Vercel serverless functions handle all Anthropic API calls. The API key is s
 - **`api/estimate-meal.js`** — POST `{ description, previousMeals }` → returns `{ description, kcal, protein_g, carbs_g, fat_g }`. Model: `claude-sonnet-4-6`, max_tokens 500. Includes yesterday's meals as context. Returns JSON only.
 - **`api/suggest-meal.js`** — POST `{ remainingKcal, remainingProtein, remainingCarbs, remainingFat }` → returns `{ suggestion }`. Returns plain text (markdown stripped before display).
 
-#### Apple Health (planned)
-Integration via Health Auto Export (third-party app, pushes to webhook/Supabase on a schedule).
-Metrics to connect: steps, sleep, HRV, workouts, running progress.
+#### Apple Health integration (complete as of 17 June 2026)
+
+Integration via Health Auto Export (iOS app), which pushes to `api/health-sync.js` on a schedule.
+
+- **`api/health-sync.js`** — POST webhook receiver. Parses `data.metrics` and `data.stateOfMind` from Health Auto Export payloads. Upserts to `apple_health_logs` (one row per date, `onConflict: 'date'`). Perth-safe date extraction uses `String(raw).slice(0, 10)` — never `new Date()`.
+- **Metrics mapped**: `step_count` → `steps`, `sleepAnalysis` (totalSleep field, hours) → `sleep_minutes`, `heartRateVariability` / `hrv` → `hrv_ms`, `restingHeartRate` → `resting_hr`, `activeEnergy` / `activeCalories` → `active_calories`, `stateOfMind` valence (−1 to 1) → `mood_score` (converted to 1–10 scale).
+- **Step deduplication**: Health Auto Export sends per-minute `step_count` samples, often duplicated across overlapping sources (e.g. "Ben's Apple Watch", "Ben's iPhone", and "Ben's Apple Watch|Ben's iPhone"). Raw samples are upserted to `apple_health_step_samples` (unique on `date, timestamp`). Before upserting, samples are deduplicated in JS — for each `(date, timestamp)`, the max qty across sources is kept. Daily total is then recomputed from the full samples table (direct `SUM(qty)` — one row per timestamp, so no further deduplication needed).
+- **Step bug fixed (18 June 2026)**: Two root causes identified and resolved. (1) Raw per-minute samples were being summed within the sync call without deduplicating across overlapping sources, causing wildly inflated daily totals. Fixed by the `apple_health_step_samples` deduplication approach above. (2) The step metric filter used `.includes('step')`, which incorrectly matched `walking_step_length` (stride length in cm) as well as `step_count`, corrupting the daily total by mixing stride-length values into the step sum. Fixed by changing the filter to an exact match: `=== 'step_count'`.
+- **HealthPage.jsx** reads `apple_health_logs` (last 14 rows, ordered by date desc). `latestHealthLog` = most recent row (steps, HRV, resting HR). `latestSleepLog` = first row with non-null `sleep_minutes` (sleep belongs to the prior day's date row). 7-day averages computed for HRV and resting HR via `avgField(rows, field)`. Summary cards show real data where available; fall back to `<ConnectBadge />` when null.
 
 #### Telegram meal logging (planned)
 Send a message to a Telegram bot describing a meal; bot parses it and writes to `meal_logs` via a webhook/serverless function.
@@ -348,13 +354,15 @@ File: `src/components/FinancePage.jsx`
 | `recurring_items` | name, type (subscription/fixed_cost/income), amount, frequency, currency (GBP/AUD), active boolean |
 | `weekly_goals` | name, target_count, active boolean, created_at |
 | `weekly_goal_logs` | goal_id (FK→weekly_goals), week_start date, count int, updated_at — unique on (goal_id, week_start) |
+| `apple_health_logs` | date (unique, NOT NULL), steps (integer), sleep_minutes (integer), sleep_deep_minutes (integer), sleep_rem_minutes (integer), sleep_core_minutes (integer), sleep_awake_minutes (integer), hrv_ms (numeric), resting_hr (integer), active_calories (integer, stored in kcal — Health Auto Export sends kJ, divided by 4.184 on ingest), mood_score (numeric) — one row per date, upserted by `api/health-sync.js` |
+| `apple_health_step_samples` | id (uuid PK), date (date NOT NULL), timestamp (text NOT NULL), qty (integer NOT NULL), source (text), created_at — unique on (date, timestamp); stores raw per-minute step samples for cross-source deduplication |
 | `weight_logs` | date (NOT NULL), weight_kg (NOT NULL), notes (nullable), created_at |
 | `meal_logs` | date (NOT NULL), time (nullable — column is `time`, not `logged_at`), description (NOT NULL), kcal, protein_g, carbs_g, fat_g, created_at |
 | `health_settings` | weight_target_kg (nullable), sleep_target_hours (default 8), steps_target (default 10000), nutrition_mode (default 'calories'), kcal_target (default 2000), protein_target_g (default 150), carbs_target_g (default 200), fat_target_g (default 70), protein_pct (default 30), carbs_pct (default 40), fat_pct (default 30) — single row, no user_id |
 
 ### Health table notes
 
-- All three health tables have RLS disabled — anon key has full read/write access.
+- All five health tables have RLS disabled — anon key has full read/write access.
 - `health_settings` is a single-row table. The code reads with `.limit(1).maybeSingle()` and tracks the row's `id` in `settingsId` state to decide insert vs update. The `persistHealthSettings` function strips `id` from the update payload to avoid primary key conflicts.
 - `meal_logs` time column is named `time` (not `logged_at`). The frontend form state uses `logged_at` internally but maps to `time` on insert/update.
 - `health_settings` column for weight target is `weight_target_kg` (not `target_weight_kg`). All code references use `weight_target_kg`.
@@ -451,16 +459,38 @@ Everything in Phase 1 is built and deployed.
 
 Health page is built and stable. All four sections functional. AI meal estimation and suggestion working via Vercel serverless functions. Weight tracker, nutrition tracking, and settings all persisting to Supabase. View History modal allows editing and deleting past weight entries. RLS disabled on all health tables.
 
+**Apple Health integration complete as of 18 June 2026.** Steps Today, Sleep Last Night, and Heart (Resting HR + HRV) cards show real data from `apple_health_logs`. Step deduplication via `apple_health_step_samples` is working end to end. Two step-count bugs fixed — source overlap inflation and `walking_step_length` contamination. See Apple Health integration section above for full detail.
+
+**Health page fixes as of 20 June 2026.**
+- **active_calories kJ→kcal bug fixed**: Health Auto Export sends active energy in kJ. `health-sync.js` now divides by 4.184 before storing. All existing rows must be migrated (see SQL below).
+- **Weekly history panels fixed**: Steps This Week, Sleep This Week, and HRV This Week panels now query `apple_health_logs` via `healthLogByDate` lookup by date rather than showing static em-dashes.
+- **Sleep breakdown added**: `health-sync.js` now parses `deep`, `rem`, `core`, `awake` fields from `sleepAnalysis` entries and stores them as `sleep_deep_minutes`, `sleep_rem_minutes`, `sleep_core_minutes`, `sleep_awake_minutes` on `apple_health_logs`. Sleep card shows a 2-column breakdown grid when data is available.
+- **Active Calories tile added**: Fifth summary card (Active Cal) shows today's kcal burned and 7-day average. Grid changed to `lg:grid-cols-3 xl:grid-cols-5`.
+
+**SQL required (run in Supabase dashboard):**
+```sql
+ALTER TABLE apple_health_logs
+  ADD COLUMN IF NOT EXISTS sleep_deep_minutes integer,
+  ADD COLUMN IF NOT EXISTS sleep_rem_minutes integer,
+  ADD COLUMN IF NOT EXISTS sleep_core_minutes integer,
+  ADD COLUMN IF NOT EXISTS sleep_awake_minutes integer;
+
+UPDATE apple_health_logs
+SET active_calories = ROUND(active_calories / 4.184)
+WHERE active_calories IS NOT NULL;
+
+NOTIFY pgrst, 'reload schema';
+```
+
 ### Known Issues
 
 None currently known.
 
 ### Next Session
 
-1. **Apple Health integration** — connect steps, sleep, and HRV data via Health Auto Export. These values feed the Summary cards (Section 1) and the Health Score calculation (currently at 0% for those three components).
-2. **Telegram bot for meal logging** — send a meal description to a bot; bot calls the Anthropic API (or reuses `api/estimate-meal.js`) and writes to `meal_logs` via webhook.
-3. **Trading tab** — plan and begin building Phase 3. Manual trade entry initially; IG API integration later.
-4. **Password gate** — consider adding a simple password gate to protect the app before sharing the URL.
+1. **Telegram bot for meal logging** — send a meal description to a bot; bot calls the Anthropic API (or reuses `api/estimate-meal.js`) and writes to `meal_logs` via webhook.
+2. **Trading tab** — plan and begin building Phase 3. Manual trade entry initially; IG API integration later.
+3. **Password gate** — consider adding a simple password gate to protect the app before sharing the URL.
 
 ---
 

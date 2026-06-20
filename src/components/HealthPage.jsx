@@ -574,6 +574,14 @@ export default function HealthPage() {
     ? (restingHr7dAvg > priorRestingHr7dAvg + 1 ? 'up' : restingHr7dAvg < priorRestingHr7dAvg - 1 ? 'down' : 'flat')
     : null
 
+  const healthLogByDate = useMemo(() => {
+    const map = {}
+    appleHealthLogs.forEach(r => { map[r.date] = r })
+    return map
+  }, [appleHealthLogs])
+
+  const activeCal7dAvg = avgField(last7Health, 'active_calories')
+
   const burntKcal = latestHealthLog?.active_calories ?? 0
   const netKcal = totalKcal - burntKcal
   const nutritionKcalTarget = healthSettings.kcal_target || 2000
@@ -641,7 +649,7 @@ export default function HealthPage() {
     <div className="space-y-6">
 
       {/* ── Section 1: Summary cards ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
 
         {/* Health Score */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
@@ -714,12 +722,55 @@ export default function HealthPage() {
               <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
                 <div className="bg-emerald-400 h-1.5 rounded-full" style={{ width: `${Math.min(100, (latestSleepLog.sleep_minutes / 60 / healthSettings.sleep_target_hours) * 100)}%` }} />
               </div>
+              {(latestSleepLog.sleep_deep_minutes != null || latestSleepLog.sleep_rem_minutes != null) && (
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 mb-3">
+                  {[
+                    { label: 'Deep', field: 'sleep_deep_minutes', color: 'text-purple-400' },
+                    { label: 'REM', field: 'sleep_rem_minutes', color: 'text-blue-400' },
+                    { label: 'Core', field: 'sleep_core_minutes', color: 'text-emerald-400' },
+                    { label: 'Awake', field: 'sleep_awake_minutes', color: 'text-amber-400' },
+                  ].map(({ label, field, color }) => latestSleepLog[field] != null ? (
+                    <div key={label} className="flex justify-between">
+                      <span className="text-xs text-gray-500">{label}</span>
+                      <span className={`text-xs ${color}`}>
+                        {Math.floor(latestSleepLog[field] / 60)}h {latestSleepLog[field] % 60}m
+                      </span>
+                    </div>
+                  ) : null)}
+                </div>
+              )}
               <div className="text-xs text-gray-600">{fmtShort(latestSleepLog.date)}</div>
             </>
           ) : (
             <>
               <div className="text-4xl font-bold text-gray-600 mb-1">—</div>
               <div className="text-xs text-gray-600 mb-3">Target: {healthSettings.sleep_target_hours} hrs</div>
+              <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
+                <div className="bg-gray-700 h-1.5 rounded-full" style={{ width: '0%' }} />
+              </div>
+              <ConnectBadge />
+            </>
+          )}
+        </div>
+
+        {/* Active Calories */}
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+          <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">Active Cal</h2>
+          {latestHealthLog?.active_calories != null ? (
+            <>
+              <div className="text-4xl font-bold text-white mb-1">
+                {Math.round(latestHealthLog.active_calories).toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-600 mb-3">kcal burned</div>
+              <div className="text-xs text-gray-600">
+                7-day avg: {activeCal7dAvg != null ? `${Math.round(activeCal7dAvg).toLocaleString()} kcal` : '—'}
+              </div>
+              {latestHealthLog?.date && <div className="text-xs text-gray-600 mt-1">{fmtShort(latestHealthLog.date)}</div>}
+            </>
+          ) : (
+            <>
+              <div className="text-4xl font-bold text-gray-600 mb-1">—</div>
+              <div className="text-xs text-gray-600 mb-3">kcal burned</div>
               <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
                 <div className="bg-gray-700 h-1.5 rounded-full" style={{ width: '0%' }} />
               </div>
@@ -1177,28 +1228,50 @@ export default function HealthPage() {
       {/* ── Section 4: Weekly breakdown ──────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { title: 'Steps This Week', unit: 'steps', target: 10000 },
-          { title: 'Sleep This Week', unit: 'hrs', target: 8 },
-          { title: 'HRV This Week', unit: 'ms', target: 60 },
-        ].map(({ title, unit, target }) => (
-          <div key={title} className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm tracking-widest uppercase text-gray-400">{title}</h2>
-              <ConnectBadge />
+          {
+            title: 'Steps This Week',
+            field: 'steps',
+            format: v => v != null ? Math.round(v).toLocaleString() : null,
+          },
+          {
+            title: 'Sleep This Week',
+            field: 'sleep_minutes',
+            format: v => v != null ? `${Math.floor(v / 60)}h ${Math.round(v % 60)}m` : null,
+          },
+          {
+            title: 'HRV This Week',
+            field: 'hrv_ms',
+            format: v => v != null ? `${Math.round(v)} ms` : null,
+          },
+        ].map(({ title, field, format }) => {
+          const hasData = WEEK_DATES.some(({ dateStr }) => healthLogByDate[dateStr]?.[field] != null)
+          return (
+            <div key={title} className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm tracking-widest uppercase text-gray-400">{title}</h2>
+                {!hasData && <ConnectBadge />}
+              </div>
+              <div className="space-y-2">
+                {WEEK_DATES.map(({ label, dateStr, dayLabel }) => {
+                  const row = healthLogByDate[dateStr]
+                  const value = row?.[field]
+                  const formatted = format(value)
+                  return (
+                    <div key={label} className="flex items-center justify-between py-1 border-b border-gray-800 last:border-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-600 w-7">{label}</span>
+                        <span className="text-xs text-gray-700">{dayLabel}</span>
+                      </div>
+                      <span className={`text-xs ${formatted ? 'text-white' : 'text-gray-600'}`}>
+                        {formatted ?? '—'}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-            <div className="space-y-2">
-              {WEEK_DATES.map(({ label, dayLabel }) => (
-                <div key={label} className="flex items-center justify-between py-1 border-b border-gray-800 last:border-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-600 w-7">{label}</span>
-                    <span className="text-xs text-gray-700">{dayLabel}</span>
-                  </div>
-                  <span className="text-xs text-gray-600">—</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* ── Log Weight modal ──────────────────────────────────────────────────────── */}
