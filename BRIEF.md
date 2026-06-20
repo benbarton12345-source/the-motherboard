@@ -271,7 +271,7 @@ Four cards: Health Score (weighted composite, 0–100), Steps Today (Apple Healt
 **Section 3 — Nutrition**
 - Daily macro tracking — logs meals for today from `meal_logs`
 - Macro progress bars: Calories, Protein, Carbs, Fat vs targets
-- Two-step AI meal entry: describe meal → AI estimates macros → review/adjust → save
+- Three meal entry modes via tabbed modal: AI Estimate (describe → AI estimates → review/adjust → save), Manual (fill in numbers directly, no API call), Recent (pick from last 7 days deduplicated by name → pre-fills manual form for quick reuse or tweaking)
 - Meal suggestion button — AI suggests a meal based on remaining daily targets
 - Meal list for today with hover edit/delete; Edit opens a pre-populated edit modal
 - Nutrition settings modal — two modes: Calories (set kcal target + macro % split) or Macros (set g directly); derived targets calculated and persisted

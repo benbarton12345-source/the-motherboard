@@ -159,6 +159,9 @@ export default function HealthPage() {
   const [editingMealId, setEditingMealId] = useState(null)
   const [editMealForm, setEditMealForm] = useState({ description: '', kcal: '', protein_g: '', carbs_g: '', fat_g: '', logged_at: '' })
   const [editMealSaving, setEditMealSaving] = useState(false)
+  const [mealMode, setMealMode] = useState('ai') // 'ai' | 'manual' | 'recent'
+  const [recentMeals, setRecentMeals] = useState([])
+  const [recentMealsLoading, setRecentMealsLoading] = useState(false)
   const [mealSuggestion, setMealSuggestion] = useState('')
   const [mealSuggesting, setMealSuggesting] = useState(false)
   const [nutritionSettingsForm, setNutritionSettingsForm] = useState({ ...DEFAULT_SETTINGS })
@@ -202,6 +205,30 @@ export default function HealthPage() {
     const { data } = await supabase
       .from('meal_logs').select('*').eq('date', localDate()).order('time', { ascending: true })
     if (data) setMealLogs(data)
+  }
+
+  async function fetchRecentMeals() {
+    setRecentMealsLoading(true)
+    const since = shiftDate(localDate(), -7)
+    const { data } = await supabase
+      .from('meal_logs')
+      .select('*')
+      .gte('date', since)
+      .order('date', { ascending: false })
+      .order('time', { ascending: false })
+    if (data) {
+      const seen = new Set()
+      const deduped = []
+      for (const meal of data) {
+        const key = (meal.description || '').toLowerCase().trim()
+        if (!seen.has(key)) {
+          seen.add(key)
+          deduped.push(meal)
+        }
+      }
+      setRecentMeals(deduped)
+    }
+    setRecentMealsLoading(false)
   }
 
   async function fetchAppleHealthLogs() {
@@ -349,6 +376,7 @@ export default function HealthPage() {
     setShowAddMealModal(false)
     setMealInput('')
     setMealStep('input')
+    setMealMode('ai')
     setMealForm({ description: '', kcal: '', protein_g: '', carbs_g: '', fat_g: '', logged_at: localTime() })
     await fetchMealLogs()
     if (weekOffset === 0) await fetchWeekMeals(0)
@@ -952,7 +980,7 @@ export default function HealthPage() {
               {mealSuggesting ? 'Thinking...' : 'Suggest a Meal'}
             </button>
             <button
-              onClick={() => { setMealInput(''); setMealStep('input'); setMealForm({ description: '', kcal: '', protein_g: '', carbs_g: '', fat_g: '', logged_at: localTime() }); setShowAddMealModal(true) }}
+              onClick={() => { setMealInput(''); setMealStep('input'); setMealMode('ai'); setMealForm({ description: '', kcal: '', protein_g: '', carbs_g: '', fat_g: '', logged_at: localTime() }); fetchRecentMeals(); setShowAddMealModal(true) }}
               className="text-xs tracking-widest uppercase px-3 py-1.5 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors"
             >
               + Add Meal
@@ -1389,34 +1417,103 @@ export default function HealthPage() {
       {showAddMealModal && (
         <Modal
           title="Add Meal"
-          onClose={() => { setShowAddMealModal(false); setMealStep('input') }}
-          onSave={mealStep === 'input' ? estimateMeal : saveMeal}
-          saveLabel={mealStep === 'input' ? 'Estimate' : 'Save Meal'}
+          onClose={() => { setShowAddMealModal(false); setMealStep('input'); setMealMode('ai') }}
+          onSave={
+            mealMode === 'ai'
+              ? (mealStep === 'input' ? estimateMeal : saveMeal)
+              : mealMode === 'manual'
+                ? saveMeal
+                : undefined
+          }
+          saveLabel={mealMode === 'ai' ? (mealStep === 'input' ? 'Estimate' : 'Save Meal') : 'Save Meal'}
           saveDisabled={
-            mealStep === 'input'
-              ? mealEstimating || !mealInput.trim()
+            mealMode === 'ai'
+              ? (mealStep === 'input' ? (mealEstimating || !mealInput.trim()) : (mealSaving || !mealForm.description || !mealForm.kcal))
               : mealSaving || !mealForm.description || !mealForm.kcal
           }
-          saving={mealStep === 'input' ? mealEstimating : mealSaving}
+          saving={mealMode === 'ai' ? (mealStep === 'input' ? mealEstimating : mealSaving) : mealSaving}
+          hideSave={mealMode === 'recent'}
+          cancelLabel={mealMode === 'recent' ? 'Close' : 'Cancel'}
         >
-          {mealStep === 'input' ? (
-            <div>
-              <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">What did you eat?</label>
-              <textarea
-                value={mealInput}
-                onChange={e => setMealInput(e.target.value)}
-                rows={3}
-                placeholder="e.g. 'chicken breast with rice and broccoli, about 200g chicken' or 'same lunch as yesterday'"
-                className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-emerald-400 resize-none"
-              />
-              <div className="mt-2 text-xs text-gray-600">Claude will estimate the macros. You can review and adjust before saving.</div>
+          {/* Mode tabs — hidden during AI review so the user stays focused */}
+          {!(mealMode === 'ai' && mealStep === 'review') && (
+            <div className="flex items-center bg-gray-800 rounded p-0.5">
+              {[
+                { key: 'ai', label: 'AI Estimate' },
+                { key: 'manual', label: 'Manual' },
+                { key: 'recent', label: 'Recent' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setMealMode(key)
+                    if (key === 'ai') setMealStep('input')
+                    if (key === 'manual') setMealForm({ description: '', kcal: '', protein_g: '', carbs_g: '', fat_g: '', logged_at: localTime() })
+                  }}
+                  className={`flex-1 px-3 py-1.5 text-xs tracking-widest uppercase rounded transition-colors ${mealMode === key ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-white'}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-          ) : (
+          )}
+
+          {/* AI Estimate mode */}
+          {mealMode === 'ai' && (
+            mealStep === 'input' ? (
+              <div>
+                <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">What did you eat?</label>
+                <textarea
+                  value={mealInput}
+                  onChange={e => setMealInput(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. 'chicken breast with rice and broccoli, about 200g chicken' or 'same lunch as yesterday'"
+                  className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-emerald-400 resize-none"
+                />
+                <div className="mt-2 text-xs text-gray-600">Claude will estimate the macros. You can review and adjust before saving.</div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="text-xs text-gray-500">Review and adjust the estimated values before saving.</div>
+                <div>
+                  <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Description</label>
+                  <input value={mealForm.description} onChange={e => setMealForm(f => ({ ...f, description: e.target.value }))} className={`w-full ${inputCls}`} />
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Time</label>
+                    <input type="time" value={mealForm.logged_at} onChange={e => setMealForm(f => ({ ...f, logged_at: e.target.value }))} className={`w-full ${inputCls}`} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Calories</label>
+                    <input type="number" value={mealForm.kcal} onChange={e => setMealForm(f => ({ ...f, kcal: e.target.value }))} className={`w-full ${inputCls}`} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Protein (g)</label>
+                    <input type="number" value={mealForm.protein_g} onChange={e => setMealForm(f => ({ ...f, protein_g: e.target.value }))} className={`w-full ${inputCls}`} />
+                  </div>
+                  <div>
+                    <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Carbs (g)</label>
+                    <input type="number" value={mealForm.carbs_g} onChange={e => setMealForm(f => ({ ...f, carbs_g: e.target.value }))} className={`w-full ${inputCls}`} />
+                  </div>
+                  <div>
+                    <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Fat (g)</label>
+                    <input type="number" value={mealForm.fat_g} onChange={e => setMealForm(f => ({ ...f, fat_g: e.target.value }))} className={`w-full ${inputCls}`} />
+                  </div>
+                </div>
+                <button onClick={() => setMealStep('input')} className="text-xs text-gray-500 hover:text-white tracking-widest uppercase transition-colors">← Back</button>
+              </div>
+            )
+          )}
+
+          {/* Manual entry mode */}
+          {mealMode === 'manual' && (
             <div className="space-y-3">
-              <div className="text-xs text-gray-500">Review and adjust the estimated values before saving.</div>
               <div>
                 <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Description</label>
-                <input value={mealForm.description} onChange={e => setMealForm(f => ({ ...f, description: e.target.value }))} className={`w-full ${inputCls}`} />
+                <input value={mealForm.description} onChange={e => setMealForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. chicken and rice" className={`w-full ${inputCls}`} />
               </div>
               <div className="flex gap-2">
                 <div className="flex-1">
@@ -1425,25 +1522,62 @@ export default function HealthPage() {
                 </div>
                 <div className="flex-1">
                   <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Calories</label>
-                  <input type="number" value={mealForm.kcal} onChange={e => setMealForm(f => ({ ...f, kcal: e.target.value }))} className={`w-full ${inputCls}`} />
+                  <input type="number" value={mealForm.kcal} onChange={e => setMealForm(f => ({ ...f, kcal: e.target.value }))} placeholder="0" className={`w-full ${inputCls}`} />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Protein (g)</label>
-                  <input type="number" value={mealForm.protein_g} onChange={e => setMealForm(f => ({ ...f, protein_g: e.target.value }))} className={`w-full ${inputCls}`} />
+                  <input type="number" value={mealForm.protein_g} onChange={e => setMealForm(f => ({ ...f, protein_g: e.target.value }))} placeholder="0" className={`w-full ${inputCls}`} />
                 </div>
                 <div>
                   <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Carbs (g)</label>
-                  <input type="number" value={mealForm.carbs_g} onChange={e => setMealForm(f => ({ ...f, carbs_g: e.target.value }))} className={`w-full ${inputCls}`} />
+                  <input type="number" value={mealForm.carbs_g} onChange={e => setMealForm(f => ({ ...f, carbs_g: e.target.value }))} placeholder="0" className={`w-full ${inputCls}`} />
                 </div>
                 <div>
                   <label className="text-sm tracking-widest uppercase text-gray-400 block mb-1">Fat (g)</label>
-                  <input type="number" value={mealForm.fat_g} onChange={e => setMealForm(f => ({ ...f, fat_g: e.target.value }))} className={`w-full ${inputCls}`} />
+                  <input type="number" value={mealForm.fat_g} onChange={e => setMealForm(f => ({ ...f, fat_g: e.target.value }))} placeholder="0" className={`w-full ${inputCls}`} />
                 </div>
               </div>
-              <button onClick={() => setMealStep('input')} className="text-xs text-gray-500 hover:text-white tracking-widest uppercase transition-colors">← Back</button>
             </div>
+          )}
+
+          {/* Recent meals mode */}
+          {mealMode === 'recent' && (
+            recentMealsLoading ? (
+              <div className="text-sm text-gray-600 py-2">Loading recent meals...</div>
+            ) : recentMeals.length === 0 ? (
+              <div className="text-sm text-gray-600 py-2">No meals logged in the last 7 days.</div>
+            ) : (
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600 mb-3">Select a meal to pre-fill the manual form.</div>
+                {recentMeals.map(meal => (
+                  <button
+                    key={meal.id}
+                    onClick={() => {
+                      setMealForm({
+                        description: meal.description,
+                        kcal: String(meal.kcal || ''),
+                        protein_g: String(meal.protein_g || ''),
+                        carbs_g: String(meal.carbs_g || ''),
+                        fat_g: String(meal.fat_g || ''),
+                        logged_at: localTime(),
+                      })
+                      setMealMode('manual')
+                    }}
+                    className="w-full text-left px-3 py-2.5 bg-gray-800 hover:bg-gray-700 rounded transition-colors"
+                  >
+                    <div className="text-sm text-white truncate">{meal.description}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {meal.kcal != null && `${Math.round(meal.kcal)} kcal`}
+                      {meal.protein_g != null && ` · ${Math.round(meal.protein_g)}g protein`}
+                      {meal.carbs_g != null && ` · ${Math.round(meal.carbs_g)}g carbs`}
+                      {meal.fat_g != null && ` · ${Math.round(meal.fat_g)}g fat`}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )
           )}
         </Modal>
       )}
