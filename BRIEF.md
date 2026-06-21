@@ -339,20 +339,24 @@ If actual reps >= target reps on the top set, show a simple nudge: "increase wei
 | Table | Purpose |
 |---|---|
 | `exercises` | id, name, muscle_group — the exercise bank |
-| `programme_sessions` | id, name (e.g. "Upper 1"), position (ordering) |
-| `programme_exercises` | id, session_id (FK), exercise_id (FK), position, set_number, target_reps |
+| `programmes` | id, name, is_active — one active programme at a time for now |
+| `sessions` | id, programme_id (FK→programmes, cascade), name, sort_order |
+| `session_exercises` | id, session_id (FK→sessions, cascade), exercise_id (FK→exercises), sort_order |
+| `session_sets` | id, session_exercise_id (FK→session_exercises, cascade), set_number, target_reps (nullable) |
 | `training_logs` | id, date, session_id (FK), session_rating (int 1–10, nullable), energy_rating (int 1–10, nullable), note (session-level, nullable) |
 | `training_sets` | id, log_id (FK), exercise_id (FK), set_number, target_reps, actual_reps, actual_weight, note (nullable) |
 
 RLS disabled on all training tables — same pattern as health tables.
+
+No planned weight in the programme spine — weight is logged during training only. Target reps per set is the only planned value.
 
 Overload nudge is derived in the frontend by comparing `actual_reps >= target_reps` on the top set (set_number = 1) of the most recent log entry for each exercise. Analysis derives from logged sessions vs targets, plus bodyweight history from the Health module.
 
 #### Build order (strictly sequential, each depends on the prior)
 
 1. **Exercise bank** — complete (21 June 2026). `src/components/ExerciseBankModal.jsx`. Training tab added to nav. Modal manager: grouped list by muscle group, add/edit/delete, editable datalist for muscle group.
-2. **Programme builder** — current build target. Needs exercises to exist.
-3. **Phone logging screen** — needs programmes to load; mockup approved.
+2. **Programme builder** — complete (21 June 2026). `src/components/ProgrammeBuilderModal.jsx`. Three-view modal: programme (session list with add/rename/reorder/delete) → session (ordered exercise cards with inline set rep inputs, add/reorder/remove exercises and sets) → picker (searchable, grouped by muscle group). Auto-creates "My Programme" on first use. Reps auto-save on blur. Tables: `programmes`, `sessions`, `session_exercises`, `session_sets`.
+3. **Phone logging screen** — current build target. Needs programmes to load; mockup approved.
 4. **Progress analysis, desktop** — needs logged history to chart.
 
 ---
@@ -536,11 +540,13 @@ Health page is built and stable. All sections functional with real Apple Health 
 
 ### Phase 5 — Training (in progress as of 21 June 2026)
 
-**Exercise bank complete.** Training tab added to nav. `src/components/ExerciseBankModal.jsx` — grouped list by muscle group, inline add/edit/delete, name + editable datalist muscle group (presets: Chest, Back, Legs, Shoulders, Arms, Core). `exercises` table in Supabase, RLS disabled.
+**Exercise bank complete (21 June 2026).** `src/components/ExerciseBankModal.jsx`. `exercises` table, RLS disabled.
+
+**Programme builder complete (21 June 2026).** `src/components/ProgrammeBuilderModal.jsx`. Tables: `programmes`, `sessions`, `session_exercises`, `session_sets` — all RLS disabled. Auto-creates one active programme on first open.
 
 ### Next Session
 
-**Programme builder** — step 2 of 4. Needs exercises table to exist (done). Define sessions (Upper 1, Lower 1, etc.) and which exercises sit in each, with order, rep targets, and top-set/back-off structure.
+**Phone logging screen** — step 3 of 4. Three-level tab flow: session list (sessions from active programme) → session overview (full exercise list with sets and rep targets, glanceable trend icon per lift) → exercise logging (last session weight/reps as reference, tap-increment + keyboard reps, auto-advance to next set, add extra set on the fly, swap exercise for the day, optional per-exercise note). End-of-session screen: session rating, energy rating, optional notes. Needs `training_logs` and `training_sets` tables (SQL to be provided at build time).
 
 ---
 
