@@ -257,7 +257,7 @@ Metrics:
 File: `src/components/HealthPage.jsx`
 
 **Section 1 — Summary cards**
-Four cards: Health Score (weighted composite, 0–100), Steps Today (Apple Health placeholder), Sleep Last Night (Apple Health placeholder), HRV (Apple Health placeholder). Steps/sleep/HRV show "Apple Health" badge until data is connected. Health score weights: Sleep 30%, Steps 20%, HRV 20%, Weight trend 15%, Nutrition 15%.
+Five cards: Health Score (weighted composite, 0–100), Steps Today, Sleep Last Night, Active Cal, Heart (Resting HR + HRV). Cards show real data from `apple_health_logs` where available; fall back to `<ConnectBadge />` when null. Grid: `lg:grid-cols-3 xl:grid-cols-5`. Health score weights: Sleep 30%, Steps 20%, HRV 20%, Weight trend 15%, Nutrition 15%.
 
 **Section 2 — Weight tracker**
 - Recharts `LineChart` with two series: actual weight (emerald line) and 7-day moving average (dashed grey). Target weight shown as a dashed `ReferenceLine` when set.
@@ -292,13 +292,68 @@ Two Vercel serverless functions handle all Anthropic API calls. The API key is s
 Integration via Health Auto Export (iOS app), which pushes to `api/health-sync.js` on a schedule.
 
 - **`api/health-sync.js`** — POST webhook receiver. Parses `data.metrics` and `data.stateOfMind` from Health Auto Export payloads. Upserts to `apple_health_logs` (one row per date, `onConflict: 'date'`). Perth-safe date extraction uses `String(raw).slice(0, 10)` — never `new Date()`.
-- **Metrics mapped**: `step_count` → `steps`, `sleepAnalysis` (totalSleep field, hours) → `sleep_minutes`, `heartRateVariability` / `hrv` → `hrv_ms`, `restingHeartRate` → `resting_hr`, `activeEnergy` / `activeCalories` → `active_calories`, `stateOfMind` valence (−1 to 1) → `mood_score` (converted to 1–10 scale).
+- **Metrics mapped**: `step_count` → `steps`, `sleepAnalysis` (totalSleep hours → `sleep_minutes`; deep/rem/core/awake hours → `sleep_deep_minutes` / `sleep_rem_minutes` / `sleep_core_minutes` / `sleep_awake_minutes`), `heartRateVariability` / `hrv` → `hrv_ms`, `restingHeartRate` → `resting_hr`, `activeEnergy` / `activeCalories` → `active_calories` (Health Auto Export sends kJ — divided by 4.184 on ingest to get kcal), `stateOfMind` valence (−1 to 1) → `mood_score` (converted to 1–10 scale).
 - **Step deduplication**: Health Auto Export sends per-minute `step_count` samples, often duplicated across overlapping sources (e.g. "Ben's Apple Watch", "Ben's iPhone", and "Ben's Apple Watch|Ben's iPhone"). Raw samples are upserted to `apple_health_step_samples` (unique on `date, timestamp`). Before upserting, samples are deduplicated in JS — for each `(date, timestamp)`, the max qty across sources is kept. Daily total is then recomputed from the full samples table (direct `SUM(qty)` — one row per timestamp, so no further deduplication needed).
 - **Step bug fixed (18 June 2026)**: Two root causes identified and resolved. (1) Raw per-minute samples were being summed within the sync call without deduplicating across overlapping sources, causing wildly inflated daily totals. Fixed by the `apple_health_step_samples` deduplication approach above. (2) The step metric filter used `.includes('step')`, which incorrectly matched `walking_step_length` (stride length in cm) as well as `step_count`, corrupting the daily total by mixing stride-length values into the step sum. Fixed by changing the filter to an exact match: `=== 'step_count'`.
-- **HealthPage.jsx** reads `apple_health_logs` (last 14 rows, ordered by date desc). `latestHealthLog` = most recent row (steps, HRV, resting HR). `latestSleepLog` = first row with non-null `sleep_minutes` (sleep belongs to the prior day's date row). 7-day averages computed for HRV and resting HR via `avgField(rows, field)`. Summary cards show real data where available; fall back to `<ConnectBadge />` when null.
+- **HealthPage.jsx** reads `apple_health_logs` (last 14 rows, ordered by date desc). `latestHealthLog` = most recent row (steps, active calories, HRV, resting HR). `latestSleepLog` = first row with non-null `sleep_minutes` (sleep belongs to the prior day's date row). `healthLogByDate` memo indexes rows by date string for O(1) weekly panel lookups. 7-day averages computed for HRV, resting HR, and active calories via `avgField(rows, field)`. Summary cards show real data where available; fall back to `<ConnectBadge />` when null.
+- **Sleep card breakdown**: when `sleep_deep_minutes` / `sleep_rem_minutes` are non-null on `latestSleepLog`, a 2-column breakdown grid shows Deep / REM / Core / Awake in `Xh Ym` format, colour-coded (purple / blue / emerald / amber). Confirmed working with real data (20 June 2026: 55m deep, 111m REM, 360m core, 1m awake).
 
 #### Telegram meal logging (planned)
 Send a message to a Telegram bot describing a meal; bot parses it and writes to `meal_logs` via a webhook/serverless function.
+
+---
+
+### Phase 5 — Training
+
+File (to be created): `src/components/TrainingPage.jsx`
+
+Phone-first for logging, desktop-first for analysis.
+
+#### Tab flow (three levels)
+
+1. **Session list** — the Training tab opens showing the user's sessions listed (e.g. Upper 1, Lower 1, Upper 2, Lower 2). Tap one, then "Start session".
+2. **Session overview** — shows that session's full exercise list with sets and rep targets visible, so the user sees the whole workout ahead. Each exercise row has a small line-chart icon indicating whether that lift is trending up (glanceable signal only, not a full graph — deep analysis is a desktop job).
+3. **Exercise logging** — tap an exercise to open its logging view. Shows last session's weight/reps as reference. Reps entered via BOTH tap-increment buttons AND keyboard. Logging a set auto-advances to the next, but the user can always go back and edit a prior set. Can add an extra set on the fly. Can swap an exercise on the day without altering the saved programme template. Optional per-exercise note logged at the time (e.g. record a tweak felt during bench).
+
+#### End of session
+
+When finishing a logged session: session rating out of 10, energy rating out of 10 (how energy levels felt), and an optional session notes box.
+
+#### Modal managers (opened occasionally, not permanent screen space)
+
+- **Exercise bank** — inline add/edit/delete of the exercise library. Each exercise = name + muscle group (muscle group is an editable dropdown: presets Chest/Back/Legs/Shoulders/Arms/Core, but custom values allowed). Mockup approved.
+- **Programme builder** — create/edit sessions (Upper 1, Lower 1, etc.), define which exercises sit in each, their order, rep targets, and top-set/back-off structure.
+
+#### Desktop — progress analysis (primary analysis surface, kept out of the mid-workout flow)
+
+- Per-lift progress graphs over weeks.
+- Bodyweight ratio per lift, pulling the user's logged weight from the existing Health module.
+- Flags for lifts that are progressing, stalled, or being skipped.
+
+#### Progressive overload rule
+
+If actual reps >= target reps on the top set, show a simple nudge: "increase weight or reps next time." No specific numeric increment is suggested — the user decides how much to add based on feel.
+
+#### Data spine
+
+| Table | Purpose |
+|---|---|
+| `exercises` | id, name, muscle_group — the exercise bank |
+| `programme_sessions` | id, name (e.g. "Upper 1"), position (ordering) |
+| `programme_exercises` | id, session_id (FK), exercise_id (FK), position, set_number, target_reps |
+| `training_logs` | id, date, session_id (FK), session_rating (int 1–10, nullable), energy_rating (int 1–10, nullable), note (session-level, nullable) |
+| `training_sets` | id, log_id (FK), exercise_id (FK), set_number, target_reps, actual_reps, actual_weight, note (nullable) |
+
+RLS disabled on all training tables — same pattern as health tables.
+
+Overload nudge is derived in the frontend by comparing `actual_reps >= target_reps` on the top set (set_number = 1) of the most recent log entry for each exercise. Analysis derives from logged sessions vs targets, plus bodyweight history from the Health module.
+
+#### Build order (strictly sequential, each depends on the prior)
+
+1. **Exercise bank** — complete (21 June 2026). `src/components/ExerciseBankModal.jsx`. Training tab added to nav. Modal manager: grouped list by muscle group, add/edit/delete, editable datalist for muscle group.
+2. **Programme builder** — current build target. Needs exercises to exist.
+3. **Phone logging screen** — needs programmes to load; mockup approved.
+4. **Progress analysis, desktop** — needs logged history to chart.
 
 ---
 
@@ -417,7 +472,7 @@ All data persists via Supabase across sessions and devices. Do not use localStor
 
 ---
 
-## Current State (as of 13 June 2026)
+## Current State (as of 20 June 2026)
 
 ### Phase 1 — Complete
 
@@ -455,42 +510,37 @@ Everything in Phase 1 is built and deployed.
 
 **Productivity tab** — full rebuild complete and stable. Unified task system, modal-first pattern, all sections functional. State sync between ProductivityPage and TodaysTasks fully resolved. Productivity page is considered stable — do not refactor unless a specific bug is reported.
 
-### Phase 4 — Health page complete as of 13 June 2026
+### Phase 4 — Health page complete as of 20 June 2026
 
-Health page is built and stable. All four sections functional. AI meal estimation and suggestion working via Vercel serverless functions. Weight tracker, nutrition tracking, and settings all persisting to Supabase. View History modal allows editing and deleting past weight entries. RLS disabled on all health tables.
+Health page is built and stable. All sections functional with real Apple Health data. AI meal estimation and suggestion working via Vercel serverless functions. Weight tracker, nutrition tracking, and settings all persisting to Supabase. View History modal allows editing and deleting past weight entries. RLS disabled on all health tables.
 
-**Apple Health integration complete as of 18 June 2026.** Steps Today, Sleep Last Night, and Heart (Resting HR + HRV) cards show real data from `apple_health_logs`. Step deduplication via `apple_health_step_samples` is working end to end. Two step-count bugs fixed — source overlap inflation and `walking_step_length` contamination. See Apple Health integration section above for full detail.
+**Apple Health integration complete as of 18 June 2026.** Step deduplication via `apple_health_step_samples` working end to end. Two step-count bugs fixed (source overlap inflation and `walking_step_length` contamination). See Apple Health integration section for full detail.
 
-**Health page fixes as of 20 June 2026.**
-- **active_calories kJ→kcal bug fixed**: Health Auto Export sends active energy in kJ. `health-sync.js` now divides by 4.184 before storing. All existing rows must be migrated (see SQL below).
-- **Weekly history panels fixed**: Steps This Week, Sleep This Week, and HRV This Week panels now query `apple_health_logs` via `healthLogByDate` lookup by date rather than showing static em-dashes.
-- **Sleep breakdown added**: `health-sync.js` now parses `deep`, `rem`, `core`, `awake` fields from `sleepAnalysis` entries and stores them as `sleep_deep_minutes`, `sleep_rem_minutes`, `sleep_core_minutes`, `sleep_awake_minutes` on `apple_health_logs`. Sleep card shows a 2-column breakdown grid when data is available.
-- **Active Calories tile added**: Fifth summary card (Active Cal) shows today's kcal burned and 7-day average. Grid changed to `lg:grid-cols-3 xl:grid-cols-5`.
+**Consolidation fixes complete as of 20 June 2026.** See fixes detail above. All confirmed working with real synced data.
 
-**SQL required (run in Supabase dashboard):**
-```sql
-ALTER TABLE apple_health_logs
-  ADD COLUMN IF NOT EXISTS sleep_deep_minutes integer,
-  ADD COLUMN IF NOT EXISTS sleep_rem_minutes integer,
-  ADD COLUMN IF NOT EXISTS sleep_core_minutes integer,
-  ADD COLUMN IF NOT EXISTS sleep_awake_minutes integer;
+**Health page consolidation fixes (20 June 2026) — all confirmed working:**
 
-UPDATE apple_health_logs
-SET active_calories = ROUND(active_calories / 4.184)
-WHERE active_calories IS NOT NULL;
+1. **active_calories unit bug** — Health Auto Export sends `active_energy` in kJ, not kcal. `health-sync.js` was summing the raw value with no conversion, so all stored values were ~4.184× too high. Fixed by dividing by 4.184 on ingest. A one-off SQL migration corrected all existing `apple_health_logs` rows by the same factor.
 
-NOTIFY pgrst, 'reload schema';
-```
+2. **Weekly history panels** — Steps This Week / Sleep This Week / HRV This Week were showing em-dashes for every day despite data existing in `apple_health_logs`. Root cause: the component iterated `WEEK_DATES` but never looked up the date in the health data. Fixed via a `healthLogByDate` memo (keyed by date string) so each panel row does an O(1) lookup. Confirmed showing real numbers across the week.
+
+3. **Sleep stage breakdown** — added `sleep_deep_minutes`, `sleep_rem_minutes`, `sleep_core_minutes`, `sleep_awake_minutes` to `apple_health_logs`. `health-sync.js` now parses `entry.deep / rem / core / awake` (hours) from `sleepAnalysis` payloads and converts to minutes. Sleep card shows a 2-column breakdown grid when data is present. Confirmed with real synced data (20 June: 55m deep, 111m REM, 360m core, 1m awake).
+
+4. **Active Calories tile** — fifth summary card showing today's kcal burned and 7-day average. Grid: `lg:grid-cols-3 xl:grid-cols-5`.
+
+**Nutrition module additions (20 June 2026):** The Add Meal modal now has three tabs — AI Estimate (existing flow unchanged), Manual (enter description + calories/macros directly, no API call), Recent (last 7 days deduplicated by description, most recent instance kept, selecting one pre-fills the manual form). All three paths save through the same `meal_logs` insert so meals display identically. `Modal.jsx` gained a `hideSave` prop (omits the save button from the footer; used for the Recent tab where interaction is list-click rather than a form submit).
 
 ### Known Issues
 
-None currently known.
+- **Mobile responsive layout** — needs a dedicated pass, particularly the Health page summary tile row (now 5 tiles) on small screens. No fix attempted yet.
+
+### Phase 5 — Training (in progress as of 21 June 2026)
+
+**Exercise bank complete.** Training tab added to nav. `src/components/ExerciseBankModal.jsx` — grouped list by muscle group, inline add/edit/delete, name + editable datalist muscle group (presets: Chest, Back, Legs, Shoulders, Arms, Core). `exercises` table in Supabase, RLS disabled.
 
 ### Next Session
 
-1. **Telegram bot for meal logging** — send a meal description to a bot; bot calls the Anthropic API (or reuses `api/estimate-meal.js`) and writes to `meal_logs` via webhook.
-2. **Trading tab** — plan and begin building Phase 3. Manual trade entry initially; IG API integration later.
-3. **Password gate** — consider adding a simple password gate to protect the app before sharing the URL.
+**Programme builder** — step 2 of 4. Needs exercises table to exist (done). Define sessions (Upper 1, Lower 1, etc.) and which exercises sit in each, with order, rep targets, and top-set/back-off structure.
 
 ---
 

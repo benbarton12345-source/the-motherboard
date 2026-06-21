@@ -3,9 +3,10 @@ import HomePage from './components/HomePage'
 import FinancePage from './components/FinancePage'
 import ProductivityPage from './components/ProductivityPage'
 import HealthPage from './components/HealthPage'
+import TrainingPage from './components/TrainingPage'
 import { useCurrency } from './CurrencyContext'
 
-const TABS = ['home', 'finance', 'trading', 'productivity', 'health']
+const TABS = ['home', 'finance', 'trading', 'productivity', 'health', 'training']
 
 function App() {
   const [activeTab, setActiveTab] = useState('home')
@@ -75,6 +76,7 @@ function App() {
         )}
         {activeTab === 'productivity' && <ProductivityPage />}
         {activeTab === 'health' && <HealthPage />}
+        {activeTab === 'training' && <TrainingPage />}
       </main>
     </div>
   )
