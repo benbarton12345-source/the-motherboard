@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import ExerciseBankModal from './ExerciseBankModal'
 import ProgrammeBuilderModal from './ProgrammeBuilderModal'
+import TrainingSession from './TrainingSession'
 
 export default function TrainingPage() {
   const [showExerciseBank, setShowExerciseBank] = useState(false)
   const [showProgrammeBuilder, setShowProgrammeBuilder] = useState(false)
   const [sessions, setSessions] = useState([])
+  const [programmeId, setProgrammeId] = useState(null)
+  const [selectedId, setSelectedId] = useState(null)
+  const [activeSession, setActiveSession] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { fetchSessions() }, [])
@@ -21,10 +25,11 @@ export default function TrainingPage() {
       .maybeSingle()
 
     if (!prog) { setLoading(false); return }
+    setProgrammeId(prog.id)
 
     const { data } = await supabase
       .from('sessions')
-      .select('id, name')
+      .select('id, name, session_exercises(count)')
       .eq('programme_id', prog.id)
       .order('sort_order')
 
@@ -34,6 +39,7 @@ export default function TrainingPage() {
 
   function closeProgrammeBuilder() {
     setShowProgrammeBuilder(false)
+    setSelectedId(null)
     fetchSessions()
   }
 
@@ -65,11 +71,30 @@ export default function TrainingPage() {
           <p className="text-sm text-gray-600">No sessions yet. Use Manage programme to build your programme.</p>
         ) : (
           <div className="space-y-1">
-            {sessions.map(session => (
-              <div key={session.id} className="py-2 px-3 rounded bg-gray-800/50">
-                <span className="text-sm text-white">{session.name}</span>
-              </div>
-            ))}
+            {sessions.map(session => {
+              const exerciseCount = session.session_exercises?.[0]?.count ?? 0
+              const selected = selectedId === session.id
+              return (
+                <div key={session.id}>
+                  <button
+                    onClick={() => setSelectedId(selected ? null : session.id)}
+                    className={`w-full flex items-center justify-between py-2 px-3 rounded transition-colors ${selected ? 'bg-gray-800' : 'bg-gray-800/50 hover:bg-gray-800'}`}
+                  >
+                    <span className="text-sm text-white">{session.name}</span>
+                    <span className="text-xs text-gray-500">{exerciseCount} {exerciseCount === 1 ? 'exercise' : 'exercises'}</span>
+                  </button>
+                  {selected && (
+                    <button
+                      onClick={() => setActiveSession(session)}
+                      disabled={exerciseCount === 0}
+                      className="w-full mt-1 mb-2 py-2.5 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-emerald-300 transition-colors disabled:opacity-50"
+                    >
+                      {exerciseCount === 0 ? 'No exercises in this session' : 'Start session'}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
@@ -79,6 +104,14 @@ export default function TrainingPage() {
       )}
       {showProgrammeBuilder && (
         <ProgrammeBuilderModal onClose={closeProgrammeBuilder} />
+      )}
+      {activeSession && (
+        <TrainingSession
+          session={activeSession}
+          programmeId={programmeId}
+          onClose={() => setActiveSession(null)}
+          onSaved={fetchSessions}
+        />
       )}
 
     </div>
