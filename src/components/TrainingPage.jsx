@@ -3,10 +3,12 @@ import { supabase } from '../supabase'
 import ExerciseBankModal from './ExerciseBankModal'
 import ProgrammeBuilderModal from './ProgrammeBuilderModal'
 import TrainingSession from './TrainingSession'
+import TrainingAnalysis from './TrainingAnalysis'
 
 export default function TrainingPage() {
   const [showExerciseBank, setShowExerciseBank] = useState(false)
   const [showProgrammeBuilder, setShowProgrammeBuilder] = useState(false)
+  const [showAnalysis, setShowAnalysis] = useState(false)
   const [sessions, setSessions] = useState([])
   const [programmeId, setProgrammeId] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
@@ -48,6 +50,12 @@ export default function TrainingPage() {
 
       <div className="flex justify-end">
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAnalysis(true)}
+            className="px-4 py-2 bg-gray-900 border border-gray-800 rounded-lg text-xs tracking-widest uppercase text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+          >
+            Analysis
+          </button>
           <button
             onClick={() => setShowProgrammeBuilder(true)}
             className="px-4 py-2 bg-gray-900 border border-gray-800 rounded-lg text-xs tracking-widest uppercase text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
@@ -112,6 +120,9 @@ export default function TrainingPage() {
           onClose={() => setActiveSession(null)}
           onSaved={fetchSessions}
         />
+      )}
+      {showAnalysis && (
+        <TrainingAnalysis onClose={() => setShowAnalysis(false)} />
       )}
 
     </div>

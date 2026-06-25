@@ -358,7 +358,7 @@ Overload nudge is derived in the frontend by comparing `actual_reps >= target_re
 1. **Exercise bank** — complete (21 June 2026). `src/components/ExerciseBankModal.jsx`. Modal manager: grouped list by muscle group, inline add/edit/delete, editable datalist for muscle group (presets + custom). Populated with 173 real exercises across 11 muscle groups via one-off bulk SQL insert: Back 37, Quads 25, Chest 24, Hamstrings 20, Shoulders 19, Core 16, Triceps 11, Biceps 9, Calves 5, Glutes 5, Cardio 2.
 2. **Programme builder** — complete (21 June 2026). `src/components/ProgrammeBuilderModal.jsx`. Three-view modal: programme (session list, add/rename/reorder/delete) → session (ordered exercise cards with inline per-set rep inputs, add/reorder/remove exercises and sets, add/remove sets per exercise) → picker (searchable, grouped by muscle group, shows "in session" label for duplicates). Adding an exercise defaults to 2 sets (top set + back-off). No planned weight — weight is logged live. Reps auto-save on blur. Auto-creates "My Programme" on first open. Tables: `programmes`, `sessions`, `session_exercises`, `session_sets`. Training tab shows a live Sessions card with exercise counts per session, refreshes when builder closes.
 3. **Phone logging screen** — complete (22 June 2026). `src/components/TrainingSession.jsx`. Full-screen phone-first flow launched from the Sessions card on TrainingPage (tap a session → Start session). Three in-session views — overview (exercise list with sets/target reps + placeholder trend icon, tap to log) → set logging (last-session weight/reps reference, weight & reps inputs with tap-increment ± and keyboard, log-set auto-advance, edit prior sets, add set on the fly, swap exercise for the day, per-exercise note) → finish (session rating /10, energy /10, optional notes). **Save-as-you-go persistence** — the `performed_sessions` row is created on Start; each set, note, swap and removal is written immediately; Finish only stamps ratings + note onto the existing row. A closed/crashed phone keeps everything logged so far. Tables replace the originally-specced 2-table `training_logs`/`training_sets` spine — the 3-table shape gives the per-exercise note and on-the-day swap a clean home without touching the programme template.
-4. **Progress analysis, desktop** — needs logged history to chart.
+4. **Progress analysis, desktop** — complete (25 June 2026). `src/components/TrainingAnalysis.jsx`. Opened via the "Analysis" button on TrainingPage; full-screen desktop-first overlay. Overview (status tally, weekly set-volume 6-card grid, muscle-filter chips, lift cards with sparklines) + per-lift Direction A "Hero Overlay" (dual-axis weight/×BW hero chart, stat rail with recent PRs, and a Deeper Signals tabbed panel: EST 1RM, VOLUME, REPS @ WEIGHT, WELLBEING). All numbers derived live from `performed_*` data + `weight_logs`. No new tables. Built to the approved design handoff (Direction A only).
 
 ---
 
@@ -539,7 +539,7 @@ Health page is built and stable. All sections functional with real Apple Health 
 
 - **Mobile responsive layout** — needs a dedicated pass, particularly the Health page summary tile row (now 5 tiles) on small screens. No fix attempted yet.
 
-### Phase 5 — Training (in progress as of 21 June 2026)
+### Phase 5 — Training (COMPLETE as of 25 June 2026 — all 4 steps built)
 
 **Step 1 — Exercise bank complete (21 June 2026).** `src/components/ExerciseBankModal.jsx`. `exercises` table, RLS disabled. 173 exercises across 11 muscle groups loaded via one-off bulk SQL insert.
 
@@ -556,11 +556,16 @@ Persistence is **save-as-you-go** (changed from save-at-end on 22 June 2026):
 - Finish is an `update` of session_rating/energy_rating/session_note onto the existing row, then a cleanup pass deletes any `performed_exercises` left with zero logged sets.
 - Abandoning mid-session keeps logged data; closing with nothing logged deletes the empty session row. A null-ratings session row is expected and harmless.
 
-"Last session" reference pulls the most recent `performed_exercises` row (joined to `performed_sessions` with `performed_date < today`) per exercise, counting only sets where **both** `actual_reps` and `actual_weight` are populated — so a half-logged abandoned session never shows as garbage reference. Trend icon on the overview is a static placeholder — real trend data comes in step 4.
+"Last session" reference pulls the most recent `performed_exercises` row (joined to `performed_sessions` with `performed_date < today`) per exercise, counting only sets where **both** `actual_reps` and `actual_weight` are populated — so a half-logged abandoned session never shows as garbage reference.
 
-### Next Session
+**Step 4 — Progress analysis (desktop) complete (25 June 2026).** `src/components/TrainingAnalysis.jsx`. Opened via the "Analysis" button on TrainingPage as a full-screen overlay. No new tables — everything aggregates client-side from `performed_sessions`/`performed_exercises`/`performed_sets` joined to `exercises` + `weight_logs`.
 
-**Step 4 — Progress analysis, desktop.** Per-lift progress graphs over weeks, bodyweight ratio per lift (pulling logged weight from the Health module), and progressing/stalled/skipped flags. Progressive-overload nudge derived from `actual_reps >= target_reps` on the top set (set_number = 1) of the most recent performed entry per exercise. Replace the placeholder trend icon in `TrainingSession.jsx` overview with real direction data.
+- **Overview:** status tally (progressing/stalled/not-trained, computed from the classifier), weekly set-volume 6-card grid, muscle-filter chips, and per-muscle lift cards (top-set value, delta, status label, Recharts sparkline).
+- **Per-lift — Direction A "Hero Overlay" only** (Directions B/C not built): exercise selector (search + recently-trained + grouped bank, via shared Modal), dual-axis hero chart (top-set weight + ×BW ratio with show/hide toggles), stat rail with Recent PRs, and a "Deeper Signals" tabbed panel — EST 1RM (raw + Epley lines), VOLUME (bars), REPS @ WEIGHT (held-load rep-progression blocks), WELLBEING (scatter + trend + Pearson r, gated to n≥8 with a graceful "not enough data" state below the threshold).
+- **Formulas** (from the approved design's `classify`/`renderVals`): Epley `e1rm = w×(1+reps/30)`; session volume `Σ w×reps` over all sets; classifier over last 3 sessions (weight up → progressing/load; else reps up at same weight → progressing/reps; else stalled; ≥14 days idle → not-trained); wellbeing `(session_rating+energy_rating)/2`; Pearson r for wellbeing↔est-1RM.
+- **Decisions:** top set = `set_number = 1` (fallback heaviest valid set); 11 bank muscle groups collapsed into the design's 6 buckets (Legs ← Quads+Hamstrings+Glutes+Calves, Arms ← Biceps+Triceps; Cardio/unmapped excluded); weekly set targets are domain-default constants per muscle; this screen uses the app's JetBrains Mono (`font-mono`) for its terminal-aesthetic numbers and the design's exact hex palette incl. the approved new data-series hues teal `#2dd4bf` and blue `#60a5fa`.
+
+**Training module is now fully built (steps 1–4 complete).** Remaining nicety: the placeholder trend icon in `TrainingSession.jsx` overview is still static — could later be wired to the classifier's per-lift direction.
 
 ---
 
