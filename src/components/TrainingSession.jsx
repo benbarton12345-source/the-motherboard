@@ -28,9 +28,13 @@ function TrendIcon() {
   )
 }
 
-export default function TrainingSession({ session, programmeId, onClose, onSaved }) {
+const MUSCLE_GROUPS = ['Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core']
+
+export default function TrainingSession({ session, programmeId, adHoc = false, onClose, onSaved }) {
+  const sessionTitle = session?.name || 'Ad hoc session'
+
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState('overview') // 'overview' | 'logging' | 'swap' | 'finish'
+  const [view, setView] = useState('overview') // 'overview' | 'logging' | 'swap' | 'add' | 'finish'
 
   const [sessionRowId, setSessionRowId] = useState(null)
   const [exercises, setExercises] = useState([])
@@ -43,9 +47,15 @@ export default function TrainingSession({ session, programmeId, onClose, onSaved
   // exercise_id -> { date, sets: [{ set_number, actual_reps, actual_weight }] }
   const [lastByExercise, setLastByExercise] = useState({})
 
-  // Swap picker
+  // Exercise picker (shared by swap + add)
   const [allExercises, setAllExercises] = useState([])
-  const [swapSearch, setSwapSearch] = useState('')
+  const [pickerSearch, setPickerSearch] = useState('')
+
+  // Create-new-exercise form (from the add picker)
+  const [creating, setCreating] = useState(false)
+  const [newExName, setNewExName] = useState('')
+  const [newExGroup, setNewExGroup] = useState('')
+  const [savingNewEx, setSavingNewEx] = useState(false)
 
   // Finish
   const [sessionRating, setSessionRating] = useState(null)
@@ -56,44 +66,55 @@ export default function TrainingSession({ session, programmeId, onClose, onSaved
   useEffect(() => { init() }, [])
 
   async function init() {
-    // Template for this session: exercises in order, each with its planned sets
-    const { data } = await supabase
-      .from('session_exercises')
-      .select(`
-        id, sort_order,
-        exercise:exercises(id, name, muscle_group),
-        sets:session_sets(id, set_number, target_reps)
-      `)
-      .eq('session_id', session.id)
-      .order('sort_order')
+    // Exercise bank — used by the swap + add pickers
+    const { data: exs } = await supabase
+      .from('exercises')
+      .select('id, name, muscle_group')
+      .order('muscle_group')
+      .order('name')
+    setAllExercises(exs || [])
 
-    const built = (data || []).map(se => ({
-      uid: uid(),
-      session_exercise_id: se.id,
-      exercise: se.exercise,
-      note: '',
-      performedExerciseId: null,
-      sets: [...(se.sets || [])]
-        .sort((a, b) => a.set_number - b.set_number)
-        .map(s => ({
-          uid: uid(),
-          set_number: s.set_number,
-          target_reps: s.target_reps,
-          actual_reps: '',
-          actual_weight: '',
-          logged: false,
-          performedSetId: null,
-        })),
-    }))
+    // Template for this session (ad-hoc sessions start empty)
+    let built = []
+    if (session?.id) {
+      const { data } = await supabase
+        .from('session_exercises')
+        .select(`
+          id, sort_order,
+          exercise:exercises(id, name, muscle_group),
+          sets:session_sets(id, set_number, target_reps)
+        `)
+        .eq('session_id', session.id)
+        .order('sort_order')
+
+      built = (data || []).map(se => ({
+        uid: uid(),
+        session_exercise_id: se.id,
+        exercise: se.exercise,
+        note: '',
+        performedExerciseId: null,
+        sets: [...(se.sets || [])]
+          .sort((a, b) => a.set_number - b.set_number)
+          .map(s => ({
+            uid: uid(),
+            set_number: s.set_number,
+            target_reps: s.target_reps,
+            actual_reps: '',
+            actual_weight: '',
+            logged: false,
+            performedSetId: null,
+          })),
+      }))
+    }
     setExercises(built)
 
     // Create the performed_sessions row up front so logging persists immediately.
-    // Ratings/note stay null until Finish. Exercise rows are created lazily on first set log.
+    // session_id is null for ad-hoc sessions. Ratings/note stay null until Finish.
     const { data: ps } = await supabase
       .from('performed_sessions')
       .insert({
-        session_id: session.id,
-        programme_id: programmeId,
+        session_id: session?.id ?? null,
+        programme_id: programmeId ?? null,
         performed_date: localDate(),
         session_rating: null,
         energy_rating: null,
@@ -103,16 +124,7 @@ export default function TrainingSession({ session, programmeId, onClose, onSaved
       .single()
     setSessionRowId(ps?.id ?? null)
 
-    const exerciseIds = built.map(e => e.exercise.id)
-    await loadLastPerformed(exerciseIds)
-
-    // Bank for swaps
-    const { data: exs } = await supabase
-      .from('exercises')
-      .select('id, name, muscle_group')
-      .order('muscle_group')
-      .order('name')
-    setAllExercises(exs || [])
+    if (built.length) await loadLastPerformed(built.map(e => e.exercise.id))
 
     setLoading(false)
   }
@@ -315,10 +327,57 @@ export default function TrainingSession({ session, programmeId, onClose, onSaved
     if (peId) await supabase.from('performed_exercises').update({ exercise_note: trimmed || null }).eq('id', peId)
   }
 
+  // ── Add exercise (ad-hoc / on the fly) ───────────────────────────
+
+  function openAdd() {
+    setPickerSearch('')
+    setCreating(false)
+    setNewExName('')
+    setNewExGroup('')
+    setView('add')
+  }
+
+  function buildExercise(exercise) {
+    return {
+      uid: uid(),
+      session_exercise_id: null,
+      exercise,
+      note: '',
+      performedExerciseId: null,
+      sets: [{ uid: uid(), set_number: 1, target_reps: null, actual_reps: '', actual_weight: '', logged: false, performedSetId: null }],
+    }
+  }
+
+  async function addExerciseToSession(exercise) {
+    const newIndex = exercises.length // appended item's index (current count)
+    setExercises(prev => [...prev, buildExercise(exercise)])
+    if (!lastByExercise[exercise.id]) await loadLastPerformed([exercise.id])
+    setActiveIndex(newIndex)
+    setActiveSetIndex(0)
+    setView('logging')
+  }
+
+  async function createExercise() {
+    const name = newExName.trim()
+    if (!name || savingNewEx) return
+    setSavingNewEx(true)
+    const { data, error } = await supabase
+      .from('exercises')
+      .insert({ name, muscle_group: newExGroup.trim() || 'Other' })
+      .select()
+      .single()
+    setSavingNewEx(false)
+    if (error || !data) { alert('Could not create the exercise.'); return }
+    setAllExercises(prev => [...prev, data].sort(
+      (a, b) => (a.muscle_group || '').localeCompare(b.muscle_group || '') || a.name.localeCompare(b.name)
+    ))
+    await addExerciseToSession(data)
+  }
+
   // ── Swap ─────────────────────────────────────────────────────────
 
   function openSwap() {
-    setSwapSearch('')
+    setPickerSearch('')
     setView('swap')
   }
 
@@ -377,15 +436,16 @@ export default function TrainingSession({ session, programmeId, onClose, onSaved
 
   // ── Derived ──────────────────────────────────────────────────────
 
-  const swapFiltered = allExercises.filter(ex =>
-    ex.name.toLowerCase().includes(swapSearch.toLowerCase()) ||
-    ex.muscle_group.toLowerCase().includes(swapSearch.toLowerCase())
+  const pickerFiltered = allExercises.filter(ex =>
+    ex.name.toLowerCase().includes(pickerSearch.toLowerCase()) ||
+    (ex.muscle_group || '').toLowerCase().includes(pickerSearch.toLowerCase())
   )
-  const swapGrouped = swapFiltered.reduce((acc, ex) => {
-    (acc[ex.muscle_group] ??= []).push(ex)
+  const pickerGrouped = pickerFiltered.reduce((acc, ex) => {
+    (acc[ex.muscle_group || 'Other'] ??= []).push(ex)
     return acc
   }, {})
-  const swapGroups = Object.keys(swapGrouped).sort()
+  const pickerGroups = Object.keys(pickerGrouped).sort()
+  const muscleOptions = Array.from(new Set([...MUSCLE_GROUPS, ...allExercises.map(e => e.muscle_group).filter(Boolean)]))
 
   const loggedCount = exercises.filter(e => e.sets.length && e.sets.every(s => s.logged)).length
 
@@ -407,7 +467,7 @@ export default function TrainingSession({ session, programmeId, onClose, onSaved
     <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col">
       {loading ? (
         <>
-          {header(session.name, null)}
+          {header(sessionTitle, null)}
           <div className="flex-1 flex items-center justify-center">
             <p className="text-xs text-gray-600">Loading…</p>
           </div>
@@ -415,13 +475,15 @@ export default function TrainingSession({ session, programmeId, onClose, onSaved
       ) : view === 'overview' ? (
         // ── Session overview ───────────────────────────────────────
         <>
-          {header(session.name, null)}
+          {header(sessionTitle, null)}
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
             <p className="text-xs text-gray-500 mb-1">
               {loggedCount} of {exercises.length} {exercises.length === 1 ? 'exercise' : 'exercises'} done
             </p>
             {exercises.length === 0 ? (
-              <p className="text-xs text-gray-600">This session has no exercises. Add some in Manage programme.</p>
+              <p className="text-xs text-gray-600">
+                {adHoc ? 'No exercises yet. Add your first one below.' : 'This session has no exercises. Add some in Manage programme.'}
+              </p>
             ) : exercises.map((ex, i) => {
               const done = ex.sets.length && ex.sets.every(s => s.logged)
               const setsLabel = ex.sets
@@ -449,6 +511,12 @@ export default function TrainingSession({ session, programmeId, onClose, onSaved
                 </button>
               )
             })}
+            <button
+              onClick={openAdd}
+              className="w-full py-3 border border-dashed border-gray-700 rounded-lg text-xs tracking-widest uppercase text-gray-500 hover:text-emerald-400 hover:border-gray-600 transition-colors"
+            >
+              + Add exercise
+            </button>
           </div>
           <div className="p-4 border-t border-gray-800 shrink-0">
             <button
@@ -620,22 +688,99 @@ export default function TrainingSession({ session, programmeId, onClose, onSaved
             </p>
             <input
               type="text"
-              value={swapSearch}
-              onChange={e => setSwapSearch(e.target.value)}
+              value={pickerSearch}
+              onChange={e => setPickerSearch(e.target.value)}
               placeholder="Search exercises…"
               autoFocus
               className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-400"
             />
-            {swapGroups.length === 0 ? (
+            {pickerGroups.length === 0 ? (
               <p className="text-xs text-gray-600">No exercises match.</p>
-            ) : swapGroups.map(group => (
+            ) : pickerGroups.map(group => (
               <div key={group}>
                 <p className="text-xs tracking-widest uppercase text-gray-500 mb-2">{group}</p>
                 <div className="space-y-px">
-                  {swapGrouped[group].map(ex => (
+                  {pickerGrouped[group].map(ex => (
                     <button
                       key={ex.id}
                       onClick={() => swapExercise(ex)}
+                      className="w-full text-left py-3 px-3 rounded text-sm text-white hover:bg-gray-800 transition-colors"
+                    >
+                      {ex.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : view === 'add' ? (
+        // ── Add-exercise picker (search library + create new) ──────
+        <>
+          {header('Add exercise', backToOverview)}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <input
+              type="text"
+              value={pickerSearch}
+              onChange={e => setPickerSearch(e.target.value)}
+              placeholder="Search exercises…"
+              autoFocus
+              className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-400"
+            />
+
+            {/* Create new exercise */}
+            {creating ? (
+              <div className="bg-gray-900 border border-gray-800 rounded-lg p-3 space-y-2">
+                <p className="text-xs tracking-widest uppercase text-gray-500">New exercise</p>
+                <input
+                  type="text"
+                  value={newExName}
+                  onChange={e => setNewExName(e.target.value)}
+                  placeholder="Exercise name"
+                  autoFocus
+                  className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-400"
+                />
+                <input
+                  type="text"
+                  list="adhoc-muscle-groups"
+                  value={newExGroup}
+                  onChange={e => setNewExGroup(e.target.value)}
+                  placeholder="Muscle group"
+                  className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-400"
+                />
+                <datalist id="adhoc-muscle-groups">
+                  {muscleOptions.map(g => <option key={g} value={g} />)}
+                </datalist>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={createExercise}
+                    disabled={!newExName.trim() || savingNewEx}
+                    className="px-3 py-2 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-emerald-300 transition-colors disabled:opacity-50"
+                  >
+                    {savingNewEx ? 'Saving…' : 'Create & add'}
+                  </button>
+                  <button onClick={() => setCreating(false)} className="text-xs text-gray-500 hover:text-white tracking-widest uppercase transition-colors">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setCreating(true); setNewExName(pickerSearch.trim()); setNewExGroup('') }}
+                className="w-full py-2.5 border border-dashed border-gray-700 rounded-lg text-xs tracking-widest uppercase text-gray-500 hover:text-emerald-400 hover:border-gray-600 transition-colors"
+              >
+                + New exercise (add to library)
+              </button>
+            )}
+
+            {pickerGroups.length === 0 ? (
+              <p className="text-xs text-gray-600">No exercises match. Use “New exercise” to add one.</p>
+            ) : pickerGroups.map(group => (
+              <div key={group}>
+                <p className="text-xs tracking-widest uppercase text-gray-500 mb-2">{group}</p>
+                <div className="space-y-px">
+                  {pickerGrouped[group].map(ex => (
+                    <button
+                      key={ex.id}
+                      onClick={() => addExerciseToSession(ex)}
                       className="w-full text-left py-3 px-3 rounded text-sm text-white hover:bg-gray-800 transition-colors"
                     >
                       {ex.name}

@@ -402,7 +402,7 @@ function OverviewView({ tally, trackedCount, weeklySets, weekTotal, groups, grou
       {/* Title */}
       <div className="flex justify-between items-end">
         <div>
-          <div className="text-[23px] font-semibold font-syne" style={{ color: '#eef1f4' }}>Training Analysis</div>
+          <div className="text-[23px] font-semibold font-sans" style={{ color: '#eef1f4' }}>Training Analysis</div>
           <div className="text-[12px] mt-2" style={{ color: C.muted }}>{trackedCount} lifts tracked · trailing performance</div>
         </div>
         <button onClick={onOpenSelector} className="flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-[12px]"
@@ -484,7 +484,7 @@ function OverviewView({ tally, trackedCount, weeklySets, weekTotal, groups, grou
                     className="text-left rounded-[10px] p-4 flex flex-col gap-2.5 hover:brightness-110 transition"
                     style={{ background: C.card, border: `1px solid #1e242b` }}>
                     <div className="flex justify-between items-start">
-                      <div className="text-[13.5px] font-syne font-semibold" style={{ color: '#dfe4e9' }}>{lift.name}</div>
+                      <div className="text-[13.5px] font-sans font-semibold" style={{ color: '#dfe4e9' }}>{lift.name}</div>
                       <span className="mt-1"><StatusDot color={lift.color} size={7} /></span>
                     </div>
                     <div className="flex items-end gap-2">
@@ -687,7 +687,7 @@ function LiftHeader({ exercise, bucket, onOpenSelector, status, headline }) {
   return (
     <div className="flex justify-between items-start mb-6">
       <div className="flex items-center gap-4 flex-wrap">
-        <div className="text-[30px] font-syne font-semibold" style={{ color: '#f1f4f7' }}>{exercise.name}</div>
+        <div className="text-[30px] font-sans font-semibold" style={{ color: '#f1f4f7' }}>{exercise.name}</div>
         <span className="text-[10px] tracking-[0.14em] rounded px-2 py-1.5" style={{ color: C.secondary, border: `1px solid ${C.chipBorder}` }}>{(bucket || exercise.muscle_group || '').toUpperCase()}</span>
         {status && (
           <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-[10.5px] tracking-[0.12em] font-semibold"
@@ -713,7 +713,7 @@ function TabHead({ title, desc, value, valueColor, sub }) {
   return (
     <div className="flex justify-between items-start mb-3 gap-5">
       <div className="max-w-[600px]">
-        <div className="text-[13px] font-syne font-semibold" style={{ color: '#e3e8ed' }}>{title}</div>
+        <div className="text-[13px] font-sans font-semibold" style={{ color: '#e3e8ed' }}>{title}</div>
         <div className="text-[10.5px] leading-relaxed mt-1.5" style={{ color: C.muted }}>{desc}</div>
       </div>
       {value && (
@@ -813,7 +813,7 @@ function WellbeingTab({ derived, r }) {
       <div>
         <div className="flex justify-between items-start mb-3 gap-5">
           <div className="max-w-[520px]">
-            <div className="text-[13px] font-syne font-semibold" style={{ color: '#e3e8ed' }}>Wellbeing vs performance</div>
+            <div className="text-[13px] font-sans font-semibold" style={{ color: '#e3e8ed' }}>Wellbeing vs performance</div>
             <div className="text-[10.5px] leading-relaxed mt-1.5" style={{ color: C.muted }}>Session + energy rating (averaged /10) against that day's est 1RM.</div>
           </div>
           <span className="text-[9.5px] tracking-wider font-semibold rounded px-2 py-1.5 flex-none" style={{ color: C.amber, border: `1px solid ${C.amber}55` }}>n={n} · BUILDING</span>
@@ -846,7 +846,7 @@ function WellbeingTab({ derived, r }) {
     <div>
       <div className="flex justify-between items-start mb-3 gap-5">
         <div className="max-w-[520px]">
-          <div className="text-[13px] font-syne font-semibold" style={{ color: '#e3e8ed' }}>Wellbeing vs performance</div>
+          <div className="text-[13px] font-sans font-semibold" style={{ color: '#e3e8ed' }}>Wellbeing vs performance</div>
           <div className="text-[10.5px] leading-relaxed mt-1.5" style={{ color: C.muted }}>Session + energy rating (averaged /10) against that day's est 1RM. Each dot is one session.</div>
         </div>
         <div className="flex-none flex gap-2.5 items-center">

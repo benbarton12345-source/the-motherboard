@@ -13,6 +13,7 @@ export default function TrainingPage() {
   const [programmeId, setProgrammeId] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
   const [activeSession, setActiveSession] = useState(null)
+  const [adHocActive, setAdHocActive] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { fetchSessions() }, [])
@@ -72,7 +73,15 @@ export default function TrainingPage() {
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-        <p className="text-xs tracking-widest uppercase text-gray-500 mb-4">Sessions</p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-xs tracking-widest uppercase text-gray-500">Sessions</p>
+          <button
+            onClick={() => setAdHocActive(true)}
+            className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-xs tracking-widest uppercase text-gray-300 hover:text-white hover:border-gray-600 transition-colors"
+          >
+            + Ad hoc session
+          </button>
+        </div>
         {loading ? (
           <p className="text-sm text-gray-600">Loading…</p>
         ) : sessions.length === 0 ? (
@@ -118,6 +127,15 @@ export default function TrainingPage() {
           session={activeSession}
           programmeId={programmeId}
           onClose={() => setActiveSession(null)}
+          onSaved={fetchSessions}
+        />
+      )}
+      {adHocActive && (
+        <TrainingSession
+          session={null}
+          programmeId={programmeId}
+          adHoc
+          onClose={() => setAdHocActive(false)}
           onSaved={fetchSessions}
         />
       )}
