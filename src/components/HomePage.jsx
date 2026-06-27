@@ -4,6 +4,7 @@ import { useCurrency } from '../CurrencyContext'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import TodaysTasks from './TodaysTasks'
 import Modal from './Modal'
+import ReadingCard from './ReadingCard'
 
 const DEFAULT_HABITS = [
   '10k steps',
@@ -308,6 +309,9 @@ export default function HomePage() {
             </ResponsiveContainer>
           )}
         </div>
+
+        {/* READING */}
+        <ReadingCard />
 
         {/* FREEDOM FIGURE */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">

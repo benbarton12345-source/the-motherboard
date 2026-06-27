@@ -419,6 +419,9 @@ File: `src/components/FinancePage.jsx`
 | `weight_logs` | date (NOT NULL), weight_kg (NOT NULL), notes (nullable), created_at |
 | `meal_logs` | date (NOT NULL), time (nullable — column is `time`, not `logged_at`), description (NOT NULL), kcal, protein_g, carbs_g, fat_g, created_at |
 | `health_settings` | weight_target_kg (nullable), sleep_target_hours (default 8), steps_target (default 10000), nutrition_mode (default 'calories'), kcal_target (default 2000), protein_target_g (default 150), carbs_target_g (default 200), fat_target_g (default 70), protein_pct (default 30), carbs_pct (default 40), fat_pct (default 30) — single row, no user_id |
+| `books` | id (uuid PK), title (NOT NULL), author, format ('book'/'audio'), genre, status ('queued'/'current'/'finished'), progress (int 0–100), unit_total (int), unit_label ('ch'/'hr'), queue_order (int, null once current/finished), started_at (timestamptz), finished_at (date), created_at — every book is a real row; doneCount and genreCounts are derived (count/group of status='finished' rows), never stored — RLS disabled |
+| `reading_settings` | single row (id=1, check constraint): goal (int, default 24) — just the one editable number — RLS disabled |
+| `reading_activity` | activity_date (date PK), intensity (int 0–4), updated_at — real per-day reading-activity log driving the heatmap/streak; bumped +1 (cap 4) on each progress update or finish — RLS disabled |
 
 ### Health table notes
 
@@ -566,6 +569,19 @@ Persistence is **save-as-you-go** (changed from save-at-end on 22 June 2026):
 - **Decisions:** top set = `set_number = 1` (fallback heaviest valid set); 11 bank muscle groups collapsed into the design's 6 buckets (Legs ← Quads+Hamstrings+Glutes+Calves, Arms ← Biceps+Triceps; Cardio/unmapped excluded); weekly set targets are domain-default constants per muscle; this screen uses the app's JetBrains Mono (`font-mono`) for its terminal-aesthetic numbers and the design's exact hex palette incl. the approved new data-series hues teal `#2dd4bf` and blue `#60a5fa`.
 
 **Training module is now fully built (steps 1–4 complete).** Remaining nicety: the placeholder trend icon in `TrainingSession.jsx` overview is still static — could later be wired to the classifier's per-lift direction.
+
+---
+
+### Reading Tracker module (complete as of 27 June 2026)
+
+A book/audiobook reading-goal tracker built from an approved design handoff, in **two placements that share one persisted state** (relational: `books` rows + `reading_settings` singleton + `reading_activity` log; all RLS disabled). Every book is a real row (`status` = queued/current/finished); doneCount and genreCounts are derived from finished rows, not stored. This matches the app's relational norm (exercises/sessions/performed_sets) rather than the JSONB-blob exception (net_worth_snapshots/habit_logs). Mark-finished/start/undo are row-status transitions; undo is a true revert of the prior row states (in-memory snapshot stack).
+
+- **Accent:** reading owns purple `#a78bfa` (Tailwind `violet-400`) consistently — distinct from the work/finance/goal accents. Genre colours use a deterministic palette (Self-development `#a78bfa`, Business `#60a5fa`, Psychology `#34d399`, Biography `#fbbf24`, Non-fiction `#f472b6`, History `#38bdf8`, Fiction `#f87171`, then `#c084fc` for custom, grey fallback).
+- **Shared logic:** `src/useReading.js` (hook: fetch + persist + handlers + derived heat/year/genres), `src/utils/readingHelpers.js` (pure: pace/projection formulas, genre view, heatmap builder, genre colours). Undo is a session-only in-memory snapshot stack (not persisted).
+- **Home placement** — `src/components/ReadingCard.jsx`, in the Home left column between Net Worth and Freedom Figure. Compact glance: current book (title/author/format badge/clickable genre pill→popover), click-to-set progress bar, year count with click-to-edit goal and pace text, compact genre stacked bar + legend, ~13-week activity heatmap with streak, "Mark finished · start next", conditional undo, and an "Up next" line.
+- **Productivity placement** — `src/components/ReadingPanel.jsx`, full-width band between Week Summary and Recurring Tasks. Three columns (Currently Reading with format toggle + −/+5% steppers + mark finished + undo; Year Progress with segmented goal bar, pace, projected total and per-month-needed; Finished This Year scrollable list with × remove), then a Reading List (add-book form + queue rows each with Start/×), then Genres Read (stacked bar + legend) and full-year Daily Reading Activity heatmap with month labels and streak/active-days.
+- **Formulas (exact):** `yearFrac = dayOfYear/365`; `expected = goal × yearFrac`; `ahead = doneCount − expected` (≥0.7 ahead emerald / ≤−0.7 behind amber / else on-track); `projected = round(doneCount / max(yearFrac, 0.01))`; `perMonth = remaining / max(monthsLeft, 0.1)`; `percent = round(doneCount/goal×100)`.
+- **Activity logging:** every progress update or finish bumps today's `reading_activity.intensity` by 1 (cap 4); streak = consecutive days to today with intensity > 0; active days = days with intensity > 0. Real logged data, never inferred.
 
 ---
 

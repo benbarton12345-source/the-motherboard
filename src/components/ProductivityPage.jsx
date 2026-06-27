@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import TodaysTasks from './TodaysTasks'
 import AddTaskModal from './AddTaskModal'
+import ReadingPanel from './ReadingPanel'
 import { localDate, shiftDate, isRecurringDueOnDate } from '../utils/taskHelpers'
 
 // ── Helpers (calendar/week-specific) ─────────────────────────────────────────
@@ -647,6 +648,9 @@ export default function ProductivityPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Reading Tracker ───────────────────────────────────────────────── */}
+      <ReadingPanel />
 
       {/* ── Section 3: Recurring Tasks ────────────────────────────────────── */}
       <div className={cardCls}>
