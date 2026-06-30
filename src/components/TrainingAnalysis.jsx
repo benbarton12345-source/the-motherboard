@@ -5,6 +5,7 @@ import {
   XAxis, YAxis, ReferenceLine, ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 import Modal from './Modal'
+import SessionHistoryModal from './SessionHistoryModal'
 import { localDate, shiftDate } from '../utils/taskHelpers'
 
 // Accent colours — emerald/amber/red match the app's Tailwind tokens; teal/blue
@@ -113,6 +114,7 @@ export default function TrainingAnalysis({ onClose }) {
   const [showWeight, setShowWeight] = useState(true)
   const [showRatio, setShowRatio] = useState(true)
   const [showSelector, setShowSelector] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [query, setQuery] = useState('')
 
   const today = localDate()
@@ -318,7 +320,12 @@ export default function TrainingAnalysis({ onClose }) {
           groups={groups} groupFilter={groupFilter} setGroupFilter={setGroupFilter}
           onSelectLift={(ex) => { setSelectedLift(ex); setATab('1rm') }}
           onOpenSelector={() => { setQuery(''); setShowSelector(true) }}
+          onOpenHistory={() => setShowHistory(true)}
         />
+      )}
+
+      {showHistory && (
+        <SessionHistoryModal exerciseMap={exerciseMap} onClose={() => setShowHistory(false)} />
       )}
 
       {showSelector && (
@@ -409,19 +416,25 @@ function Sparkline({ data, color }) {
 }
 
 // ── Overview ────────────────────────────────────────────────────────
-function OverviewView({ tally, trackedCount, weeklySets, weekTotal, groups, groupFilter, setGroupFilter, onSelectLift, onOpenSelector }) {
+function OverviewView({ tally, trackedCount, weeklySets, weekTotal, groups, groupFilter, setGroupFilter, onSelectLift, onOpenSelector, onOpenHistory }) {
   return (
     <div className="px-8 pt-7 pb-12 max-w-[1420px] mx-auto">
       {/* Title */}
-      <div className="flex justify-between items-end">
+      <div className="flex justify-between items-end gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-white">Training Analysis</h1>
           <p className="text-sm text-gray-500 mt-1">{trackedCount} lifts tracked · trailing performance</p>
         </div>
-        <button onClick={onOpenSelector}
-          className="flex items-center gap-2 bg-gray-900 border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-400 hover:text-white hover:border-gray-600 transition-colors">
-          ⌕ Find a lift…
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={onOpenHistory}
+            className="flex items-center gap-2 bg-gray-900 border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-400 hover:text-white hover:border-gray-600 transition-colors">
+            Session history
+          </button>
+          <button onClick={onOpenSelector}
+            className="flex items-center gap-2 bg-gray-900 border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-400 hover:text-white hover:border-gray-600 transition-colors">
+            ⌕ Find a lift…
+          </button>
+        </div>
       </div>
 
       {trackedCount === 0 ? (
