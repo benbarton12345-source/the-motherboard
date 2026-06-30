@@ -135,7 +135,18 @@ All free tier. No paid services until explicitly decided.
 
 ## Navigation Tabs
 
-HOME · FINANCE · TRADING · PRODUCTIVITY · HEALTH
+HOME · FINANCE · TRADING · PRODUCTIVITY · HEALTH · TRAINING
+
+### Sidebar navigation shell (complete as of 30 June 2026)
+
+The flat top tab bar was replaced with a collapsible sidebar (`src/components/Sidebar.jsx`, wired in `src/App.jsx`). Navigation is still state-based (`activeTab` in App) — there is no router; the active group derives from that single state so the indicator and visible page can't disagree.
+
+- **Desktop:** sidebar is a flex sibling of the main content (`flex h-screen overflow-hidden`); expanded 220px (`w-[220px]`) or collapsed 64px (`w-16`) icon rail. Header = logo mark + "The Motherboard" wordmark + collapse chevron. Six nav items with an emerald left-border active indicator, `bg-emerald-400/10` active row, and accent icon/label. User area (avatar "B" / "Ben" / "Personal") pinned at the bottom. `collapsed` persists in `localStorage` ('sidebarCollapsed').
+- **Mobile (<768px, Tailwind `md:`):** desktop sidebar is `hidden md:flex`; a hamburger in the top bar opens a 280px drawer (`MobileDrawer`) over a scrim. Scrim tap, close button, or selecting a group all close it. Drawer z-40 / scrim z-30 sit **below** the app's modals (z-50) so overlays still cover correctly.
+- **Top bar (60px):** shows the active group title; the global GBP/AUD toggle and live FX ticker moved here from the old header (ticker hidden below `sm`). Page content keeps the prior `max-w-7xl mx-auto px-6 py-6` wrapper so every page renders exactly as before.
+- **Trading** shows a reduced-opacity row + SOON badge and routes to a "coming soon" placeholder; still clickable.
+
+**Design-token mapping (handoff hex → existing Tailwind, no parallel system introduced):** accent `#34d399` → `emerald-400`; active tint `rgba(52,211,153,.12)` → `bg-emerald-400/10`; sidebar bg `#111118` → `bg-gray-900`; page bg kept as existing `bg-[#0a0a0a]`; subtle borders → `border-gray-800`; primary text → `text-white`; inactive label `#8888a8` → `text-gray-400`; muted → `text-gray-500`; very-muted/SOON → `text-gray-600`; logo/avatar gradient `#052e16→#064e3b` → `from-emerald-950 to-emerald-900`. **Font:** Plus Jakarta Sans was NOT added — nav uses the app's default system sans; the wordmark keeps `font-syne`.
 
 ---
 

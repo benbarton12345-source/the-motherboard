@@ -1,33 +1,75 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import HomePage from './components/HomePage'
 import FinancePage from './components/FinancePage'
 import ProductivityPage from './components/ProductivityPage'
 import HealthPage from './components/HealthPage'
 import TrainingPage from './components/TrainingPage'
+import Sidebar, { MobileDrawer } from './components/Sidebar'
 import { useCurrency } from './CurrencyContext'
 
-const TABS = ['home', 'finance', 'trading', 'productivity', 'health', 'training']
+const LABELS = {
+  home: 'Home', finance: 'Finance', trading: 'Trading',
+  productivity: 'Productivity', health: 'Health', training: 'Training',
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState('home')
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('sidebarCollapsed') === 'true' } catch { return false }
+  })
+  const [mobileOpen, setMobileOpen] = useState(false)
   const { currency, setCurrency, rate } = useCurrency()
 
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+  useEffect(() => {
+    try { localStorage.setItem('sidebarCollapsed', String(collapsed)) } catch { /* ignore */ }
+  }, [collapsed])
 
-      {/* Header */}
-      <header className="border-b border-[#1a1a1a] px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="font-syne text-xl font-bold tracking-widest text-white uppercase">
-            The Motherboard
+  function navigate(id) {
+    setActiveTab(id)
+    setMobileOpen(false)
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-[#0a0a0a] text-white">
+
+      <Sidebar
+        activeGroup={activeTab}
+        onNavigate={navigate}
+        collapsed={collapsed}
+        onToggleCollapse={() => setCollapsed(c => !c)}
+      />
+      <MobileDrawer
+        open={mobileOpen}
+        activeGroup={activeTab}
+        onNavigate={navigate}
+        onClose={() => setMobileOpen(false)}
+      />
+
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+
+        {/* Top bar */}
+        <header className="h-[60px] shrink-0 flex items-center gap-4 px-6 border-b border-gray-800">
+          <button
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open navigation"
+            className="md:hidden w-[38px] h-[38px] rounded-[9px] bg-white/5 hover:bg-white/10 flex flex-col items-center justify-center gap-[5px] shrink-0 transition-colors"
+          >
+            <span className="w-[17px] h-[1.5px] bg-gray-200 rounded" />
+            <span className="w-[17px] h-[1.5px] bg-gray-200 rounded" />
+            <span className="w-[17px] h-[1.5px] bg-gray-200 rounded" />
+          </button>
+
+          <h1 className="text-[17px] font-bold tracking-tight text-white flex-1 min-w-0 truncate">
+            {LABELS[activeTab]}
           </h1>
-          <div className="flex items-center gap-4">
+
+          <div className="flex items-center gap-4 shrink-0">
             {rate !== null ? (
-              <span className="font-mono text-[11px] text-[#3a3a3a]">
+              <span className="hidden sm:inline font-mono text-[11px] text-[#3a3a3a]">
                 1 GBP = A${rate.toFixed(4)}
               </span>
             ) : (
-              <span className="font-mono text-[11px] text-[#2a2a2a]">fetching rate...</span>
+              <span className="hidden sm:inline font-mono text-[11px] text-[#2a2a2a]">fetching rate...</span>
             )}
             <div className="flex items-center bg-[#111] border border-[#1c1c1c] rounded-lg p-1">
               {['GBP', 'AUD'].map(c => (
@@ -35,9 +77,7 @@ function App() {
                   key={c}
                   onClick={() => setCurrency(c)}
                   className={`px-3 py-1 font-mono text-xs font-bold tracking-widest rounded-md transition-colors ${
-                    currency === c
-                      ? 'bg-[#00ff88] text-black'
-                      : 'text-[#555] hover:text-white'
+                    currency === c ? 'bg-[#00ff88] text-black' : 'text-[#555] hover:text-white'
                   }`}
                 >
                   {c}
@@ -45,39 +85,41 @@ function App() {
               ))}
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Navigation */}
-      <nav className="border-b border-[#1a1a1a] px-6">
-        <div className="max-w-7xl mx-auto flex gap-8">
-          {TABS.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`py-3 font-mono text-xs tracking-[0.15em] uppercase border-b-2 transition-colors ${
-                activeTab === tab
-                  ? 'border-[#00ff88] text-[#00ff88]'
-                  : 'border-transparent text-[#444] hover:text-[#888]'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      </nav>
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            {activeTab === 'home' && <HomePage />}
+            {activeTab === 'finance' && <FinancePage />}
+            {activeTab === 'trading' && <TradingPlaceholder />}
+            {activeTab === 'productivity' && <ProductivityPage />}
+            {activeTab === 'health' && <HealthPage />}
+            {activeTab === 'training' && <TrainingPage />}
+          </div>
+        </main>
+      </div>
+    </div>
+  )
+}
 
-      {/* Main content */}
-      <main className="max-w-7xl mx-auto px-6 py-6">
-        {activeTab === 'home' && <HomePage />}
-        {activeTab === 'finance' && <FinancePage />}
-        {activeTab === 'trading' && (
-          <div className="font-mono text-sm text-[#333]">Trading module — Phase 3</div>
-        )}
-        {activeTab === 'productivity' && <ProductivityPage />}
-        {activeTab === 'health' && <HealthPage />}
-        {activeTab === 'training' && <TrainingPage />}
-      </main>
+function TradingPlaceholder() {
+  return (
+    <div className="flex flex-col items-center justify-center text-center gap-4 py-20 min-h-[320px]">
+      <div className="w-16 h-16 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-600">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" />
+        </svg>
+      </div>
+      <div>
+        <div className="text-[17px] font-bold tracking-tight text-white mb-2">Trading</div>
+        <div className="text-sm text-gray-500 leading-relaxed max-w-[280px] mx-auto">
+          This section is not yet built. It will appear here once ready.
+        </div>
+      </div>
+      <div className="bg-white/5 border border-gray-800 text-gray-500 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
+        Coming soon
+      </div>
     </div>
   )
 }
