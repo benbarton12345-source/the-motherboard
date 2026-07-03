@@ -142,9 +142,11 @@ HOME · FINANCE · TRADING · PRODUCTIVITY · HEALTH · TRAINING
 The flat top tab bar was replaced with a collapsible sidebar (`src/components/Sidebar.jsx`, wired in `src/App.jsx`). Navigation is still state-based (`activeTab` in App) — there is no router; the active group derives from that single state so the indicator and visible page can't disagree.
 
 - **Desktop:** sidebar is a flex sibling of the main content (`flex h-screen overflow-hidden`); expanded 220px (`w-[220px]`) or collapsed 64px (`w-16`) icon rail. Header = logo mark + "The Motherboard" wordmark + collapse chevron. Six nav items with an emerald left-border active indicator, `bg-emerald-400/10` active row, and accent icon/label. User area (avatar "B" / "Ben" / "Personal") pinned at the bottom. `collapsed` persists in `localStorage` ('sidebarCollapsed').
-- **Mobile (<768px, Tailwind `md:`):** desktop sidebar is `hidden md:flex`; a hamburger in the top bar opens a 280px drawer (`MobileDrawer`) over a scrim. Scrim tap, close button, or selecting a group all close it. Drawer z-40 / scrim z-30 sit **below** the app's modals (z-50) so overlays still cover correctly.
+- **Mobile (<768px, Tailwind `md:`):** desktop sidebar is `hidden md:flex`; a hamburger in the top bar opens a 280px drawer (`MobileDrawer`) over a scrim. The drawer stays mounted and slides in/out from the left via a `translateX` transition (`duration-300 ease-out`) over a fading scrim — not mount/unmount. Scrim tap, close button, or selecting a group all close it. Drawer z-40 / scrim z-30 sit **below** the app's modals (z-50) so overlays still cover correctly.
 - **Top bar (60px):** shows the active group title; the global GBP/AUD toggle and live FX ticker moved here from the old header (ticker hidden below `sm`). Page content keeps the prior `max-w-7xl mx-auto px-6 py-6` wrapper so every page renders exactly as before.
 - **Trading** shows a reduced-opacity row + SOON badge and routes to a "coming soon" placeholder; still clickable.
+
+Two post-build fixes applied (30 June 2026): the mobile drawer's entrance/exit animation (was appearing instantly; now slides smoothly) and the hamburger icon's three lines (were uneven; now equal-length and symmetrical). Tested on desktop and an actual mobile device, confirmed working, committed and pushed.
 
 **Design-token mapping (handoff hex → existing Tailwind, no parallel system introduced):** accent `#34d399` → `emerald-400`; active tint `rgba(52,211,153,.12)` → `bg-emerald-400/10`; sidebar bg `#111118` → `bg-gray-900`; page bg kept as existing `bg-[#0a0a0a]`; subtle borders → `border-gray-800`; primary text → `text-white`; inactive label `#8888a8` → `text-gray-400`; muted → `text-gray-500`; very-muted/SOON → `text-gray-600`; logo/avatar gradient `#052e16→#064e3b` → `from-emerald-950 to-emerald-900`. **Font:** Plus Jakarta Sans was NOT added — nav uses the app's default system sans; the wordmark keeps `font-syne`.
 
@@ -417,7 +419,8 @@ File: `src/components/FinancePage.jsx`
 | Table | Purpose |
 |---|---|
 | `net_worth_snapshots` | date, entries (jsonb array of {name, type, value, currency}), total (GBP) |
-| `budget_entries` | month, category, type (income/expense), amount, currency, notes, recurring_item_id (FK, nullable) |
+| `budget_entries` | month, category, type (income/expense), amount, currency, notes, recurring_item_id (FK, nullable), **one_off (boolean, default false)** — one_off marks a single imported transaction split into its own row so the insights layer can exclude it from category averages |
+| `statement_imports` | id (uuid), imported_at, statement_month (date, first-of-month), commbank_filename, amex_filename, transaction_count (int), category_totals (jsonb), reimbursements_total (numeric) — one audit row per statement import; RLS disabled |
 | `habit_definitions` | position, label — editable ordered list of habits; seeded with 6 defaults on first load |
 | `habit_logs` | date (unique), habits (jsonb array of booleans, length matches habit_definitions count) |
 | `tasks` | text, priority (HIGH/MEDIUM/LOW), done boolean, saved_at timestamptz, task_date date (nullable), task_time time (nullable), is_recurring boolean, recurrence_frequency text (daily/weekly/monthly), recurrence_day_of_week int (0=Mon…6=Sun), recurrence_day_of_month int (1–31), recurrence_parent_id uuid FK→tasks(id) ON DELETE CASCADE, snoozed_from date, add_to_cal boolean |
@@ -491,7 +494,7 @@ All data persists via Supabase across sessions and devices. Do not use localStor
 
 ---
 
-## Current State (as of 20 June 2026)
+## Current State (as of 30 June 2026)
 
 ### Phase 1 — Complete
 
@@ -579,6 +582,8 @@ Persistence is **save-as-you-go** (changed from save-at-end on 22 June 2026):
 - **Formulas** (from the approved design's `classify`/`renderVals`): Epley `e1rm = w×(1+reps/30)`; session volume `Σ w×reps` over all sets; classifier over last 3 sessions (weight up → progressing/load; else reps up at same weight → progressing/reps; else stalled; ≥14 days idle → not-trained); wellbeing `(session_rating+energy_rating)/2`; Pearson r for wellbeing↔est-1RM.
 - **Decisions:** top set = `set_number = 1` (fallback heaviest valid set); 11 bank muscle groups collapsed into the design's 6 buckets (Legs ← Quads+Hamstrings+Glutes+Calves, Arms ← Biceps+Triceps; Cardio/unmapped excluded); weekly set targets are domain-default constants per muscle; this screen uses the app's JetBrains Mono (`font-mono`) for its terminal-aesthetic numbers and the design's exact hex palette incl. the approved new data-series hues teal `#2dd4bf` and blue `#60a5fa`.
 
+**Session History added within Analysis (30 June 2026).** `src/components/SessionHistoryModal.jsx`, opened via a "Session history" button on the Analysis overview. Read-only browser of past logged sessions — reverse-chronological list (date, session name; `session_id` null → "Ad hoc"), click through to a detail view (exercises with sets `weight × reps · target`, session rating, energy rating, session notes, per-exercise notes). No new schema — reads existing `performed_sessions`/`performed_exercises`/`performed_sets` joined to `sessions` (name) + the already-loaded `exerciseMap`. No editing, filtering, or search in this first pass.
+
 **Training module is now fully built (steps 1–4 complete).** Remaining nicety: the placeholder trend icon in `TrainingSession.jsx` overview is still static — could later be wired to the classifier's per-lift direction.
 
 ---
@@ -593,6 +598,46 @@ A book/audiobook reading-goal tracker built from an approved design handoff, in 
 - **Productivity placement** — `src/components/ReadingPanel.jsx`, full-width band between Week Summary and Recurring Tasks. Three columns (Currently Reading with format toggle + −/+5% steppers + mark finished + undo; Year Progress with segmented goal bar, pace, projected total and per-month-needed; Finished This Year scrollable list with × remove), then a Reading List (add-book form + queue rows each with Start/×), then Genres Read (stacked bar + legend) and full-year Daily Reading Activity heatmap with month labels and streak/active-days.
 - **Formulas (exact):** `yearFrac = dayOfYear/365`; `expected = goal × yearFrac`; `ahead = doneCount − expected` (≥0.7 ahead emerald / ≤−0.7 behind amber / else on-track); `projected = round(doneCount / max(yearFrac, 0.01))`; `perMonth = remaining / max(monthsLeft, 0.1)`; `percent = round(doneCount/goal×100)`.
 - **Activity logging:** every progress update or finish bumps today's `reading_activity.intensity` by 1 (cap 4); streak = consecutive days to today with intensity > 0; active days = days with intensity > 0. Real logged data, never inferred.
+
+---
+
+## Planned Work
+
+### Confirmed sub-page structure (decided, not yet built)
+
+The sidebar groups will gain sub-navigation in a future round, once properly designed. Agreed structure:
+
+- **Finance:** Net Worth, Budgeting, Projections (placeholder, to be scoped properly later)
+- **Productivity:** Overview, Habits & Goals (weekly / yearly / long-term goal tiers, manual entry for now), Tasks, Reading
+- **Health:** Daily Metrics, Nutrition, Mood (placeholder), Insights (placeholder)
+- **Training:** Log Session, Programmes, Exercise Bank, Analysis (ordered by frequency of use)
+- **Home** and **Trading** remain flat — no sub-navigation
+
+**Sub-navigation mechanic (agreed):** the sidebar itself expands inline to show sub-items under the active group (not a separate tab row). When the desktop sidebar is collapsed, sub-items appear as a flyout popover beside the icon rather than auto-expanding. Only one group's sub-items are expanded at a time.
+
+### Next up — agreed build order
+
+1. **Sub-navigation design brief** — comparing the three states (expanded inline, collapsed flyout, mobile drawer inline). Already sent to Claude Design; awaiting mockups.
+2. **Build sub-navigation + overview pages** — once mockups approved. One group at a time, not all at once. Recommended order: Training first (structure most settled), then Health, then Productivity (new goal tiers add complexity), then Finance last (Projections needs separate scoping).
+3. **Statement import and recurring reconciliation** — design brief written and approved; build queued to land against the new sub-page structure, not the old flat Finance page.
+4. **Auto-linking engine for goals** — one reusable sync mechanism (not built per-feature): net worth snapshots auto-fill linked net-worth goals, habit completions auto-increment linked habit goals, steps data feeds linked step goals. The goals table needs a `linked_source` field reserved from the start.
+5. **Remaining horizon items** (sequenced as makes sense): app icon/logo (brief sent), Export Coach Data build (mockup approved), mood tracker, AI health insights, MyFitnessPal exploration, Trading tab proper build, password gate, Telegram bot for voice meal logging.
+
+### Statement Import & Reconciliation (build 1 of 2 — complete)
+
+`src/components/StatementImportModal.jsx` — a 5-step modal (Upload → Processing → Review → Confirm → Success) opened from an "Import Statement" button on the Finance page header (top-right; will move to the Budgeting sub-page once that exists). Built from the approved design handoff. Desktop-primary.
+
+- **Parsing / rules** (pure, in `src/utils/`): `statementParser.js` (quote-aware CSV parse, CommBank signed-amount + Amex header-skip column mapping, description cleaning, Layer-1 exclusions, `buildReview()`), and **`categoryRules.js`** (`CATEGORY_RULES` array of `{ category, keywords }` — first-match-wins, case-insensitive partial match on the cleaned description — plus the canonical `CATEGORIES` list used by the Section C dropdown and the AI prompt). Validated against Ben's real CommBank/Amex exports.
+- **Categorisation order:** Layer 1 exclusions/special handling (LIFENET→salary, DEFT→rent, LAURA/Transfer-from→reimbursement income, CASH DEPOSIT excluded, Transfer-to-Laura-by-reference→category, other positive Commbank→Section C) → Layer 2 `categoryRules.js` keywords (→ Section B) → Layer 3 AI fallback for the rest (→ Section C).
+- **AI fallback:** `api/categorise-transactions.js` — one batched call, same pattern as `api/estimate-meal.js` (raw HTTP, server-side `ANTHROPIC_API_KEY`, `claude-sonnet-4-6`). Returns an order-aligned array of suggested categories; off-list → "Uncategorised". AI only suggests; every result still lands in Section C for confirmation.
+- **Review:** Section A recurring (confirm/skip, forecast vs actual diff, reimbursements line), Section B confident categories (expand, inline amount edit, exclude, per-transaction one-off toggle), Section C needs-review (AI suggestion + dropdown, confirm/exclude, gated — can't proceed while any pending).
+- **Recurring match (Section A):** salary/rent are found in `recurring_items` by **word-boundary** name match (`\b(salary|wage|lifenet)\b`, `\brent\b`) — the earlier `/rent/i` matched "Cur**rent** account" and produced a wrong $6,478 forecast; `\brent\b` fixed it. Forecast shown is the monthly-equivalent (`toMonthly`, e.g. weekly rent $395 ×52÷12 = $1,711.67), consistent with how the budget seeds recurring rows.
+- **Write on commit** (nothing written until "Commit to Database"): recurring actuals → update the month's `budget_entries` row for that `recurring_item_id` (forecast/`recurring_items` untouched); variable spend → delete the month's non-recurring expense rows + prior import-tagged reimbursement income, then insert per-category expense rows (aggregating B included + C confirmed) tagged `notes: 'statement-import'`; reimbursements → a `Reimbursements` income row. **One-off flag lives on `budget_entries.one_off`** — flagged transactions are split into their OWN `budget_entries` rows with `one_off = true` (per-transaction, not whole-category), so the insights layer can exclude specific transactions from averages. One `statement_imports` audit row per import.
+- **Rules tuned against real exports (validated):** parsing + categorisation checked against a real CommBank + Amex month (115 txns → only the Amex annual fee left for manual review). Added keyword variants for formatting quirks: `UBER *ONE`, `ALHGROUP`, `PRESTON`, plus `JS4-M789`/`S24 BALCATTA` acquirer-code merchants (these codes may vary month to month and fall back to Section C if they change).
+
+### Note on approach
+
+Builds are kept deliberately small and sequential to manage cost and review quality — one focused feature or fix per session rather than large combined builds, even where features are related.
 
 ---
 

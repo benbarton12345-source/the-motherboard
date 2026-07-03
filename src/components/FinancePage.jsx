@@ -3,6 +3,7 @@ import { supabase } from '../supabase'
 import { useCurrency } from '../CurrencyContext'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import Modal from './Modal'
+import StatementImportModal from './StatementImportModal'
 
 const CATEGORIES = ['Cash', 'Investments', 'Property', 'Crypto', 'Other']
 const INCOME_CATEGORIES = ['Salary', 'Trading', 'Dividends', 'Bonus', 'Other']
@@ -251,6 +252,8 @@ export default function FinancePage() {
   const months = getMonthOptions()
 
   // ── Data
+  const [showImport, setShowImport] = useState(false)
+  const [importBanner, setImportBanner] = useState(null)
   const [snapshots, setSnapshots] = useState([])
   const [recurringItems, setRecurringItems] = useState([])
   const [budgetEntries, setBudgetEntries] = useState([])
@@ -449,6 +452,29 @@ export default function FinancePage() {
 
   return (
     <div className="space-y-6">
+
+      {importBanner && (
+        <div className="flex items-center gap-3 bg-emerald-400/10 border border-emerald-400/30 rounded-lg px-4 py-3">
+          <span className="text-emerald-400 text-lg leading-none">✓</span>
+          <span className="text-sm text-emerald-200 flex-1">
+            {importBanner.month} statement imported — {importBanner.txCount} transactions, {'$'}{importBanner.variableSpend.toFixed(2)} variable spend recorded.
+          </span>
+          <button onClick={() => setImportBanner(null)} className="text-emerald-400/60 hover:text-white text-lg leading-none">&times;</button>
+        </div>
+      )}
+
+      {/* Page header — Import Statement entry point (will move to the Budgeting sub-page later) */}
+      <div className="flex items-center justify-end">
+        <button
+          onClick={() => setShowImport(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-violet-500 hover:bg-violet-400 text-white text-xs font-bold tracking-widest uppercase rounded-lg transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          Import Statement
+        </button>
+      </div>
 
       {/* ── Section 1: Summary cards ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1018,6 +1044,13 @@ export default function FinancePage() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {showImport && (
+        <StatementImportModal
+          onClose={() => setShowImport(false)}
+          onImported={(summary) => { setShowImport(false); setImportBanner(summary); fetchBudgetEntries() }}
+        />
       )}
 
     </div>
