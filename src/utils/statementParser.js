@@ -60,6 +60,8 @@ export function cleanAmexDescription(raw) {
   let d = (raw || '').replace(/\s{2,}/g, '  ').trim()
   const parts = d.split(/\s{2,}/)
   if (parts.length > 1) d = parts[0]
+  d = d.replace(/^\d+\s+/, '')        // strip a leading store number ("244 JB HI-FI")
+  d = d.replace(/\s+\d{4,}\s*$/, '')  // strip a trailing reference number ("MOLESCAN 72469")
   return d.replace(/\s+/g, ' ').trim()
 }
 
