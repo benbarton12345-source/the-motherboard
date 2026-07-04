@@ -77,6 +77,7 @@ export default function StatementImportModal({ onClose, onImported }) {
     },
     setNRCategory: (id, cat) => setReview(r => ({ ...r, needsReviewItems: r.needsReviewItems.map(x => x.id === id ? { ...x, selectedCategory: cat } : x) })),
     setNRStatus: (id, status) => setReview(r => ({ ...r, needsReviewItems: r.needsReviewItems.map(x => x.id === id ? { ...x, status } : x) })),
+    toggleNROneOff: (id) => setReview(r => ({ ...r, needsReviewItems: r.needsReviewItems.map(x => x.id === id ? { ...x, oneOff: !x.oneOff } : x) })),
   }
 
   function pickFile(setter) {
@@ -183,7 +184,13 @@ export default function StatementImportModal({ onClose, onImported }) {
       if (main > 0) catTotals[cat.name] = round2((catTotals[cat.name] || 0) + main)
       for (const t of oneOffTxns) oneOffRows.push({ category: cat.name, amount: round2(t.amount), merchant: t.merchant })
     }
-    for (const it of confirmedC) catTotals[it.selectedCategory] = round2((catTotals[it.selectedCategory] || 0) + it.amount)
+    let extraReimb = 0
+    for (const it of confirmedC) {
+      if (it.selectedCategory === 'Reimbursements') { extraReimb = round2(extraReimb + it.amount); continue }
+      if (it.oneOff) { oneOffRows.push({ category: it.selectedCategory, amount: round2(it.amount), merchant: it.merchant }); continue }
+      catTotals[it.selectedCategory] = round2((catTotals[it.selectedCategory] || 0) + it.amount)
+    }
+    const reimbTotal = round2(review.reimbursements.total + extraReimb)
 
     const inserts = []
     for (const [cat, amt] of Object.entries(catTotals)) {
@@ -192,8 +199,8 @@ export default function StatementImportModal({ onClose, onImported }) {
     for (const r of oneOffRows) {
       inserts.push({ month: monthDate, category: r.category, type: 'expense', amount: r.amount, currency: 'AUD', notes: `statement-import: ${r.merchant}`, recurring_item_id: null, one_off: true })
     }
-    if (review.reimbursements.total > 0) {
-      inserts.push({ month: monthDate, category: 'Reimbursements', type: 'income', amount: round2(review.reimbursements.total), currency: 'AUD', notes: 'statement-import', recurring_item_id: null, one_off: false })
+    if (reimbTotal > 0) {
+      inserts.push({ month: monthDate, category: 'Reimbursements', type: 'income', amount: reimbTotal, currency: 'AUD', notes: 'statement-import', recurring_item_id: null, one_off: false })
     }
     if (inserts.length) await supabase.from('budget_entries').insert(inserts)
 
@@ -204,7 +211,7 @@ export default function StatementImportModal({ onClose, onImported }) {
       amex_filename: amex?.name || null,
       transaction_count: review.txCount,
       category_totals: catTotals,
-      reimbursements_total: round2(review.reimbursements.total),
+      reimbursements_total: reimbTotal,
     })
 
     const variableSpend = round2(Object.values(catTotals).reduce((a, b) => a + b, 0) + oneOffRows.reduce((a, r) => a + r.amount, 0))
@@ -542,9 +549,21 @@ function SectionB({ categories, included, bTotal, h, editingCategoryId, editValu
   )
 }
 
+// Visible one-off chip, shared by Section B (per-tx) and Section C rows.
+// One-offs are split into their own budget_entries row and kept out of averages.
+function OneOffToggle({ active, onClick }) {
+  return (
+    <button onClick={onClick} title="Mark as one-off (kept out of monthly spend averages)"
+      className={`text-[9px] font-semibold uppercase tracking-wider rounded px-1.5 py-0.5 border shrink-0 transition-colors ${active ? 'text-amber-400 border-amber-400/50 bg-amber-400/10' : 'text-gray-400 border-gray-600 hover:text-amber-400 hover:border-amber-400/50'}`}>
+      {active ? '1× one-off' : '1×'}
+    </button>
+  )
+}
+
 function CategoryRow({ c, h, editing, editValue, setEditValue }) {
   const shown = c.transactions.slice(0, 5)
   const more = c.transactions.length - shown.length
+  const oneOffCount = c.transactions.filter(t => t.oneOff).length
   return (
     <div className={`rounded-lg border border-gray-800 ${c.excluded ? 'opacity-40' : ''}`}>
       <div className="flex items-center gap-2 p-3">
@@ -552,6 +571,9 @@ function CategoryRow({ c, h, editing, editValue, setEditValue }) {
           <span className={`inline-block transition-transform ${c.expanded ? 'rotate-90' : ''}`}>›</span>
         </button>
         <button onClick={() => !c.excluded && h.toggleExpanded(c.id)} className={`flex-1 text-left text-sm ${c.excluded ? 'text-gray-500 line-through' : 'text-white'}`}>{c.name}</button>
+        {oneOffCount > 0 && !c.excluded && (
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-amber-400 border border-amber-400/40 rounded px-1.5 py-0.5 shrink-0">{oneOffCount} one-off</span>
+        )}
         {editing ? (
           <div className="flex items-center gap-1 shrink-0">
             <input autoFocus type="number" value={editValue} onChange={e => setEditValue(e.target.value)}
@@ -577,7 +599,7 @@ function CategoryRow({ c, h, editing, editValue, setEditValue }) {
             <div key={i} className="flex items-center gap-3 text-[12.5px] py-0.5">
               <span className="w-11 text-[11px] font-mono text-gray-600 shrink-0">{fmtDay(t.date)}</span>
               <span className="flex-1 text-gray-300 truncate">{t.merchant}</span>
-              <button onClick={() => h.toggleTxOneOff(c.id, i)} title="Mark one-off" className={`text-[10px] shrink-0 ${t.oneOff ? 'text-amber-400' : 'text-gray-700 hover:text-amber-400'}`}>1×</button>
+              <OneOffToggle active={t.oneOff} onClick={() => h.toggleTxOneOff(c.id, i)} />
               <span className="font-mono text-gray-400 shrink-0">{money(t.amount)}</span>
             </div>
           ))}
@@ -624,10 +646,12 @@ function NeedsReviewRow({ it, h }) {
         <div className="shrink-0 flex items-center justify-end gap-2">
           {it.status === 'pending' ? (
             <>
+              <OneOffToggle active={it.oneOff} onClick={() => h.toggleNROneOff(it.id)} />
               <select value={it.selectedCategory} onChange={e => h.setNRCategory(it.id, e.target.value)}
                 className="bg-gray-800 border border-amber-400/30 rounded px-2 py-1 text-xs text-white focus:outline-none">
                 <option value="">Choose…</option>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="Reimbursements">Reimbursements</option>
               </select>
               <button onClick={() => h.setNRStatus(it.id, 'confirmed')} disabled={!it.selectedCategory}
                 className="text-[11px] font-semibold text-amber-400 border border-amber-400/40 rounded px-2 py-1 hover:bg-amber-400/10 disabled:opacity-40 disabled:cursor-not-allowed">Confirm</button>
@@ -635,7 +659,7 @@ function NeedsReviewRow({ it, h }) {
             </>
           ) : confirmed ? (
             <>
-              <span className="text-[11px] text-emerald-400">✓ {it.selectedCategory}</span>
+              <span className="text-[11px] text-emerald-400">✓ {it.selectedCategory}{it.oneOff ? <span className="text-amber-400"> · one-off</span> : ''}</span>
               <button onClick={() => h.setNRStatus(it.id, 'pending')} className="text-[11px] text-gray-500 hover:text-white">Undo</button>
             </>
           ) : (
@@ -661,7 +685,12 @@ function ConfirmStep({ review, month, saving, onBack, onClose, onCommit }) {
   // Aggregate variable spend by category (B + C) for the breakdown
   const catTotals = {}
   for (const c of included) catTotals[c.name] = round2((catTotals[c.name] || 0) + c.amount)
-  for (const it of confirmedC) catTotals[it.selectedCategory] = round2((catTotals[it.selectedCategory] || 0) + it.amount)
+  let extraReimb = 0
+  for (const it of confirmedC) {
+    if (it.selectedCategory === 'Reimbursements') { extraReimb = round2(extraReimb + it.amount); continue }
+    catTotals[it.selectedCategory] = round2((catTotals[it.selectedCategory] || 0) + it.amount)
+  }
+  const reimbTotal = round2(review.reimbursements.total + extraReimb)
   const varTotal = round2(Object.values(catTotals).reduce((a, b) => a + b, 0))
   const catList = Object.entries(catTotals).sort((a, b) => b[1] - a[1])
 
@@ -712,7 +741,7 @@ function ConfirmStep({ review, month, saving, onBack, onClose, onCommit }) {
             ))}
           </div>
           {confirmedC.length > 0 && <p className="text-[11px] text-amber-400/70 mt-2">{confirmedC.length} manually categorised transaction{confirmedC.length === 1 ? '' : 's'}</p>}
-          {review.reimbursements.total > 0 && <p className="text-[11px] text-emerald-400/70 mt-1">+ {money(review.reimbursements.total)} reimbursements recorded as income</p>}
+          {reimbTotal > 0 && <p className="text-[11px] text-emerald-400/70 mt-1">+ {money(reimbTotal)} reimbursements recorded as income</p>}
         </div>
 
         {/* Month / tx note */}
