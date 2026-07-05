@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0c0e15;color:#d6daea;-webkit-font-smoothing:antialiased}
+    button{cursor:pointer;font-family:inherit}
+    input[type=range]{-webkit-appearance:none;appearance:none;width:100%;cursor:pointer;background:transparent;outline:none}
+    input[type=range]::-webkit-slider-runnable-track{background:rgba(255,255,255,0.1);border-radius:2px;height:3px}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#7c6ef8;margin-top:-5px;border:2px solid #131520}
+    input[type=range]::-moz-range-track{background:rgba(255,255,255,0.1);border-radius:2px;height:3px}
+    input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:#7c6ef8;border:2px solid #131520}
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+  </style>
+</helmet>
+
+<div style="display:flex; height:100vh; background:#0c0e15; overflow:hidden;">
+
+  <!-- ── SIDEBAR ── -->
+  <aside style="width:212px; background:#08090e; border-right:1px solid rgba(255,255,255,0.055); display:flex; flex-direction:column; flex-shrink:0;">
+    <div style="padding:22px 18px 26px; display:flex; align-items:center; gap:10px;">
+      <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#7c6ef8,#4fa3e8);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" fill="rgba(255,255,255,0.85)"/><rect x="8" y="1" width="5" height="5" rx="1" fill="rgba(255,255,255,0.5)"/><rect x="1" y="8" width="5" height="5" rx="1" fill="rgba(255,255,255,0.5)"/><rect x="8" y="8" width="5" height="5" rx="1" fill="rgba(255,255,255,0.85)"/></svg>
+      </div>
+      <span style="font-size:13.5px;font-weight:600;letter-spacing:-0.3px;color:#e0e4f6;">Motherboard</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:1px;padding:0 10px;flex:1;">
+      <div style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:7px;background:rgba(124,110,248,0.13);">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="9" width="3" height="5" rx="1" fill="#7c6ef8"/><rect x="6" y="5.5" width="3" height="8.5" rx="1" fill="#7c6ef8"/><rect x="11" y="2" width="3" height="12" rx="1" fill="#7c6ef8"/></svg>
+        <span style="font-size:13px;color:#c4beff;font-weight:560;">Finance</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:7px;" style-hover="background:rgba(255,255,255,0.04);">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1.5" y="1.5" width="12" height="12" rx="2" stroke="rgba(214,218,234,0.28)" stroke-width="1.3" fill="none"/><path d="M4.5 7.5L6.5 9.5L10.5 5.5" stroke="rgba(214,218,234,0.28)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span style="font-size:13px;color:rgba(214,218,234,0.35);font-weight:440;">Productivity</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:7px;" style-hover="background:rgba(255,255,255,0.04);">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5L13 6.5V13.5H9.5V9.5H5.5V13.5H2V6.5L7.5 1.5Z" stroke="rgba(214,218,234,0.28)" stroke-width="1.3" fill="none" stroke-linejoin="round"/></svg>
+        <span style="font-size:13px;color:rgba(214,218,234,0.35);font-weight:440;">Home</span>
+      </div>
+    </nav>
+    <div style="padding:14px 14px 18px;border-top:1px solid rgba(255,255,255,0.055);">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <div style="width:27px;height:27px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#60a5fa);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:white;flex-shrink:0;">B</div>
+        <div><div style="font-size:12.5px;font-weight:500;color:#d6daea;">Ben</div><div style="font-size:11px;color:rgba(214,218,234,0.3);">Admin</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main style="flex:1;overflow-y:auto;min-width:0;display:flex;flex-direction:column;">
+
+    <!-- Page header -->
+    <div style="padding:30px 36px 0;flex-shrink:0;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
+        <div>
+          <div style="font-size:9.5px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:rgba(214,218,234,0.25);margin-bottom:5px;">Finance / Budgeting</div>
+          <h1 style="font-size:23px;font-weight:650;letter-spacing:-0.6px;color:#e8ecf8;line-height:1;">{{ selectedMonth }}</h1>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onClick="{{ onToggleData }}" style="background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:7px 13px;font-size:12px;color:rgba(214,218,234,0.38);" style-hover="background:rgba(255,255,255,0.04);">{{ dataToggleLabel }}</button>
+          <button style="display:flex;align-items:center;gap:6px;background:#7c6ef8;color:white;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:520;" style-hover="background:#917bf9;">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v7M6 1L4 3M6 1l2 2" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 10h9" stroke="white" stroke-width="1.4" stroke-linecap="round"/></svg>
+            Import Statement
+          </button>
+        </div>
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex;gap:1px;background:rgba(255,255,255,0.045);border-radius:9px;padding:3px;width:fit-content;">
+        <button onClick="{{ onTabOverview }}" style="background:{{ overviewTabBg }};color:{{ overviewTabColor }};border:none;border-radius:7px;padding:7px 20px;font-size:13px;font-weight:500;transition:all 0.15s;">Monthly Overview</button>
+        <button onClick="{{ onTabIntelligence }}" style="background:{{ intelligenceTabBg }};color:{{ intelligenceTabColor }};border:none;border-radius:7px;padding:7px 20px;font-size:13px;font-weight:500;transition:all 0.15s;">Spending Intelligence</button>
+      </div>
+    </div>
+
+    <!-- ═══ EMPTY STATE ═══ -->
+    <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:60px 40px;animation:fadeIn 0.3s ease;">
+        <div style="text-align:center;max-width:400px;">
+          <div style="width:60px;height:60px;border-radius:16px;background:rgba(124,110,248,0.08);border:1px solid rgba(124,110,248,0.18);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><rect x="2.5" y="6" width="21" height="16" rx="2.5" stroke="rgba(124,110,248,0.7)" stroke-width="1.5" fill="none"/><path d="M7 11h12M7 15h8" stroke="rgba(124,110,248,0.5)" stroke-width="1.4" stroke-linecap="round"/><path d="M7 3.5v3M13 3.5v3M19 3.5v3" stroke="rgba(124,110,248,0.4)" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </div>
+          <h2 style="font-size:18px;font-weight:630;color:#e8ecf8;letter-spacing:-0.3px;margin-bottom:9px;">No data for {{ selectedMonth }}</h2>
+          <p style="font-size:13.5px;color:rgba(214,218,234,0.38);line-height:1.6;margin-bottom:26px;">Import your CSV statements to unlock the full analytics dashboard — waterfall, savings rate gauge, FI trajectory, and the what-if simulator.</p>
+          <button style="display:flex;align-items:center;gap:8px;background:#7c6ef8;color:white;border:none;border-radius:9px;padding:11px 24px;font-size:14px;font-weight:540;margin:0 auto 10px;" style-hover="background:#917bf9;">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5v8M6.5 1.5L4 4M6.5 1.5L9 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11h9" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Import Statement
+          </button>
+          <p style="font-size:11.5px;color:rgba(214,218,234,0.2);">Upload CommBank and/or Amex CSV exports</p>
+          <!-- Preview list -->
+          <div style="margin-top:28px;background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 20px;text-align:left;">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(214,218,234,0.25);margin-bottom:12px;">After import you'll see</div>
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <div style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:rgba(214,218,234,0.45);"><div style="width:6px;height:6px;border-radius:50%;background:#10b981;flex-shrink:0;"></div>Income vs spending waterfall chart</div>
+              <div style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:rgba(214,218,234,0.45);"><div style="width:6px;height:6px;border-radius:50%;background:#10b981;flex-shrink:0;"></div>Savings rate gauge + month health score</div>
+              <div style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:rgba(214,218,234,0.45);"><div style="width:6px;height:6px;border-radius:50%;background:#a78bfa;flex-shrink:0;"></div>12-month heatmap + category trends</div>
+              <div style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:rgba(214,218,234,0.45);"><div style="width:6px;height:6px;border-radius:50%;background:#a78bfa;flex-shrink:0;"></div>FI trajectory to $1.5M + what-if simulator</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ═══ OVERVIEW LAYER ═══ -->
+    <sc-if value="{{ showOverview }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:16px 36px 44px;display:flex;flex-direction:column;gap:12px;">
+
+        <!-- Row 1: Waterfall + Gauge + Health Score -->
+        <div style="display:grid;grid-template-columns:1fr 178px 178px;gap:12px;">
+
+          <!-- Waterfall -->
+          <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 20px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+              <div>
+                <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(214,218,234,0.3);">Income vs Spending</div>
+                <div style="font-size:11.5px;color:rgba(214,218,234,0.25);margin-top:3px;">{{ selectedMonth }} · categories ranked largest to smallest</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:rgba(16,185,129,0.5);"><div style="width:8px;height:3px;background:#10b981;border-radius:1px;"></div>income</div>
+                <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:rgba(251,191,36,0.5);"><div style="width:8px;height:3px;background:rgba(251,191,36,0.5);border-radius:1px;"></div>wants</div>
+                <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:rgba(148,163,184,0.4);"><div style="width:8px;height:3px;background:rgba(148,163,184,0.4);border-radius:1px;"></div>needs/fixed</div>
+              </div>
+            </div>
+            {{ waterfallChart }}
+          </div>
+
+          <!-- Gauge -->
+          <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;align-items:center;">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(214,218,234,0.3);align-self:flex-start;margin-bottom:6px;">Savings Rate</div>
+            {{ savingsGauge }}
+            <div style="margin-top:8px;align-self:stretch;">
+              <div style="font-size:9px;color:rgba(214,218,234,0.22);margin-bottom:4px;">6-month trend</div>
+              {{ savingsSparkline }}
+            </div>
+          </div>
+
+          <!-- Health Score -->
+          <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(214,218,234,0.3);margin-bottom:8px;">Month Score</div>
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;">
+              <div style="text-align:center;">
+                <div style="font-size:72px;font-weight:700;color:{{ healthGradeColor }};line-height:1;letter-spacing:-2px;font-family:ui-monospace,monospace;">{{ healthGrade }}</div>
+                <div style="font-size:12px;color:rgba(214,218,234,0.28);margin-top:6px;">{{ healthScore }}/10</div>
+              </div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:10px 12px;margin-top:10px;">
+              <div style="font-size:11px;color:rgba(214,218,234,0.42);line-height:1.4;">{{ healthDetail }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Forecast vs Actual -->
+        <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 22px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:3px;height:13px;background:#60a5fa;border-radius:2px;"></div>
+              <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(214,218,234,0.35);">Forecast vs Actual</span>
+              <span style="font-size:10.5px;color:rgba(214,218,234,0.22);">Ranked by overspend · click row to see merchants</span>
+            </div>
+            <div style="display:flex;gap:14px;font-size:10px;color:rgba(214,218,234,0.22);">
+              <div style="display:flex;align-items:center;gap:4px;"><div style="width:14px;height:2px;background:rgba(255,255,255,0.22);border-radius:1px;"></div>Forecast</div>
+              <div style="display:flex;align-items:center;gap:4px;"><div style="width:14px;height:5px;background:rgba(248,113,113,0.5);border-radius:2px;"></div>Actual</div>
+            </div>
+          </div>
+          <!-- Col headers -->
+          <div style="display:flex;align-items:center;gap:10px;padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,0.05);margin-bottom:2px;">
+            <div style="width:138px;font-size:9px;color:rgba(214,218,234,0.2);font-weight:600;text-transform:uppercase;letter-spacing:0.7px;flex-shrink:0;">Category</div>
+            <div style="flex:1;font-size:9px;color:rgba(214,218,234,0.2);font-weight:600;text-transform:uppercase;letter-spacing:0.7px;">Scale</div>
+            <div style="width:66px;text-align:right;font-size:9px;color:rgba(214,218,234,0.2);font-weight:600;text-transform:uppercase;flex-shrink:0;">Forecast</div>
+            <div style="width:66px;text-align:right;font-size:9px;color:rgba(214,218,234,0.2);font-weight:600;text-transform:uppercase;flex-shrink:0;">Actual</div>
+            <div style="width:56px;text-align:right;font-size:9px;color:rgba(214,218,234,0.2);font-weight:600;text-transform:uppercase;flex-shrink:0;">Diff</div>
+            <div style="width:24px;flex-shrink:0;"></div>
+          </div>
+          <sc-for list="{{ forecastVsActual }}" as="item" hint-placeholder-count="5">
+            <div style="background:{{ item.expandBg }};border-radius:4px;margin:0 -4px;padding:0 4px;transition:background 0.15s;">
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.038);">
+                <div style="width:138px;font-size:13px;color:#d6daea;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;">{{ item.name }}</div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:2.5px;">
+                  <div style="display:flex;height:3px;">
+                    <div style="flex:{{ item.forecastFlex }};background:rgba(255,255,255,0.2);border-radius:1.5px;"></div>
+                    <div style="flex:{{ item.forecastFillerFlex }};"></div>
+                  </div>
+                  <div style="display:flex;height:6px;">
+                    <div style="flex:{{ item.actualFlex }};background:{{ item.barColor }};border-radius:3px;"></div>
+                    <div style="flex:{{ item.fillerFlex }};"></div>
+                  </div>
+                </div>
+                <div style="width:66px;text-align:right;font-size:12px;color:rgba(214,218,234,0.38);font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;flex-shrink:0;">{{ item.forecastStr }}</div>
+                <div style="width:66px;text-align:right;font-size:12px;color:#d6daea;font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:520;flex-shrink:0;">{{ item.actualStr }}</div>
+                <div style="width:56px;text-align:right;font-size:12px;color:{{ item.diffColor }};font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:540;flex-shrink:0;">{{ item.diffStr }}</div>
+                <button onClick="{{ item.onExpand }}" style="width:24px;height:22px;border-radius:5px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:rgba(214,218,234,0.4);font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;" style-hover="background:rgba(255,255,255,0.1);">{{ item.expandIcon }}</button>
+              </div>
+            </div>
+          </sc-for>
+          <!-- Merchant panel -->
+          <sc-if value="{{ showMerchantPanel }}">
+            <div style="margin-top:10px;background:rgba(124,110,248,0.05);border:1px solid rgba(124,110,248,0.14);border-radius:10px;padding:12px 16px;animation:fadeIn 0.18s ease;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <span style="font-size:11.5px;font-weight:600;color:#a78bfa;">{{ expandedCatName }}</span>
+                <span style="font-size:12.5px;font-weight:560;font-family:ui-monospace,monospace;color:#d6daea;">{{ expandedCatTotal }}</span>
+              </div>
+              <sc-for list="{{ merchants }}" as="m" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:9px;padding:4px 0;">
+                  <div style="width:118px;font-size:12px;color:rgba(214,218,234,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;">{{ m.name }}</div>
+                  <div style="flex:1;display:flex;height:4px;">
+                    <div style="flex:{{ m.barFlex }};background:rgba(167,139,250,0.5);border-radius:2px;"></div>
+                    <div style="flex:{{ m.fillerFlex }};"></div>
+                  </div>
+                  <div style="width:58px;text-align:right;font-size:12px;font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;color:#d6daea;flex-shrink:0;">{{ m.amountStr }}</div>
+                  <div style="width:34px;text-align:right;font-size:10.5px;color:rgba(167,139,250,0.55);flex-shrink:0;">{{ m.pct }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <!-- Row 3: Net savings + Callouts -->
+        <div style="display:grid;grid-template-columns:208px 1fr;gap:12px;">
+          <!-- Net Savings -->
+          <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:5px;">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(214,218,234,0.3);">Net Savings</div>
+            <div style="font-size:32px;font-weight:700;color:#10b981;letter-spacing:-1px;line-height:1;font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;">{{ netSavingsStr }}</div>
+            <div style="font-size:12px;color:rgba(16,185,129,0.55);">{{ savingsRateStr }}% of income</div>
+            <div style="height:1px;background:rgba(255,255,255,0.05);margin:4px 0;"></div>
+            <div style="font-size:11px;color:rgba(214,218,234,0.26);">At this rate, FI in approx.</div>
+            <div style="font-size:19px;font-weight:630;color:rgba(214,218,234,0.6);letter-spacing:-0.3px;font-family:ui-monospace,monospace;">{{ fiYears }} yrs</div>
+            <div style="font-size:11px;color:rgba(214,218,234,0.2);">{{ fiMonths }} months · $1.5M target</div>
+          </div>
+          <!-- Callouts -->
+          <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <div style="width:3px;height:13px;background:#f59e0b;border-radius:2px;"></div>
+              <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(214,218,234,0.35);">Unusual Spend</span>
+              <span style="font-size:10px;color:rgba(214,218,234,0.25);background:rgba(255,255,255,0.04);padding:2px 8px;border-radius:20px;border:1px solid rgba(255,255,255,0.07);">&gt;20% above 3-month average</span>
+            </div>
+            <sc-if value="{{ hasCallouts }}">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;">
+                <sc-for list="{{ callouts }}" as="item" hint-placeholder-count="2">
+                  <div style="background:{{ item.bgColor }};border:1px solid {{ item.borderColor }};border-radius:9px;padding:10px 13px;display:flex;align-items:flex-start;gap:9px;">
+                    <div style="width:6px;height:6px;border-radius:50%;background:{{ item.dotColor }};flex-shrink:0;margin-top:4px;"></div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:12.5px;color:{{ item.textColor }};font-weight:500;margin-bottom:3px;">{{ item.text }}</div>
+                      <div style="font-size:11px;color:rgba(214,218,234,0.3);">{{ item.subtext }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noCallouts }}">
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 0;">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" fill="rgba(16,185,129,0.1)" stroke="#10b981" stroke-width="1"/><path d="M4.5 7L6.5 9L9.5 5" stroke="#10b981" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span style="font-size:13px;color:rgba(16,185,129,0.65);">All categories within normal range</span>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+      </div>
+    </sc-if>
+
+    <!-- ═══ INTELLIGENCE LAYER ═══ -->
+    <sc-if value="{{ showIntelligence }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:16px 36px 44px;display:flex;flex-direction:column;gap:12px;">
+
+        <!-- Heatmap -->
+        <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 22px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:3px;height:13px;background:#10b981;border-radius:2px;"></div>
+              <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(214,218,234,0.35);">Category Heatmap</span>
+              <span style="font-size:10.5px;color:rgba(214,218,234,0.22);">Jul 2025 – Jun 2026 · Jun column highlighted</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:rgba(214,218,234,0.22);">
+              <div style="display:flex;gap:2px;">
+                <div style="width:10px;height:10px;border-radius:2px;background:rgba(16,185,129,0.08);"></div>
+                <div style="width:10px;height:10px;border-radius:2px;background:rgba(16,185,129,0.3);"></div>
+                <div style="width:10px;height:10px;border-radius:2px;background:rgba(16,185,129,0.55);"></div>
+                <div style="width:10px;height:10px;border-radius:2px;background:rgba(16,185,129,0.82);"></div>
+              </div>
+              Low → High (relative per category)
+            </div>
+          </div>
+          {{ heatmap }}
+        </div>
+
+        <!-- Small multiples -->
+        <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 22px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+            <div style="width:3px;height:13px;background:#60a5fa;border-radius:2px;"></div>
+            <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(214,218,234,0.35);">Category Trend Lines</span>
+            <span style="font-size:10.5px;color:rgba(214,218,234,0.22);">12 months · ↑ rising · ↓ falling · → stable</span>
+          </div>
+          {{ smallMultiplesGrid }}
+        </div>
+
+        <!-- Velocity + Needs/Wants -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+          <!-- Spending Velocity -->
+          <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <div style="width:3px;height:13px;background:#60a5fa;border-radius:2px;"></div>
+              <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(214,218,234,0.35);">Spending Velocity</span>
+            </div>
+            <div style="font-size:11.5px;color:rgba(214,218,234,0.25);margin-bottom:12px;">Cumulative spend day-by-day vs forecast pace</div>
+            {{ velocityChart }}
+            <div style="display:flex;gap:14px;margin-top:8px;font-size:10.5px;">
+              <div style="display:flex;align-items:center;gap:4px;color:rgba(96,165,250,0.65);"><div style="width:14px;height:2px;background:#60a5fa;border-radius:1px;"></div>Actual</div>
+              <div style="display:flex;align-items:center;gap:4px;color:rgba(255,255,255,0.28);"><div style="width:14px;height:2px;background:rgba(255,255,255,0.22);border-radius:1px;"></div>Budget pace</div>
+            </div>
+          </div>
+
+          <!-- Needs vs Wants -->
+          <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <div style="width:3px;height:13px;background:#a78bfa;border-radius:2px;"></div>
+              <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(214,218,234,0.35);">Needs vs Wants</span>
+            </div>
+            <!-- Current split bar -->
+            <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px;margin-bottom:8px;">
+              <div style="flex:{{ needsPct }};background:rgba(16,185,129,0.45);border-radius:4px 0 0 4px;"></div>
+              <div style="flex:{{ wantsPct }};background:rgba(245,158,11,0.38);border-radius:0 4px 4px 0;"></div>
+            </div>
+            <div style="display:flex;gap:14px;margin-bottom:14px;">
+              <div style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:rgba(214,218,234,0.5);">
+                <div style="width:8px;height:8px;border-radius:2px;background:rgba(16,185,129,0.45);"></div>
+                Needs {{ needsPct }}% · {{ needsTotalStr }}
+              </div>
+              <div style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:rgba(214,218,234,0.5);">
+                <div style="width:8px;height:8px;border-radius:2px;background:rgba(245,158,11,0.38);"></div>
+                Wants {{ wantsPct }}% · {{ wantsTotalStr }}
+              </div>
+            </div>
+            <!-- 6-month trend -->
+            <div style="font-size:9.5px;color:rgba(214,218,234,0.25);margin-bottom:7px;">6-month trend</div>
+            <sc-for list="{{ last6NW }}" as="item" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:8px;padding:3px 0;">
+                <div style="width:26px;font-size:10.5px;color:rgba(214,218,234,0.28);flex-shrink:0;">{{ item.month }}</div>
+                <div style="flex:1;display:flex;height:4px;border-radius:2px;overflow:hidden;gap:1px;">
+                  <div style="flex:{{ item.needsPct }};background:rgba(16,185,129,0.38);"></div>
+                  <div style="flex:{{ item.wantsPct }};background:rgba(245,158,11,0.28);"></div>
+                </div>
+                <div style="font-size:10px;color:rgba(214,218,234,0.3);font-family:ui-monospace,monospace;flex-shrink:0;width:40px;text-align:right;">{{ item.needsPct }}%</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- FI Trajectory -->
+        <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 22px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:3px;height:13px;background:#a78bfa;border-radius:2px;"></div>
+              <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(214,218,234,0.35);">Savings Trajectory to $1.5M</span>
+            </div>
+            <div style="display:flex;gap:20px;flex-shrink:0;">
+              <div style="text-align:right;">
+                <div style="font-size:9.5px;color:rgba(214,218,234,0.25);margin-bottom:3px;">Current balance</div>
+                <div style="font-size:15px;font-weight:640;font-family:ui-monospace,monospace;color:#60a5fa;">{{ currentBalStr }}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:9.5px;color:rgba(214,218,234,0.25);margin-bottom:3px;">FI in (current rate)</div>
+                <div style="font-size:15px;font-weight:640;font-family:ui-monospace,monospace;color:rgba(124,110,248,0.8);">{{ fiYears }} yrs</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:9.5px;color:rgba(214,218,234,0.25);margin-bottom:3px;">Required monthly</div>
+                <div style="font-size:15px;font-weight:640;font-family:ui-monospace,monospace;color:rgba(245,158,11,0.75);">{{ requiredMonthlyStr }}</div>
+              </div>
+            </div>
+          </div>
+          {{ fiTrajectoryChart }}
+        </div>
+
+        <!-- What-If Simulator -->
+        <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 22px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+            <div style="width:3px;height:13px;background:#7c6ef8;border-radius:2px;"></div>
+            <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(214,218,234,0.35);">What-If Savings Simulator</span>
+            <span style="font-size:10.5px;color:rgba(214,218,234,0.22);">Adjust category spend to see impact on FI date</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 240px;gap:24px;align-items:start;">
+            <!-- Sliders -->
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <sc-for list="{{ whatIfSliders }}" as="slider" hint-placeholder-count="6">
+                <div>
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;">
+                    <span style="font-size:12.5px;color:rgba(214,218,234,0.6);">{{ slider.name }}</span>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span style="font-size:11px;color:{{ slider.deltaColor }};">{{ slider.deltaStr }}</span>
+                      <span style="font-size:13.5px;font-weight:560;font-family:ui-monospace,monospace;color:#d6daea;">{{ slider.valueStr }}</span>
+                    </div>
+                  </div>
+                  <input type="range" min="{{ slider.min }}" max="{{ slider.max }}" value="{{ slider.value }}" onChange="{{ slider.onChange }}" />
+                </div>
+              </sc-for>
+            </div>
+            <!-- Impact panel -->
+            <div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px;">
+              <div>
+                <div style="font-size:9.5px;color:rgba(214,218,234,0.28);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">Currently saving</div>
+                <div style="font-size:19px;font-weight:600;font-family:ui-monospace,monospace;color:rgba(214,218,234,0.45);letter-spacing:-0.5px;">{{ wiCurrentSavingsStr }}/mo</div>
+              </div>
+              <div>
+                <div style="font-size:9.5px;color:rgba(214,218,234,0.28);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">Adjusted savings</div>
+                <div style="font-size:24px;font-weight:700;font-family:ui-monospace,monospace;color:{{ wiDeltaColor }};letter-spacing:-0.7px;">{{ wiAdjustedSavingsStr }}/mo</div>
+                <div style="font-size:12px;color:{{ wiDeltaColor }};margin-top:3px;font-family:ui-monospace,monospace;">{{ wiDeltaStr }}</div>
+              </div>
+              <div style="height:1px;background:rgba(255,255,255,0.06);"></div>
+              <div>
+                <div style="font-size:9.5px;color:rgba(214,218,234,0.28);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">FI timeline</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <span style="font-size:14px;font-family:ui-monospace,monospace;color:rgba(214,218,234,0.4);">{{ wiCurrentFIYears }} yr</span>
+                  <span style="font-size:11px;color:rgba(214,218,234,0.2);">→</span>
+                  <span style="font-size:18px;font-weight:650;font-family:ui-monospace,monospace;color:{{ wiMonthsSavedColor }};letter-spacing:-0.4px;">{{ wiNewFIYears }} yr</span>
+                </div>
+                <div style="font-size:12px;color:{{ wiMonthsSavedColor }};font-weight:500;">{{ wiMonthsSaved }} {{ wiMonthsSavedLabel }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Spend Creep + One-offs -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+          <!-- Spend Creep -->
+          <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <div style="width:3px;height:13px;background:#a78bfa;border-radius:2px;"></div>
+              <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(214,218,234,0.35);">Subscription Spend Creep</span>
+            </div>
+            <div style="font-size:11.5px;color:rgba(214,218,234,0.25);margin-bottom:12px;">Total recurring subscriptions · 12 months</div>
+            {{ spendCreepChart }}
+            <div style="display:flex;align-items:center;gap:6px;margin-top:10px;padding:7px 10px;background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.14);border-radius:7px;">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1L9.5 9H.5L5 1Z" stroke="rgba(245,158,11,0.5)" stroke-width="1" fill="none" stroke-linejoin="round"/><path d="M5 4V6.5" stroke="rgba(245,158,11,0.7)" stroke-width="1" stroke-linecap="round"/><circle cx="5" cy="7.5" r="0.4" fill="rgba(245,158,11,0.7)"/></svg>
+              <span style="font-size:11px;color:rgba(245,158,11,0.65);">+$15/mo increase observed over 12 months (gym added Aug)</span>
+            </div>
+          </div>
+
+          <!-- One-off Timeline -->
+          <div style="background:#131520;border:1px solid rgba(255,255,255,0.065);border-radius:12px;padding:16px 20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <div style="width:3px;height:13px;background:#f59e0b;border-radius:2px;"></div>
+              <span style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(214,218,234,0.35);">One-Off Items — FY2025–26</span>
+            </div>
+            <sc-for list="{{ oneoffs }}" as="item" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.22);border-radius:6px;padding:3px 7px;font-size:10.5px;color:#f59e0b;font-weight:500;flex-shrink:0;white-space:nowrap;">{{ item.month }}</div>
+                <div style="flex:1;font-size:13px;color:rgba(214,218,234,0.6);">{{ item.label }}</div>
+                <div style="font-size:13px;font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;color:rgba(245,158,11,0.75);font-weight:520;flex-shrink:0;">{{ item.amountStr }}</div>
+              </div>
+            </sc-for>
+            <div style="font-size:11px;color:rgba(214,218,234,0.22);margin-top:10px;">One-off items are flagged during import review and excluded from category averages.</div>
+          </div>
+
+        </div>
+      </div>
+    </sc-if>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1440, &quot;height&quot;: 900}}">
+class Component extends DCLogic {
+  _income = 9240;
+  _rent = 790;
+  _fiTarget = 1500000;
+  _tgtRate = 0.45;
+
+  _months = ['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'];
+
+  _cats = [
+    {key:'groceries', name:'Groceries',        short:'Groc',   type:'need', forecast:880, cur:950},
+    {key:'eatingOut', name:'Eating Out',        short:'EatOut', type:'want', forecast:500, cur:625},
+    {key:'utilities', name:'Utilities',         short:'Utils',  type:'need', forecast:320, cur:340},
+    {key:'clothing',  name:'Clothing & Retail', short:'Cloth',  type:'want', forecast:200, cur:310},
+    {key:'health',    name:'Health & Wellness', short:'Health', type:'need', forecast:220, cur:250},
+    {key:'transport', name:'Transport',         short:'Trans',  type:'need', forecast:180, cur:185},
+    {key:'vehicle',   name:'Vehicle',           short:'Vehicl', type:'need', forecast:150, cur:180},
+    {key:'subs',      name:'Subscriptions',     short:'Subs',   type:'fixed',forecast:145, cur:145},
+    {key:'pc',        name:'Personal Care',     short:'Care',   type:'want', forecast:100, cur:120},
+    {key:'entertain', name:'Entertainment',     short:'Entmt',  type:'want', forecast:120, cur:95},
+  ];
+
+  _hist = {
+    groceries:  [820,890,760,930,1020,980, 810,870,910,840,890,950],
+    eatingOut:  [580,620,490,710, 850,1240,520,590,380,600,550,625],
+    utilities:  [290,310,340,330, 380, 410,420,390,360,330,300,340],
+    clothing:   [120, 85,340,180, 650, 920, 95,280,150,120, 85,310],
+    health:     [180,220,195,240, 310, 180,200,225,190,280,210,250],
+    transport:  [160,145,190,175, 155, 210,165,140,195,160,170,185],
+    vehicle:    [150, 85,420,150, 160, 200,150, 85,580,150, 85,180],
+    subs:       [130,130,130,130, 130, 130,130,145,145,145,145,145],
+    pc:         [ 95,110, 85,130, 140, 200, 90,105,115, 95,110,120],
+    entertain:  [ 80, 95,120, 85, 140, 280, 75, 90,110, 95, 80, 95],
+  };
+
+  _histInc = [7800,8200,7800,8200,7800,16400,7800,8200,7800,8200,7800,9240];
+
+  _merch = {
+    groceries:  [{n:'Woolworths',a:445},{n:'Coles',a:285},{n:'ALDI',a:145},{n:'Harris Farm',a:75}],
+    eatingOut:  [{n:'Uber Eats',a:195},{n:'Mr Miyagi',a:145},{n:'Tuck Shop',a:115},{n:'Lune',a:85},{n:'Other',a:85}],
+    utilities:  [{n:'Ausgrid',a:140},{n:'Sydney Water',a:110},{n:'Origin Energy',a:90}],
+    clothing:   [{n:'Myer',a:165},{n:'ASOS',a:95},{n:'The Iconic',a:50}],
+    health:     [{n:'Alchemy Saunas',a:90},{n:'Priceline Phcy',a:75},{n:'Chemist Whouse',a:55},{n:'Other',a:30}],
+    transport:  [{n:'Uber',a:120},{n:'myki top-up',a:45},{n:'Parking',a:20}],
+    vehicle:    [{n:'Shell Coles Expr',a:110},{n:'BP',a:70}],
+    subs:       [{n:'Gym (MYFIT)',a:97},{n:'Netflix',a:22.99},{n:'iCloud+',a:12.99},{n:'Spotify',a:11.99}],
+    pc:         [{n:'Mecca Cosmetica',a:78},{n:'Priceline',a:42}],
+    entertain:  [{n:'Village Cinemas',a:48},{n:'Ticketmaster',a:47}],
+  };
+
+  _oneoffs = [
+    {month:'Sep 25', label:'Vehicle rego renewal', amount:420},
+    {month:'Nov 25', label:'Winter clothing haul', amount:280},
+    {month:'Dec 25', label:'Christmas gifts', amount:320},
+    {month:'Mar 26', label:'Car service + tyres', amount:450},
+  ];
+
+  state = {
+    hasData: true,
+    activeTab: 'overview',
+    expandedCategory: null,
+    whatIf: {groceries:950,eatingOut:625,clothing:310,health:250,entertain:95,pc:120},
+  };
+
+  _f(n) { return '$' + Math.round(Math.abs(n)).toLocaleString(); }
+  _r(d) { return d * Math.PI / 180; }
+  _cc(t) {
+    return t==='fixed'?'rgba(167,139,250,0.62)':t==='want'?'rgba(251,191,36,0.52)':'rgba(148,163,184,0.42)';
+  }
+
+  _histBal() {
+    let b = 130000;
+    return this._histInc.map((inc,i) => {
+      const sp = Object.keys(this._hist).reduce((s,k)=>s+this._hist[k][i],0);
+      b += inc - this._rent - sp;
+      return b;
+    });
+  }
+
+  _makeWaterfall() {
+    const W=640,H=208,pad={t:18,r:8,b:44,l:52};
+    const iW=W-pad.l-pad.r,iH=H-pad.t-pad.b;
+    const maxV=this._income;
+    const sY=v=>pad.t+(1-v/maxV)*iH;
+    const sorted=[...this._cats].sort((a,b)=>b.cur-a.cur);
+    const segs=[
+      {lb:'Salary',val:this._income,tp:'income'},
+      {lb:'Rent',val:this._rent,tp:'spend',cc:'rgba(167,139,250,0.62)'},
+      ...sorted.map(c=>({lb:c.short,val:c.cur,tp:'spend',cc:this._cc(c.type)})),
+    ];
+    const totalOut=sorted.reduce((s,c)=>s+c.cur,0)+this._rent;
+    const net=this._income-totalOut;
+    segs.push({lb:'Net',val:net,tp:'total'});
+    const n=segs.length,pitch=iW/n,bw=pitch*0.72;
+    let run=0;
+    const bars=segs.map((sg,i)=>{
+      const cx=pad.l+i*pitch+pitch/2,x=cx-bw/2;
+      let y,h,color,cY;
+      if(sg.tp==='income'){y=sY(sg.val);h=sY(0)-y;run=sg.val;color='#10b981';cY=y;}
+      else if(sg.tp==='spend'){const p=run;run-=sg.val;y=sY(p);h=sY(run)-y;color=sg.cc;cY=y+h;}
+      else{y=sY(run);h=sY(0)-y;color=run>=0?'#10b981':'#f87171';cY=null;}
+      return {x,y,bw,h:Math.max(h,1.5),color,lb:sg.lb,cx,tp:sg.tp,cY};
+    });
+    const yTk=[0,2000,4000,6000,8000,9240];
+    const R=React,C=R.createElement,F=R.Fragment;
+    return C('svg',{width:'100%',viewBox:`0 0 ${W} ${H}`,style:{display:'block',overflow:'visible'}},
+      ...yTk.map(v=>C(F,{key:'g'+v},
+        C('line',{x1:pad.l,y1:sY(v),x2:W-pad.r,y2:sY(v),stroke:'rgba(255,255,255,0.045)',strokeWidth:1}),
+        C('text',{x:pad.l-5,y:sY(v)+4,textAnchor:'end',fontSize:9,fill:'rgba(214,218,234,0.25)',fontFamily:'ui-monospace,monospace'},v?`$${v/1000}k`:'0'),
+      )),
+      ...bars.map((b,i)=>C(F,{key:'b'+i},
+        (i<bars.length-1&&b.cY!=null)?C('line',{x1:b.x+b.bw,y1:b.cY,x2:bars[i+1].x,y2:b.cY,stroke:'rgba(255,255,255,0.08)',strokeWidth:1,strokeDasharray:'3,2'}):null,
+        C('rect',{x:b.x,y:b.y,width:b.bw,height:b.h,fill:b.color,rx:2.5}),
+        C('text',{x:b.cx,y:H-6,textAnchor:'middle',fontSize:7.5,fill:'rgba(214,218,234,0.3)',fontFamily:'system-ui'},b.lb),
+        (b.tp==='income'||b.tp==='total')?C('text',{x:b.cx,y:b.y-5,textAnchor:'middle',fontSize:9.5,fontWeight:'600',fill:b.color,fontFamily:'ui-monospace,monospace'},
+          b.tp==='income'?`$${this._income/1000}k`:this._f(net)):null,
+      )),
+    );
+  }
+
+  _makeGauge(rate, tgt) {
+    const S=160,cx=S/2,cy=S/2+6,r=60;
+    const cp=deg=>({x:cx+r*Math.sin(this._r(deg)),y:cy-r*Math.cos(this._r(deg))});
+    const sA=225,sw=270;
+    const s=cp(sA),e=cp(sA+sw);
+    const bg=`M ${s.x.toFixed(2)},${s.y.toFixed(2)} A ${r},${r} 0 1 1 ${e.x.toFixed(2)},${e.y.toFixed(2)}`;
+    const fA=sA+rate*sw,fp=cp(fA),la=rate*sw>180?1:0;
+    const fill=`M ${s.x.toFixed(2)},${s.y.toFixed(2)} A ${r},${r} 0 ${la} 1 ${fp.x.toFixed(2)},${fp.y.toFixed(2)}`;
+    const tA=sA+tgt*sw,tO=cp(tA);
+    const tI={x:cx+(r-12)*Math.sin(this._r(tA)),y:cy-(r-12)*Math.cos(this._r(tA))};
+    const R=React,C=R.createElement;
+    return C('svg',{width:S,height:S,viewBox:`0 0 ${S} ${S}`},
+      C('path',{d:bg,stroke:'rgba(255,255,255,0.07)',strokeWidth:11,fill:'none',strokeLinecap:'round'}),
+      C('path',{d:fill,stroke:'rgba(16,185,129,0.2)',strokeWidth:14,fill:'none',strokeLinecap:'round'}),
+      C('path',{d:fill,stroke:'#10b981',strokeWidth:11,fill:'none',strokeLinecap:'round',style:{filter:'drop-shadow(0 0 5px rgba(16,185,129,0.35))'}}),
+      C('line',{x1:tI.x,y1:tI.y,x2:tO.x,y2:tO.y,stroke:'#f59e0b',strokeWidth:2.5,strokeLinecap:'round'}),
+      C('text',{x:cx,y:cy-2,textAnchor:'middle',fontSize:26,fontWeight:'700',fill:'#e8ecf8',fontFamily:'ui-monospace,monospace'},`${Math.round(rate*100)}%`),
+      C('text',{x:cx,y:cy+14,textAnchor:'middle',fontSize:9,fill:'rgba(214,218,234,0.3)',fontFamily:'system-ui'},'of income saved'),
+      C('text',{x:cx,y:S-6,textAnchor:'middle',fontSize:8.5,fill:'rgba(245,158,11,0.52)',fontFamily:'system-ui'},`▸ Target ${Math.round(tgt*100)}%`),
+    );
+  }
+
+  _makeSparkline(data) {
+    const W=110,H=30,p=4;
+    const mn=Math.min(...data),mx=Math.max(...data),range=mx-mn||1;
+    const pts=data.map((v,i)=>`${p+(i/(data.length-1))*(W-2*p)},${p+(1-(v-mn)/range)*(H-2*p)}`).join(' ');
+    const R=React,C=R.createElement;
+    return C('svg',{width:'100%',height:H,viewBox:`0 0 ${W} ${H}`,style:{display:'block'}},
+      C('polyline',{points:pts,stroke:'#10b981',strokeWidth:1.5,fill:'none',strokeLinecap:'round',strokeLinejoin:'round',opacity:0.7}),
+    );
+  }
+
+  _makeSmallMultiplesGrid() {
+    const R=React,C=R.createElement;
+    const items=this._cats.map(cat=>{
+      const data=this._hist[cat.key];
+      const mn=Math.min(...data)*0.82,mx=Math.max(...data)*1.15,range=mx-mn||1;
+      const W=160,H=68,pad={t:20,r:6,b:14,l:6};
+      const iW=W-pad.l-pad.r,iH=H-pad.t-pad.b;
+      const pts=data.map((v,i)=>({
+        x:pad.l+(i/(data.length-1))*iW,
+        y:pad.t+(1-(v-mn)/range)*iH,
+      }));
+      const pl=pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      const last=pts[pts.length-1];
+      const a3=data.slice(-3).reduce((s,v)=>s+v,0)/3;
+      const p3=data.slice(-6,-3).reduce((s,v)=>s+v,0)/3;
+      const trend=a3>p3*1.08?'up':a3<p3*0.92?'dn':'fl';
+      const lc=trend==='up'?'#f87171':trend==='dn'?'#10b981':'#60a5fa';
+      const arrow=trend==='up'?'↑':trend==='dn'?'↓':'→';
+      return C('div',{key:cat.key,style:{background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'8px',overflow:'hidden'}},
+        C('svg',{width:'100%',height:H,viewBox:`0 0 ${W} ${H}`,style:{display:'block'}},
+          C('text',{x:pad.l+2,y:11,fontSize:8.5,fill:'rgba(214,218,234,0.38)',fontFamily:'system-ui'},cat.name.split(' ')[0]),
+          C('text',{x:W-pad.r,y:11,textAnchor:'end',fontSize:9,fill:lc,fontFamily:'ui-monospace,monospace',fontWeight:'600'},`$${cat.cur}`),
+          C('text',{x:W/2,y:11,textAnchor:'middle',fontSize:9,fill:lc},arrow),
+          C('polygon',{points:pl+` ${last.x.toFixed(1)},${(pad.t+iH).toFixed(1)} ${pts[0].x.toFixed(1)},${(pad.t+iH).toFixed(1)}`,fill:lc,opacity:0.06}),
+          C('polyline',{points:pl,stroke:lc,strokeWidth:1.5,fill:'none',strokeLinecap:'round',strokeLinejoin:'round'}),
+          C('circle',{cx:last.x,cy:last.y,r:2.5,fill:lc}),
+          C('text',{x:pad.l,y:H-2,fontSize:7,fill:'rgba(214,218,234,0.18)',fontFamily:'system-ui'},'Jul'),
+          C('text',{x:W-pad.r,y:H-2,textAnchor:'end',fontSize:7,fill:'rgba(214,218,234,0.18)',fontFamily:'system-ui'},'Jun'),
+        ),
+      );
+    });
+    return C('div',{style:{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:'8px'}}, ...items);
+  }
+
+  _makeHeatmap() {
+    const R=React,C=R.createElement;
+    const months=this._months;
+    return C('div',{style:{overflowX:'auto'}},
+      C('div',{style:{display:'flex',gap:3,marginBottom:5,paddingLeft:118}},
+        ...months.map((m,i)=>C('div',{key:m,style:{width:30,textAlign:'center',fontSize:9,color:i===11?'rgba(16,185,129,0.7)':'rgba(214,218,234,0.22)',flexShrink:0}},m)),
+      ),
+      C('div',{style:{display:'flex',flexDirection:'column',gap:2}},
+        ...this._cats.map(cat=>{
+          const data=this._hist[cat.key];
+          const mn=Math.min(...data),mx=Math.max(...data),range=mx-mn||1;
+          return C('div',{key:cat.key,style:{display:'flex',alignItems:'center',gap:3}},
+            C('div',{style:{width:114,fontSize:11,color:'rgba(214,218,234,0.38)',textAlign:'right',paddingRight:8,flexShrink:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},cat.name),
+            ...data.map((v,mi)=>{
+              const intensity=0.07+(v-mn)/range*0.76;
+              return C('div',{key:mi,title:`${months[mi]}: $${v}`,style:{width:30,height:20,borderRadius:3,flexShrink:0,background:`rgba(16,185,129,${intensity.toFixed(2)})`,border:mi===11?'1.5px solid rgba(16,185,129,0.55)':'1px solid transparent'}});
+            }),
+          );
+        }),
+      ),
+    );
+  }
+
+  _makeVelocity() {
+    const totalA=this._cats.reduce((s,c)=>s+c.cur,0);
+    const totalF=this._cats.reduce((s,c)=>s+c.forecast,0);
+    const raw=[42,18,95,28,62,38,85,22,110,35,72,41,18,88,24,65,92,30,48,78,15,95,38,72,28,85,41,65,30,52];
+    const rs=raw.reduce((s,v)=>s+v,0);
+    const daily=raw.map(v=>v/rs*totalA);
+    const bdaily=totalF/30;
+    let cum=0;
+    const aC=daily.map(d=>{cum+=d;return cum;});
+    const bC=daily.map((_,i)=>bdaily*(i+1));
+    const W=340,H=120,pad={t:12,r:18,b:24,l:44};
+    const iW=W-pad.l-pad.r,iH=H-pad.t-pad.b;
+    const maxV=Math.max(aC[29],bC[29])*1.06;
+    const sX=i=>pad.l+i/29*iW,sY=v=>pad.t+(1-v/maxV)*iH;
+    const ap=aC.map((v,i)=>`${sX(i)},${sY(v)}`).join(' ');
+    const bp=bC.map((v,i)=>`${sX(i)},${sY(v)}`).join(' ');
+    const yTk=[0,1000,2000,3000].filter(v=>v<=maxV);
+    const R=React,C=R.createElement,F=R.Fragment;
+    return C('svg',{width:'100%',height:H,viewBox:`0 0 ${W} ${H}`,style:{display:'block',overflow:'visible'}},
+      ...yTk.map(v=>C(F,{key:'v'+v},
+        C('line',{x1:pad.l,y1:sY(v),x2:W-pad.r,y2:sY(v),stroke:'rgba(255,255,255,0.04)',strokeWidth:1}),
+        C('text',{x:pad.l-4,y:sY(v)+4,textAnchor:'end',fontSize:8,fill:'rgba(214,218,234,0.22)',fontFamily:'ui-monospace,monospace'},`$${v}`),
+      )),
+      C('polygon',{points:bp+` ${sX(29)},${pad.t+iH} ${pad.l},${pad.t+iH}`,fill:'rgba(255,255,255,0.02)'}),
+      C('polyline',{points:bp,stroke:'rgba(255,255,255,0.15)',strokeWidth:1.2,fill:'none',strokeDasharray:'4,3'}),
+      C('polyline',{points:ap,stroke:'#60a5fa',strokeWidth:2,fill:'none',strokeLinecap:'round',strokeLinejoin:'round'}),
+      C('text',{x:W-pad.r+2,y:sY(aC[29])+4,fontSize:8.5,fill:'#60a5fa',fontFamily:'ui-monospace,monospace'},this._f(aC[29])),
+      C('text',{x:W-pad.r+2,y:sY(bC[29])+4,fontSize:8.5,fill:'rgba(255,255,255,0.28)',fontFamily:'ui-monospace,monospace'},this._f(bC[29])),
+      C('text',{x:pad.l,y:H-4,fontSize:7.5,fill:'rgba(214,218,234,0.2)',fontFamily:'system-ui'},'1 Jun'),
+      C('text',{x:sX(14),y:H-4,textAnchor:'middle',fontSize:7.5,fill:'rgba(214,218,234,0.2)',fontFamily:'system-ui'},'15 Jun'),
+      C('text',{x:sX(29),y:H-4,textAnchor:'end',fontSize:7.5,fill:'rgba(214,218,234,0.2)',fontFamily:'system-ui'},'30 Jun'),
+    );
+  }
+
+  _makeFITrajectory(hb) {
+    const cur=hb[11],curMo=hb[11]-hb[10];
+    const pMo=120,reqMo=(this._fiTarget-cur)/pMo;
+    const tot=12+pMo;
+    const W=640,H=210,pad={t:22,r:62,b:28,l:66};
+    const iW=W-pad.l-pad.r,iH=H-pad.t-pad.b;
+    const maxV=this._fiTarget;
+    const sX=i=>pad.l+(i/(tot-1))*iW;
+    const sY=v=>pad.t+(1-v/maxV)*iH;
+    const hp=hb.map((v,i)=>`${sX(i).toFixed(1)},${sY(v).toFixed(1)}`).join(' ');
+    const pp=[cur,...Array.from({length:pMo},(_,i)=>cur+curMo*(i+1))].map((v,i)=>`${sX(11+i).toFixed(1)},${sY(v).toFixed(1)}`).join(' ');
+    const rp=[cur,...Array.from({length:pMo},(_,i)=>cur+reqMo*(i+1))].map((v,i)=>`${sX(11+i).toFixed(1)},${sY(v).toFixed(1)}`).join(' ');
+    const yTk=[0,250000,500000,750000,1000000,1250000,1500000];
+    const xLb=[{i:0,l:'Jul 25'},{i:11,l:'Jun 26'},{i:35,l:'2029'},{i:59,l:'2031'},{i:83,l:'2033'},{i:107,l:'2035'},{i:131,l:'Jun 36'}];
+    const R=React,C=R.createElement,F=R.Fragment;
+    return C('svg',{width:'100%',viewBox:`0 0 ${W} ${H}`,style:{display:'block',overflow:'visible'}},
+      ...yTk.map(v=>C(F,{key:'fy'+v},
+        C('line',{x1:pad.l,y1:sY(v),x2:W-pad.r,y2:sY(v),stroke:'rgba(255,255,255,0.04)',strokeWidth:1}),
+        C('text',{x:pad.l-5,y:sY(v)+4,textAnchor:'end',fontSize:8.5,fill:'rgba(214,218,234,0.25)',fontFamily:'ui-monospace,monospace'},v>=1000000?`$${v/1000000}M`:v?`$${v/1000}k`:'0'),
+      )),
+      C('line',{x1:pad.l,y1:sY(this._fiTarget),x2:W-pad.r,y2:sY(this._fiTarget),stroke:'rgba(16,185,129,0.22)',strokeWidth:1.5,strokeDasharray:'4,3'}),
+      C('text',{x:W-pad.r+4,y:sY(this._fiTarget)+4,fontSize:8.5,fill:'rgba(16,185,129,0.5)',fontFamily:'ui-monospace,monospace'},'$1.5M'),
+      C('line',{x1:sX(11),y1:pad.t,x2:sX(11),y2:pad.t+iH,stroke:'rgba(255,255,255,0.07)',strokeWidth:1,strokeDasharray:'3,2'}),
+      C('text',{x:sX(11),y:pad.t-5,textAnchor:'middle',fontSize:7.5,fill:'rgba(255,255,255,0.22)',fontFamily:'system-ui'},'Today'),
+      C('polyline',{points:rp,stroke:'rgba(245,158,11,0.48)',strokeWidth:1.5,fill:'none',strokeDasharray:'5,3'}),
+      C('polygon',{points:pp+` ${sX(131).toFixed(1)},${sY(0).toFixed(1)} ${sX(11).toFixed(1)},${sY(0).toFixed(1)}`,fill:'rgba(124,110,248,0.04)'}),
+      C('polyline',{points:pp,stroke:'rgba(124,110,248,0.6)',strokeWidth:1.5,fill:'none',strokeDasharray:'5,3'}),
+      C('polygon',{points:hp+` ${sX(11).toFixed(1)},${sY(0).toFixed(1)} ${sX(0).toFixed(1)},${sY(0).toFixed(1)}`,fill:'rgba(96,165,250,0.05)'}),
+      C('polyline',{points:hp,stroke:'#60a5fa',strokeWidth:2,fill:'none',strokeLinecap:'round',strokeLinejoin:'round'}),
+      C('circle',{cx:sX(11),cy:sY(cur),r:3.5,fill:'#60a5fa'}),
+      ...xLb.map(xl=>C('text',{key:'xl'+xl.i,x:sX(xl.i),y:H-4,textAnchor:'middle',fontSize:7.5,fill:'rgba(214,218,234,0.2)',fontFamily:'system-ui'},xl.l)),
+      C('g',{transform:`translate(${pad.l},${pad.t+5})`},
+        C('line',{x1:0,y1:4,x2:12,y2:4,stroke:'#60a5fa',strokeWidth:2}),
+        C('text',{x:16,y:7,fontSize:8.5,fill:'rgba(214,218,234,0.38)',fontFamily:'system-ui'},'Actual'),
+        C('line',{x1:68,y1:4,x2:80,y2:4,stroke:'rgba(124,110,248,0.6)',strokeWidth:1.5,strokeDasharray:'4,2'}),
+        C('text',{x:84,y:7,fontSize:8.5,fill:'rgba(214,218,234,0.38)',fontFamily:'system-ui'},'Projected (current rate)'),
+        C('line',{x1:230,y1:4,x2:242,y2:4,stroke:'rgba(245,158,11,0.48)',strokeWidth:1.5,strokeDasharray:'4,2'}),
+        C('text',{x:246,y:7,fontSize:8.5,fill:'rgba(214,218,234,0.38)',fontFamily:'system-ui'},'Required for $1.5M target'),
+      ),
+    );
+  }
+
+  _makeSpendCreep() {
+    const data=this._hist.subs;
+    const W=280,H=90,pad={t:14,r:10,b:20,l:40};
+    const iW=W-pad.l-pad.r,iH=H-pad.t-pad.b;
+    const mn=Math.min(...data)*0.88,mx=Math.max(...data)*1.12,range=mx-mn;
+    const pts=data.map((v,i)=>({x:pad.l+(i/11)*iW,y:pad.t+(1-(v-mn)/range)*iH}));
+    const pl=pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const yTk=[130,140,150].filter(v=>v>mn&&v<mx);
+    const R=React,C=R.createElement,F=R.Fragment;
+    return C('svg',{width:'100%',height:H,viewBox:`0 0 ${W} ${H}`,style:{display:'block'}},
+      ...yTk.map(v=>{
+        const y=pad.t+(1-(v-mn)/range)*iH;
+        return C(F,{key:'sc'+v},
+          C('line',{x1:pad.l,y1:y,x2:W-pad.r,y2:y,stroke:'rgba(255,255,255,0.04)',strokeWidth:1}),
+          C('text',{x:pad.l-4,y:y+4,textAnchor:'end',fontSize:8,fill:'rgba(214,218,234,0.22)',fontFamily:'ui-monospace,monospace'},`$${v}`),
+        );
+      }),
+      C('line',{x1:pts[0].x,y1:pts[0].y,x2:pts[11].x,y2:pts[11].y,stroke:'rgba(245,158,11,0.22)',strokeWidth:1.2,strokeDasharray:'4,2'}),
+      C('polygon',{points:pl+` ${pts[11].x.toFixed(1)},${(pad.t+iH).toFixed(1)} ${pts[0].x.toFixed(1)},${(pad.t+iH).toFixed(1)}`,fill:'rgba(167,139,250,0.06)'}),
+      C('polyline',{points:pl,stroke:'rgba(167,139,250,0.75)',strokeWidth:1.5,fill:'none',strokeLinecap:'round',strokeLinejoin:'round'}),
+      C('circle',{cx:pts[11].x,cy:pts[11].y,r:2.5,fill:'#a78bfa'}),
+      C('text',{x:pad.l,y:H-3,fontSize:7.5,fill:'rgba(214,218,234,0.18)',fontFamily:'system-ui'},'Jul 25'),
+      C('text',{x:W-pad.r,y:H-3,textAnchor:'end',fontSize:7.5,fill:'rgba(214,218,234,0.18)',fontFamily:'system-ui'},'Jun 26'),
+    );
+  }
+
+  renderVals() {
+    const s = this.state;
+    const f = n => this._f(n);
+
+    // ── Core metrics ──
+    const totalCur = this._cats.reduce((sum,c)=>sum+c.cur,0);
+    const totalOut = totalCur + this._rent;
+    const netSavings = this._income - totalOut;
+    const savingsRate = netSavings / this._income;
+    const hb = this._histBal();
+    const curBal = hb[11];
+    const gap = this._fiTarget - curBal;
+    const fiMo = Math.round(gap / netSavings);
+    const fiYr = (fiMo / 12).toFixed(1);
+    const reqMo = Math.round(gap / 120);
+
+    // ── Health score ──
+    const sRatio = savingsRate / this._tgtRate;
+    const overCnt = this._cats.filter(c=>c.cur>c.forecast).length;
+    const score = Math.round(Math.min(10,Math.max(1,sRatio*5+(1-overCnt/this._cats.length)*5)));
+    const grade = score>=9?'A':score>=7?'B':score>=5?'C':'D';
+    const gradeColor = score>=7?'#10b981':score>=5?'#f59e0b':'#f87171';
+
+    // ── Forecast vs actual ──
+    const maxSp = Math.max(...this._cats.map(c=>Math.max(c.cur,c.forecast)));
+    const fva = [...this._cats].sort((a,b)=>(b.cur-b.forecast)-(a.cur-a.forecast)).map(c=>{
+      const d=c.cur-c.forecast;
+      return {
+        name:c.name, forecastStr:f(c.forecast), actualStr:f(c.cur),
+        diffStr:d===0?'—':d>0?`+${f(d)}`:`-${f(-d)}`,
+        diffColor:d>100?'#f87171':d>0?'#f59e0b':d<-20?'#10b981':'rgba(214,218,234,0.35)',
+        barColor:d>100?'rgba(248,113,113,0.55)':d>0?'rgba(245,158,11,0.5)':'rgba(16,185,129,0.55)',
+        forecastFlex:c.forecast, forecastFillerFlex:Math.max(0,maxSp-c.forecast),
+        actualFlex:c.cur, fillerFlex:Math.max(0,maxSp-c.cur),
+        expandBg:s.expandedCategory===c.key?'rgba(124,110,248,0.06)':'transparent',
+        expandIcon:s.expandedCategory===c.key?'↑':'↓',
+        onExpand:((k)=>()=>this.setState(p=>({expandedCategory:p.expandedCategory===k?null:k})))(c.key),
+      };
+    });
+
+    // ── Callouts ──
+    const callouts = this._cats.filter(c=>{
+      const h=this._hist[c.key];
+      return c.cur > (h[8]+h[9]+h[10])/3 * 1.20;
+    }).map(c=>{
+      const h=this._hist[c.key],avg=(h[8]+h[9]+h[10])/3;
+      const pct=Math.round((c.cur/avg-1)*100),hi=pct>50;
+      return {
+        text:`${c.name} is ${pct}% above 3-month average`,
+        subtext:`${f(avg)} avg → ${f(c.cur)} this month`,
+        bgColor:hi?'rgba(248,113,113,0.05)':'rgba(245,158,11,0.04)',
+        borderColor:hi?'rgba(248,113,113,0.22)':'rgba(245,158,11,0.18)',
+        textColor:hi?'#f87171':'#f59e0b', dotColor:hi?'#f87171':'#f59e0b',
+      };
+    });
+
+    // ── Sparkline (last 6 months savings rate) ──
+    const last6 = this._histInc.slice(6).map((inc,i)=>{
+      const sp=Object.keys(this._hist).reduce((s,k)=>s+this._hist[k][6+i],0);
+      return (inc-this._rent-sp)/inc*100;
+    });
+
+    // ── Needs vs Wants ──
+    const needsTot = this._cats.filter(c=>c.type==='need').reduce((s,c)=>s+c.cur,0);
+    const wantsTot = this._cats.filter(c=>c.type==='want').reduce((s,c)=>s+c.cur,0);
+    const needsPct = Math.round(needsTot/(needsTot+wantsTot)*100);
+    const last6NW = Array.from({length:6},(_,i)=>{
+      const mi=6+i;
+      const n=this._cats.filter(c=>c.type==='need').reduce((s,c)=>s+this._hist[c.key][mi],0);
+      const w=this._cats.filter(c=>c.type==='want').reduce((s,c)=>s+this._hist[c.key][mi],0);
+      return {month:this._months[mi],needsPct:Math.round(n/(n+w)*100),wantsPct:Math.round(w/(n+w)*100)};
+    });
+
+    // ── What-If ──
+    const wi = s.whatIf;
+    const wiKeys = ['groceries','eatingOut','clothing','health','entertain','pc'];
+    const wiCurTot = wiKeys.reduce((s,k)=>s+this._cats.find(c=>c.key===k).cur,0);
+    const wiNewTot = wiKeys.reduce((s,k)=>s+wi[k],0);
+    const wiDelta = wiCurTot - wiNewTot;
+    const wiNewSav = netSavings + wiDelta;
+    const wiNewFIMo = wiNewSav>0?Math.round(gap/wiNewSav):fiMo;
+    const wiMoSaved = fiMo - wiNewFIMo;
+    const wiSliders = [
+      {key:'groceries',name:'Groceries',min:400,max:1400,cur:950},
+      {key:'eatingOut',name:'Eating Out',min:100,max:1200,cur:625},
+      {key:'clothing', name:'Clothing & Retail',min:0,max:800,cur:310},
+      {key:'health',   name:'Health & Wellness',min:50,max:500,cur:250},
+      {key:'entertain',name:'Entertainment',min:0,max:400,cur:95},
+      {key:'pc',       name:'Personal Care',min:0,max:300,cur:120},
+    ].map(sl=>{
+      const val=wi[sl.key],delta=val-sl.cur;
+      return {
+        ...sl, value:val, valueStr:f(val),
+        deltaStr:delta===0?'no change':delta<0?`${f(-delta)} saved`:`+${f(delta)} more`,
+        deltaColor:delta<0?'#10b981':delta>0?'rgba(245,158,11,0.8)':'rgba(214,218,234,0.3)',
+        onChange:((k)=>e=>this.setState(p=>({whatIf:{...p.whatIf,[k]:parseInt(e.target.value)||0}})))(sl.key),
+      };
+    });
+
+    // ── Merchants ──
+    const expKey = s.expandedCategory;
+    const expCat = this._cats.find(c=>c.key===expKey)||null;
+    const merchants = (expKey&&this._merch[expKey]||[]).map(m=>{
+      const tot=expCat?expCat.cur:1;
+      return {name:m.n,amountStr:f(m.a),pct:Math.round(m.a/tot*100)+'%',barFlex:Math.round(m.a),fillerFlex:Math.max(0,Math.round(tot-m.a))};
+    });
+
+    return {
+      selectedMonth:'June 2026',
+      hasData:s.hasData, isEmpty:!s.hasData,
+      showOverview:s.hasData&&s.activeTab==='overview',
+      showIntelligence:s.hasData&&s.activeTab==='intelligence',
+      dataToggleLabel:s.hasData?'Preview empty state':'← Show data',
+      overviewTabBg:s.activeTab==='overview'?'rgba(255,255,255,0.09)':'transparent',
+      overviewTabColor:s.activeTab==='overview'?'#d6daea':'rgba(214,218,234,0.35)',
+      intelligenceTabBg:s.activeTab==='intelligence'?'rgba(255,255,255,0.09)':'transparent',
+      intelligenceTabColor:s.activeTab==='intelligence'?'#d6daea':'rgba(214,218,234,0.35)',
+
+      incomeStr:f(this._income), totalSpendStr:f(totalOut), netSavingsStr:f(netSavings),
+      savingsRateStr:Math.round(savingsRate*100),
+      currentBalStr:f(curBal),
+      fiYears:fiYr, fiMonths:fiMo,
+      requiredMonthlyStr:f(reqMo),
+      healthGrade:grade, healthGradeColor:gradeColor, healthScore:score,
+      healthDetail:`${score}/10 — Strong savings rate, ${overCnt} of 10 categories over forecast`,
+
+      waterfallChart:this._makeWaterfall(),
+      savingsGauge:this._makeGauge(savingsRate,this._tgtRate),
+      savingsSparkline:this._makeSparkline(last6),
+      heatmap:this._makeHeatmap(),
+      smallMultiplesGrid:this._makeSmallMultiplesGrid(),
+      velocityChart:this._makeVelocity(),
+      fiTrajectoryChart:this._makeFITrajectory(hb),
+      spendCreepChart:this._makeSpendCreep(),
+
+      forecastVsActual:fva,
+      showMerchantPanel:!!expKey,
+      expandedCatName:expCat?expCat.name:'',
+      expandedCatTotal:expCat?f(expCat.cur):'',
+      merchants,
+
+      callouts, hasCallouts:callouts.length>0, noCallouts:callouts.length===0,
+
+      needsPct, wantsPct:100-needsPct,
+      needsTotalStr:f(needsTot), wantsTotalStr:f(wantsTot),
+      last6NW,
+
+      whatIfSliders:wiSliders,
+      wiCurrentSavingsStr:f(netSavings),
+      wiAdjustedSavingsStr:f(wiNewSav),
+      wiDeltaStr:wiDelta===0?'No change':wiDelta>0?`+${f(wiDelta)}/mo saved`:`-${f(-wiDelta)}/mo`,
+      wiDeltaColor:wiDelta>0?'#10b981':wiDelta<0?'#f87171':'rgba(214,218,234,0.3)',
+      wiCurrentFIYears:fiYr,
+      wiNewFIYears:(wiNewFIMo/12).toFixed(1),
+      wiMonthsSaved:Math.abs(wiMoSaved),
+      wiMonthsSavedLabel:wiMoSaved>0?'months sooner to FI':wiMoSaved<0?'months further from FI':'no change',
+      wiMonthsSavedColor:wiMoSaved>0?'#10b981':wiMoSaved<0?'#f87171':'rgba(214,218,234,0.3)',
+
+      oneoffs:this._oneoffs.map(o=>({...o,amountStr:f(o.amount)})),
+
+      onTabOverview:()=>this.setState({activeTab:'overview',expandedCategory:null}),
+      onTabIntelligence:()=>this.setState({activeTab:'intelligence',expandedCategory:null}),
+      onToggleData:()=>this.setState(s=>({hasData:!s.hasData})),
+    };
+  }
+}
+</script>
+</body>
+</html>

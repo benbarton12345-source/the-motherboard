@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeSlide { from { opacity:0; transform:translateX(-6px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:system-ui,-apple-system,'Segoe UI',sans-serif; background:#0c0e15; color:#d6daea; -webkit-font-smoothing:antialiased; }
+    input, select, button { font-family:inherit; }
+    button { cursor:pointer; }
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+    ::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,0.2); }
+  </style>
+</helmet>
+
+<div style="display:flex; height:100vh; background:#0c0e15; overflow:hidden; position:relative;">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside style="width:212px; background:#08090e; border-right:1px solid rgba(255,255,255,0.055); display:flex; flex-direction:column; flex-shrink:0;">
+    <div style="padding:22px 18px 26px; display:flex; align-items:center; gap:10px;">
+      <div style="width:28px; height:28px; border-radius:7px; background:linear-gradient(135deg,#7c6ef8 0%,#4fa3e8 100%); flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" fill="rgba(255,255,255,0.85)"/><rect x="8" y="1" width="5" height="5" rx="1" fill="rgba(255,255,255,0.5)"/><rect x="1" y="8" width="5" height="5" rx="1" fill="rgba(255,255,255,0.5)"/><rect x="8" y="8" width="5" height="5" rx="1" fill="rgba(255,255,255,0.85)"/></svg>
+      </div>
+      <span style="font-size:13.5px; font-weight:600; letter-spacing:-0.3px; color:#e0e4f6;">Motherboard</span>
+    </div>
+    <nav style="display:flex; flex-direction:column; gap:1px; padding:0 10px; flex:1;">
+      <div style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:7px;" style-hover="background:rgba(255,255,255,0.04);">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="1" width="5.5" height="5.5" rx="1.5" fill="rgba(214,218,234,0.22)"/><rect x="8.5" y="1" width="5.5" height="5.5" rx="1.5" fill="rgba(214,218,234,0.22)"/><rect x="1" y="8.5" width="5.5" height="5.5" rx="1.5" fill="rgba(214,218,234,0.22)"/><rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1.5" fill="rgba(214,218,234,0.22)"/></svg>
+        <span style="font-size:13px; color:rgba(214,218,234,0.35); font-weight:440;">Overview</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:7px; background:rgba(124,110,248,0.13);">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="9" width="3" height="5" rx="1" fill="#7c6ef8"/><rect x="6" y="5.5" width="3" height="8.5" rx="1" fill="#7c6ef8"/><rect x="11" y="2" width="3" height="12" rx="1" fill="#7c6ef8"/></svg>
+        <span style="font-size:13px; color:#c4beff; font-weight:560;">Finance</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:7px;" style-hover="background:rgba(255,255,255,0.04);">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5L13 6.5V13.5H9.5V9.5H5.5V13.5H2V6.5L7.5 1.5Z" stroke="rgba(214,218,234,0.28)" stroke-width="1.3" fill="none" stroke-linejoin="round"/></svg>
+        <span style="font-size:13px; color:rgba(214,218,234,0.35); font-weight:440;">Home</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:7px;" style-hover="background:rgba(255,255,255,0.04);">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1.5" y="1.5" width="12" height="12" rx="2" stroke="rgba(214,218,234,0.28)" stroke-width="1.3" fill="none"/><path d="M4.5 7.5L6.5 9.5L10.5 5.5" stroke="rgba(214,218,234,0.28)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span style="font-size:13px; color:rgba(214,218,234,0.35); font-weight:440;">Productivity</span>
+      </div>
+    </nav>
+    <div style="padding:14px 14px 18px; border-top:1px solid rgba(255,255,255,0.055);">
+      <div style="display:flex; align-items:center; gap:9px;">
+        <div style="width:27px; height:27px; border-radius:50%; background:linear-gradient(135deg,#a78bfa,#60a5fa); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:white; flex-shrink:0;">B</div>
+        <div>
+          <div style="font-size:12.5px; font-weight:500; color:#d6daea; line-height:1.2;">Ben</div>
+          <div style="font-size:11px; color:rgba(214,218,234,0.3);">Admin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main style="flex:1; overflow-y:auto; padding:36px 44px; position:relative;" data-screen-label="Finance Page">
+
+    <!-- Done banner -->
+    <sc-if value="{{ isDone }}">
+      <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.18); border-radius:10px; padding:13px 18px; display:flex; align-items:center; gap:10px; margin-bottom:22px; animation:fadeIn 0.3s ease;">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="flex-shrink:0;"><circle cx="7.5" cy="7.5" r="6.5" fill="rgba(16,185,129,0.18)" stroke="#10b981" stroke-width="1.3"/><path d="M4.5 7.5L6.5 9.5L10.5 5.5" stroke="#10b981" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span style="font-size:13px; color:#10b981; font-weight:500;">{{ doneMessage }}</span>
+      </div>
+    </sc-if>
+
+    <!-- Page header -->
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:30px;">
+      <div>
+        <div style="font-size:9.5px; font-weight:600; letter-spacing:1.6px; text-transform:uppercase; color:rgba(214,218,234,0.25); margin-bottom:5px;">Finance</div>
+        <h1 style="font-size:26px; font-weight:650; letter-spacing:-0.7px; color:#e8ecf8; line-height:1;">{{ selectedMonth }}</h1>
+      </div>
+      <button onClick="{{ onOpenUpload }}" style="display:flex; align-items:center; gap:7px; background:#7c6ef8; color:white; border:none; border-radius:8px; padding:10px 17px; font-size:13.5px; font-weight:520; letter-spacing:-0.1px; transition:background 0.15s;" style-hover="background:#917bf9;">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5V9M6.5 1.5L4 4M6.5 1.5L9 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 10.5H11.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Import Statement
+      </button>
+    </div>
+
+    <!-- Summary cards -->
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px;">
+      <div style="background:#131520; border:1px solid rgba(255,255,255,0.065); border-radius:12px; padding:20px;">
+        <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.9px; color:rgba(214,218,234,0.32); margin-bottom:11px;">Total Income</div>
+        <div style="font-size:27px; font-weight:650; letter-spacing:-1px; color:#10b981; font-variant-numeric:tabular-nums; line-height:1; font-family:ui-monospace,monospace;">$9,240</div>
+        <div style="font-size:11.5px; color:rgba(16,185,129,0.55); margin-top:6px;">↑ $1,240 above forecast</div>
+      </div>
+      <div style="background:#131520; border:1px solid rgba(255,255,255,0.065); border-radius:12px; padding:20px;">
+        <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.9px; color:rgba(214,218,234,0.32); margin-bottom:11px;">Variable Spending</div>
+        <div style="font-size:27px; font-weight:650; letter-spacing:-1px; color:rgba(214,218,234,0.4); font-variant-numeric:tabular-nums; line-height:1; font-family:ui-monospace,monospace;">—</div>
+        <div style="font-size:11.5px; color:rgba(214,218,234,0.28); margin-top:6px;">Pending statement import</div>
+      </div>
+      <div style="background:#131520; border:1px solid rgba(255,255,255,0.065); border-radius:12px; padding:20px;">
+        <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.9px; color:rgba(214,218,234,0.32); margin-bottom:11px;">Net Savings</div>
+        <div style="font-size:27px; font-weight:650; letter-spacing:-1px; color:rgba(214,218,234,0.4); font-variant-numeric:tabular-nums; line-height:1; font-family:ui-monospace,monospace;">—</div>
+        <div style="font-size:11.5px; color:rgba(214,218,234,0.28); margin-top:6px;">Reconcile to calculate</div>
+      </div>
+    </div>
+
+    <!-- Recurring forecasts -->
+    <div style="background:#131520; border:1px solid rgba(255,255,255,0.065); border-radius:12px; padding:20px 22px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <div style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:rgba(214,218,234,0.3);">Recurring Forecasts</div>
+        <div style="font-size:11px; color:rgba(167,139,250,0.65); background:rgba(167,139,250,0.09); padding:3px 9px; border-radius:20px; border:1px solid rgba(167,139,250,0.18);">5 items · not yet reconciled</div>
+      </div>
+      <div style="display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.048);">
+          <span style="font-size:13.5px; color:rgba(214,218,234,0.65);">Salary (LIFENET)</span>
+          <span style="font-size:13.5px; font-family:ui-monospace,monospace; color:#a78bfa; font-weight:520;">$8,000/mo</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.048);">
+          <span style="font-size:13.5px; color:rgba(214,218,234,0.65);">Rent (DEFT PAYMENTS)</span>
+          <span style="font-size:13.5px; font-family:ui-monospace,monospace; color:#a78bfa; font-weight:520;">$790/mo</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0 0;">
+          <span style="font-size:13px; color:rgba(214,218,234,0.28);">+ 3 more (Gym, Netflix, Internet)</span>
+          <button onClick="{{ onOpenUpload }}" style="background:transparent; border:none; font-size:12px; color:rgba(124,110,248,0.7); cursor:pointer; padding:0;" style-hover="color:#7c6ef8;">Import to reconcile →</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══ MODAL OVERLAY ═══ -->
+  <sc-if value="{{ showModal }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; background:rgba(4,5,13,0.88); display:flex; align-items:center; justify-content:center; z-index:1000; padding:24px;" onClick="{{ onOverlayClick }}">
+      <div style="background:#13151f; border:1px solid rgba(255,255,255,0.085); border-radius:14px; width:{{ modalWidth }}; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; animation:fadeIn 0.2s ease-out;" onClick="{{ onModalClick }}">
+
+        <!-- Accent bar -->
+        <div style="height:2px; background:linear-gradient(90deg,#7c6ef8 0%,#4fa3e8 60%,transparent 100%); flex-shrink:0; border-radius:14px 14px 0 0;"></div>
+
+        <!-- ─── STEP 1: UPLOAD ─── -->
+        <sc-if value="{{ showUpload }}" hint-placeholder-val="{{ true }}">
+          <div data-screen-label="Step 1 — Upload" style="display:flex; flex-direction:column; overflow:hidden; flex:1;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px 18px; flex-shrink:0;">
+              <div>
+                <h2 style="font-size:15.5px; font-weight:620; color:#e8ecf8; letter-spacing:-0.3px;">Import Statement</h2>
+                <p style="font-size:12.5px; color:rgba(214,218,234,0.38); margin-top:3px;">Upload CSV exports to reconcile {{ selectedMonth }}</p>
+              </div>
+              <button onClick="{{ onCancel }}" style="width:28px; height:28px; border-radius:7px; background:rgba(255,255,255,0.055); border:1px solid rgba(255,255,255,0.08); color:rgba(214,218,234,0.45); font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; flex-shrink:0;" style-hover="background:rgba(255,255,255,0.1);">×</button>
+            </div>
+            <div style="height:1px; background:rgba(255,255,255,0.06); flex-shrink:0; margin:0 24px;"></div>
+
+            <div style="padding:22px 24px; display:flex; flex-direction:column; gap:20px; overflow-y:auto;">
+
+              <!-- Month selector -->
+              <div>
+                <label style="display:block; font-size:10.5px; font-weight:600; color:rgba(214,218,234,0.38); text-transform:uppercase; letter-spacing:0.9px; margin-bottom:7px;">Statement month</label>
+                <div style="position:relative;">
+                  <select onChange="{{ onChangeMonth }}" value="{{ selectedMonth }}" style="width:100%; background:#1a1d2a; border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 36px 10px 13px; font-size:13.5px; color:#d6daea; cursor:pointer; appearance:none; -webkit-appearance:none; outline:none;">
+                    <option value="April 2026">April 2026</option>
+                    <option value="May 2026">May 2026</option>
+                    <option value="June 2026">June 2026</option>
+                    <option value="July 2026">July 2026</option>
+                  </select>
+                  <svg style="position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none;" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4L6 8L10 4" stroke="rgba(214,218,234,0.4)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+
+              <!-- Upload areas: CommBank + Amex separately -->
+              <div>
+                <label style="display:block; font-size:10.5px; font-weight:600; color:rgba(214,218,234,0.38); text-transform:uppercase; letter-spacing:0.9px; margin-bottom:10px;">CSV files — upload one or both</label>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+
+                  <!-- CommBank -->
+                  <div style="border:1.5px dashed {{ commbankBorder }}; border-radius:10px; padding:16px 18px; background:{{ commbankBg }}; display:flex; align-items:center; gap:14px; transition:border-color 0.2s,background 0.2s;">
+                    <div style="width:34px; height:34px; border-radius:8px; background:rgba(255,255,255,0.05); flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="1.5" width="10" height="13" rx="2" stroke="rgba(214,218,234,0.35)" stroke-width="1.3" fill="none"/><path d="M4.5 5.5H11.5M4.5 8H11.5M4.5 10.5H8.5" stroke="rgba(214,218,234,0.28)" stroke-width="1.1" stroke-linecap="round"/></svg>
+                    </div>
+                    <div style="flex:1; min-width:0;">
+                      <div style="font-size:13.5px; font-weight:520; color:#d6daea; margin-bottom:2px;">Commonwealth Bank</div>
+                      <div style="font-size:12px; color:{{ commbankSubColor }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ commbankLabel }}</div>
+                    </div>
+                    <sc-if value="{{ commbankLoaded }}">
+                      <button onClick="{{ onRemoveCommbank }}" style="width:24px; height:24px; border-radius:6px; background:rgba(248,113,113,0.07); border:1px solid rgba(248,113,113,0.15); color:#f87171; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; line-height:1;" style-hover="background:rgba(248,113,113,0.15);">×</button>
+                    </sc-if>
+                    <sc-if value="{{ commbankNotLoaded }}">
+                      <button onClick="{{ onAddCommbank }}" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:7px 13px; font-size:12.5px; color:rgba(214,218,234,0.5); cursor:pointer; white-space:nowrap; flex-shrink:0; transition:background 0.12s;" style-hover="background:rgba(255,255,255,0.1);">+ Add CSV</button>
+                    </sc-if>
+                  </div>
+
+                  <!-- Amex -->
+                  <div style="border:1.5px dashed {{ amexBorder }}; border-radius:10px; padding:16px 18px; background:{{ amexBg }}; display:flex; align-items:center; gap:14px; transition:border-color 0.2s,background 0.2s;">
+                    <div style="width:34px; height:34px; border-radius:8px; background:rgba(255,255,255,0.05); flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="4.5" width="13" height="7" rx="1.5" stroke="rgba(214,218,234,0.35)" stroke-width="1.3" fill="none"/><path d="M4 8H12M5 10H8" stroke="rgba(214,218,234,0.28)" stroke-width="1.1" stroke-linecap="round"/></svg>
+                    </div>
+                    <div style="flex:1; min-width:0;">
+                      <div style="font-size:13.5px; font-weight:520; color:#d6daea; margin-bottom:2px;">American Express</div>
+                      <div style="font-size:12px; color:{{ amexSubColor }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ amexLabel }}</div>
+                    </div>
+                    <sc-if value="{{ amexLoaded }}">
+                      <button onClick="{{ onRemoveAmex }}" style="width:24px; height:24px; border-radius:6px; background:rgba(248,113,113,0.07); border:1px solid rgba(248,113,113,0.15); color:#f87171; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; line-height:1;" style-hover="background:rgba(248,113,113,0.15);">×</button>
+                    </sc-if>
+                    <sc-if value="{{ amexNotLoaded }}">
+                      <button onClick="{{ onAddAmex }}" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:7px 13px; font-size:12.5px; color:rgba(214,218,234,0.5); cursor:pointer; white-space:nowrap; flex-shrink:0; transition:background 0.12s;" style-hover="background:rgba(255,255,255,0.1);">+ Add CSV</button>
+                    </sc-if>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+
+            <div style="height:1px; background:rgba(255,255,255,0.06); flex-shrink:0; margin:0 24px;"></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 24px; flex-shrink:0;">
+              <button onClick="{{ onCancel }}" style="background:transparent; border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:9px 17px; font-size:13.5px; color:rgba(214,218,234,0.5); cursor:pointer;" style-hover="background:rgba(255,255,255,0.05);">Cancel</button>
+              <button onClick="{{ onProcessFiles }}" style="background:#7c6ef8; color:white; border:none; border-radius:8px; padding:9px 20px; font-size:13.5px; font-weight:520; cursor:pointer; opacity:{{ processOpacity }}; transition:opacity 0.15s;" style-hover="background:#917bf9;">Process Statements →</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ─── STEP 2: PROCESSING ─── -->
+        <sc-if value="{{ showProcessing }}">
+          <div data-screen-label="Step 2 — Processing" style="display:flex; flex-direction:column; overflow:hidden; flex:1;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; flex-shrink:0;">
+              <h2 style="font-size:15.5px; font-weight:620; color:#e8ecf8; letter-spacing:-0.3px;">Processing statements…</h2>
+              <button onClick="{{ onCancel }}" style="width:28px; height:28px; border-radius:7px; background:rgba(255,255,255,0.055); border:1px solid rgba(255,255,255,0.08); color:rgba(214,218,234,0.45); font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;" style-hover="background:rgba(255,255,255,0.1);">×</button>
+            </div>
+            <div style="padding:32px 24px 44px; display:flex; flex-direction:column; align-items:center; gap:22px;">
+              <div style="width:42px; height:42px; border-radius:50%; border:2.5px solid rgba(124,110,248,0.15); border-top-color:#7c6ef8; animation:spin 0.85s linear infinite;"></div>
+              <div style="text-align:center;">
+                <div style="font-size:14px; color:#d6daea; margin-bottom:4px;">{{ processingLabel }}</div>
+                <div style="font-size:12px; color:rgba(214,218,234,0.32);">{{ fileCount }} file(s) · keyword rules + AI categorisation</div>
+              </div>
+              <div style="width:100%; max-width:300px;">
+                <div style="background:rgba(255,255,255,0.07); border-radius:3px; height:3px; overflow:hidden; margin-bottom:7px;">
+                  <div style="background:linear-gradient(90deg,#7c6ef8,#4fa3e8); border-radius:3px; height:100%; width:{{ progressWidth }}; transition:width 0.12s ease;"></div>
+                </div>
+                <div style="display:flex; justify-content:flex-end;">
+                  <span style="font-size:11px; color:rgba(214,218,234,0.35); font-variant-numeric:tabular-nums; font-family:ui-monospace,monospace;">{{ processingProgress }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ─── STEP 3: REVIEW ─── -->
+        <sc-if value="{{ showReview }}">
+          <div data-screen-label="Step 3 — Review" style="display:flex; flex-direction:column; overflow:hidden; flex:1; min-height:0;">
+            <!-- Header -->
+            <div style="padding:20px 24px 18px; flex-shrink:0;">
+              <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+                <div>
+                  <h2 style="font-size:15.5px; font-weight:620; color:#e8ecf8; letter-spacing:-0.3px;">Review Import</h2>
+                  <p style="font-size:12.5px; color:rgba(214,218,234,0.38); margin-top:3px;">{{ selectedMonth }} · Nothing is saved until you confirm</p>
+                </div>
+                <button onClick="{{ onCancel }}" style="width:28px; height:28px; border-radius:7px; background:rgba(255,255,255,0.055); border:1px solid rgba(255,255,255,0.08); color:rgba(214,218,234,0.45); font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; flex-shrink:0;" style-hover="background:rgba(255,255,255,0.1);">×</button>
+              </div>
+            </div>
+            <div style="height:1px; background:rgba(255,255,255,0.06); flex-shrink:0; margin:0 24px;"></div>
+
+            <!-- Scrollable body -->
+            <div style="overflow-y:auto; flex:1; min-height:0;">
+
+              <!-- ── SECTION A: RECURRING UPDATES ── -->
+              <div style="padding:22px 24px 20px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:3px;">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <div style="width:3px; height:13px; background:#a78bfa; border-radius:2px; flex-shrink:0;"></div>
+                    <span style="font-size:10px; font-weight:700; letter-spacing:1.3px; text-transform:uppercase; color:rgba(214,218,234,0.38);">Recurring Updates</span>
+                    <span style="font-size:10.5px; color:rgba(167,139,250,0.6); background:rgba(167,139,250,0.09); padding:2px 7px; border-radius:20px; border:1px solid rgba(167,139,250,0.18);">{{ recurringCount }} items</span>
+                    <sc-if value="{{ recurringAllActioned }}">
+                      <span style="font-size:10.5px; color:rgba(16,185,129,0.7); display:flex; align-items:center; gap:3px;">
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4.5" fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="1"/><path d="M3 5L4.5 6.5L7 3.5" stroke="#10b981" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        All actioned
+                      </span>
+                    </sc-if>
+                  </div>
+                  <div style="font-size:11.5px; color:rgba(214,218,234,0.3); flex-shrink:0;">{{ recurringActionedCount }} / {{ recurringCount }} actioned</div>
+                </div>
+                <p style="font-size:12px; color:rgba(214,218,234,0.28); margin-bottom:15px; padding-left:11px;">Confirm records the actual figure for this month — the standing forecast is not changed. Skip excludes this item from the import.</p>
+
+                <!-- Column headers -->
+                <div style="display:flex; align-items:center; gap:12px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <div style="flex:1; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px;">Item</div>
+                  <div style="width:84px; text-align:right; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; flex-shrink:0;">Forecast</div>
+                  <div style="width:18px; flex-shrink:0;"></div>
+                  <div style="width:84px; text-align:right; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; flex-shrink:0;">Actual</div>
+                  <div style="width:80px; text-align:right; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; flex-shrink:0;">Diff</div>
+                  <div style="width:176px; text-align:right; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; flex-shrink:0;">Action</div>
+                </div>
+
+                <!-- Recurring rows -->
+                <sc-for list="{{ recurringItems }}" as="item" hint-placeholder-count="3">
+                  <div style="border-bottom:1px solid rgba(255,255,255,0.042); background:{{ item.rowBg }}; transition:background 0.2s ease; border-radius:4px; margin:0 -4px; padding:0 4px;">
+                    <div style="display:flex; align-items:center; gap:12px; padding:13px 0;">
+                      <div style="flex:1; min-width:0;">
+                        <div style="font-size:13.5px; font-weight:500; color:#d6daea; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ item.name }}</div>
+                        <sc-if value="{{ item.context }}">
+                          <div style="display:flex; align-items:center; gap:4px; margin-top:3px;">
+                            <svg width="9" height="9" viewBox="0 0 9 9" fill="none" style="flex-shrink:0;"><circle cx="4.5" cy="4.5" r="4" stroke="rgba(251,191,36,0.45)" stroke-width="1" fill="none"/><path d="M4.5 3V5" stroke="rgba(251,191,36,0.7)" stroke-width="1" stroke-linecap="round"/><circle cx="4.5" cy="6.5" r="0.5" fill="rgba(251,191,36,0.7)"/></svg>
+                            <span style="font-size:11px; color:rgba(251,191,36,0.62);">{{ item.context }}</span>
+                          </div>
+                        </sc-if>
+                      </div>
+                      <div style="width:84px; text-align:right; font-size:13px; color:rgba(214,218,234,0.42); font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; flex-shrink:0;">{{ item.forecastStr }}</div>
+                      <div style="width:18px; text-align:center; font-size:11px; color:rgba(214,218,234,0.18); flex-shrink:0;">→</div>
+                      <div style="width:84px; text-align:right; font-size:13px; font-weight:560; color:#d6daea; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; flex-shrink:0;">{{ item.actualStr }}</div>
+                      <div style="width:80px; text-align:right; font-size:13px; font-weight:540; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; color:{{ item.diffColor }}; flex-shrink:0;">{{ item.diffStr }}</div>
+                      <div style="width:176px; display:flex; align-items:center; gap:6px; justify-content:flex-end; flex-shrink:0;">
+                        <sc-if value="{{ item.isPending }}">
+                          <button onClick="{{ item.onSkip }}" style="background:transparent; border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:6px 11px; font-size:12px; color:rgba(214,218,234,0.4); cursor:pointer; white-space:nowrap;" style-hover="background:rgba(255,255,255,0.06);">Skip</button>
+                          <button onClick="{{ item.onConfirm }}" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.22); border-radius:7px; padding:6px 11px; font-size:12px; color:#10b981; cursor:pointer; white-space:nowrap;" style-hover="background:rgba(16,185,129,0.18);">Confirm →</button>
+                        </sc-if>
+                        <sc-if value="{{ item.confirmed }}">
+                          <div style="display:flex; align-items:center; gap:5px; flex:1; justify-content:flex-end;">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5.5" fill="rgba(16,185,129,0.13)" stroke="#10b981" stroke-width="1"/><path d="M3.5 6L5 7.5L8.5 4" stroke="#10b981" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            <span style="font-size:12px; color:#10b981;">Confirmed</span>
+                          </div>
+                          <button onClick="{{ item.onUndo }}" style="background:transparent; border:none; font-size:11px; color:rgba(214,218,234,0.25); cursor:pointer; padding:4px 6px;" style-hover="color:rgba(214,218,234,0.6);">Undo</button>
+                        </sc-if>
+                        <sc-if value="{{ item.skipped }}">
+                          <div style="display:flex; align-items:center; gap:5px; flex:1; justify-content:flex-end;">
+                            <span style="font-size:12px; color:rgba(214,218,234,0.3);">Skipped</span>
+                          </div>
+                          <button onClick="{{ item.onUndo }}" style="background:transparent; border:none; font-size:11px; color:rgba(214,218,234,0.25); cursor:pointer; padding:4px 6px;" style-hover="color:rgba(214,218,234,0.6);">Undo</button>
+                        </sc-if>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <!-- Divider A→B -->
+              <div style="margin:0 24px; border-top:1px solid rgba(255,255,255,0.065); position:relative; display:flex; justify-content:center;">
+                <div style="background:#13151f; padding:0 12px; font-size:10.5px; color:rgba(214,218,234,0.18); position:absolute; top:-8px;">Variable spending</div>
+              </div>
+
+              <!-- ── SECTION B: CONFIDENT CATEGORISATION ── -->
+              <div style="padding:28px 24px 22px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <div style="width:3px; height:13px; background:#60a5fa; border-radius:2px; flex-shrink:0;"></div>
+                    <span style="font-size:10px; font-weight:700; letter-spacing:1.3px; text-transform:uppercase; color:rgba(214,218,234,0.38);">Confident Categorisation</span>
+                    <span style="font-size:10.5px; color:rgba(214,218,234,0.28); background:rgba(255,255,255,0.05); padding:2px 7px; border-radius:20px; border:1px solid rgba(255,255,255,0.08);">{{ includedCatCount }} of {{ totalCatCount }} categories</span>
+                  </div>
+                  <div style="font-size:14px; font-weight:640; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; color:#d6daea;">{{ totalBSpendStr }}</div>
+                </div>
+                <p style="font-size:12px; color:rgba(214,218,234,0.28); margin-bottom:15px; padding-left:11px;">Matched by keyword rules with high confidence. Expand any category to inspect transactions.</p>
+
+                <!-- Column headers -->
+                <div style="display:flex; align-items:center; gap:10px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <div style="width:18px; flex-shrink:0;"></div>
+                  <div style="flex:1; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px;">Category</div>
+                  <div style="width:94px; text-align:right; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; flex-shrink:0;">Total</div>
+                  <div style="width:38px; text-align:center; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; flex-shrink:0;">Tx</div>
+                  <div style="width:86px; text-align:right; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; flex-shrink:0;">Actions</div>
+                </div>
+
+                <!-- Category rows -->
+                <sc-for list="{{ categoryItems }}" as="item" hint-placeholder-count="5">
+                  <div style="border-bottom:1px solid rgba(255,255,255,0.04); opacity:{{ item.rowOpacity }}; transition:opacity 0.2s;">
+                    <div style="display:flex; align-items:center; gap:10px; padding:11px 0; cursor:pointer;" onClick="{{ item.onToggleExpand }}">
+                      <!-- Expand chevron -->
+                      <div style="width:18px; flex-shrink:0; display:flex; justify-content:center; align-items:center;">
+                        <svg width="9" height="9" viewBox="0 0 9 9" fill="none" style="transform:{{ item.chevronRotate }}; transition:transform 0.18s; opacity:0.3;"><path d="M1.5 3L4.5 6L7.5 3" stroke="rgba(214,218,234,0.8)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      </div>
+                      <!-- Name -->
+                      <div style="flex:1; min-width:0;">
+                        <span style="font-size:13.5px; color:#d6daea; text-decoration:{{ item.nameDecoration }};">{{ item.name }}</span>
+                      </div>
+                      <!-- Amount -->
+                      <div style="width:94px; text-align:right; flex-shrink:0;" onClick="{{ onStopProp }}">
+                        <sc-if value="{{ item.isEditing }}">
+                          <input type="number" value="{{ editValue }}" onChange="{{ onEditValueChange }}" onClick="{{ onStopProp }}" style="width:82px; background:#1a1d2a; border:1px solid rgba(124,110,248,0.45); border-radius:6px; padding:5px 8px; font-size:13px; color:#d6daea; text-align:right; font-family:ui-monospace,monospace; outline:none;" />
+                        </sc-if>
+                        <sc-if value="{{ item.isNotEditing }}">
+                          <span style="font-size:13.5px; font-variant-numeric:tabular-nums; font-family:ui-monospace,monospace; color:#d6daea; font-weight:520;">{{ item.amountStr }}</span>
+                        </sc-if>
+                      </div>
+                      <!-- Tx count -->
+                      <div style="width:38px; text-align:center; font-size:12px; color:rgba(214,218,234,0.32); font-variant-numeric:tabular-nums; flex-shrink:0;">{{ item.countStr }}</div>
+                      <!-- Actions -->
+                      <div style="width:86px; display:flex; gap:5px; justify-content:flex-end; flex-shrink:0;" onClick="{{ onStopProp }}">
+                        <sc-if value="{{ item.isEditing }}">
+                          <button onClick="{{ onSaveCategoryEdit }}" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.22); border-radius:6px; padding:5px 10px; font-size:12px; color:#10b981; cursor:pointer;" style-hover="background:rgba(16,185,129,0.18);">✓</button>
+                          <button onClick="{{ onCancelEdit }}" style="background:transparent; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:5px 8px; font-size:12px; color:rgba(214,218,234,0.4); cursor:pointer;" style-hover="background:rgba(255,255,255,0.06);">✕</button>
+                        </sc-if>
+                        <sc-if value="{{ item.isNotEditing }}">
+                          <sc-if value="{{ item.isIncluded }}">
+                            <button onClick="{{ item.onEdit }}" style="background:transparent; border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:5px 7px; font-size:11px; color:rgba(214,218,234,0.35); cursor:pointer; display:flex; align-items:center;" style-hover="background:rgba(255,255,255,0.06); color:rgba(214,218,234,0.8);" title="Edit amount">
+                              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M6.5 2L9 4.5L3.5 10H1V7.5L6.5 2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" fill="none"/></svg>
+                            </button>
+                          </sc-if>
+                          <sc-if value="{{ item.excluded }}">
+                            <button onClick="{{ item.onExclude }}" style="background:transparent; border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:5px 9px; font-size:11px; color:rgba(214,218,234,0.4); cursor:pointer; white-space:nowrap;" style-hover="background:rgba(255,255,255,0.06);">Include</button>
+                          </sc-if>
+                          <sc-if value="{{ item.isIncluded }}">
+                            <button onClick="{{ item.onExclude }}" style="background:transparent; border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:5px 7px; font-size:11px; color:rgba(214,218,234,0.28); cursor:pointer; display:flex; align-items:center;" style-hover="background:rgba(248,113,113,0.07); border-color:rgba(248,113,113,0.2); color:#f87171;" title="Exclude">
+                              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 2L9 9M9 2L2 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                            </button>
+                          </sc-if>
+                        </sc-if>
+                      </div>
+                    </div>
+
+                    <!-- Expanded transaction list -->
+                    <sc-if value="{{ item.isExpanded }}">
+                      <div style="margin:0 0 10px 18px; background:rgba(255,255,255,0.022); border-radius:8px; overflow:hidden; animation:fadeSlide 0.15s ease;">
+                        <sc-for list="{{ item.sampleTxns }}" as="tx" hint-placeholder-count="3">
+                          <div style="display:flex; align-items:center; gap:10px; padding:7px 12px; border-bottom:1px solid rgba(255,255,255,0.035);">
+                            <span style="font-size:11px; color:rgba(214,218,234,0.28); width:44px; flex-shrink:0; font-variant-numeric:tabular-nums;">{{ tx.date }}</span>
+                            <span style="font-size:12.5px; color:rgba(214,218,234,0.6); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ tx.merchant }}</span>
+                            <span style="font-size:12.5px; color:rgba(214,218,234,0.5); font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; flex-shrink:0;">{{ tx.amountStr }}</span>
+                          </div>
+                        </sc-for>
+                        <sc-if value="{{ item.hasMoreTxns }}">
+                          <div style="padding:7px 12px; font-size:11px; color:rgba(214,218,234,0.25);">+{{ item.moreTxnCount }} more transactions</div>
+                        </sc-if>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+
+                <div style="display:flex; justify-content:flex-end; padding-top:12px;">
+                  <div style="font-size:12px; color:rgba(214,218,234,0.4);">{{ excludedCatCount }} excluded · </div>
+                  <div style="font-size:12px; font-weight:600; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; color:#d6daea; margin-left:4px;">Total: {{ totalBSpendStr }}</div>
+                </div>
+              </div>
+
+              <!-- Divider B→C -->
+              <div style="margin:0 24px; border-top:1px solid rgba(245,158,11,0.18); position:relative; display:flex; justify-content:center;">
+                <div style="background:#13151f; padding:0 12px; font-size:10.5px; color:rgba(245,158,11,0.4); position:absolute; top:-8px; white-space:nowrap;">Needs your review ↓</div>
+              </div>
+
+              <!-- ── SECTION C: NEEDS REVIEW ── -->
+              <div style="padding:28px 24px 28px; background:rgba(245,158,11,0.018);">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <div style="width:3px; height:13px; background:#f59e0b; border-radius:2px; flex-shrink:0;"></div>
+                    <span style="font-size:10px; font-weight:700; letter-spacing:1.3px; text-transform:uppercase; color:rgba(214,218,234,0.38);">Needs Review</span>
+                    <sc-if value="{{ reviewHasPending }}">
+                      <span style="font-size:10.5px; color:rgba(245,158,11,0.85); background:rgba(245,158,11,0.1); padding:2px 7px; border-radius:20px; border:1px solid rgba(245,158,11,0.25);">{{ reviewPendingCount }} need action</span>
+                    </sc-if>
+                    <sc-if value="{{ reviewAllDone }}">
+                      <span style="font-size:10.5px; color:rgba(16,185,129,0.75); background:rgba(16,185,129,0.08); padding:2px 7px; border-radius:20px; border:1px solid rgba(16,185,129,0.18); display:flex; align-items:center; gap:4px;">
+                        <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><circle cx="4.5" cy="4.5" r="4" stroke="#10b981" stroke-width="1" fill="rgba(16,185,129,0.15)"/><path d="M2.5 4.5L4 6L6.5 3" stroke="#10b981" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        All reviewed
+                      </span>
+                    </sc-if>
+                  </div>
+                  <div style="font-size:11.5px; color:rgba(214,218,234,0.3); flex-shrink:0;">{{ reviewActionedCount }} / {{ reviewTotalCount }} actioned</div>
+                </div>
+                <p style="font-size:12px; color:rgba(214,218,234,0.28); margin-bottom:15px; padding-left:11px;">No keyword rule matched these. AI has suggested a category — confirm or override each one. All must be actioned before import.</p>
+
+                <!-- Column headers -->
+                <div style="display:flex; align-items:center; gap:10px; padding-bottom:8px; border-bottom:1px solid rgba(245,158,11,0.12);">
+                  <div style="width:52px; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; flex-shrink:0;">Date</div>
+                  <div style="flex:1; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px;">Merchant</div>
+                  <div style="width:78px; text-align:right; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; flex-shrink:0;">Amount</div>
+                  <div style="width:188px; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; flex-shrink:0;">Category</div>
+                  <div style="width:100px; text-align:right; font-size:10px; color:rgba(214,218,234,0.22); font-weight:600; text-transform:uppercase; letter-spacing:0.8px; flex-shrink:0;">Action</div>
+                </div>
+
+                <!-- Review rows -->
+                <sc-for list="{{ reviewItems }}" as="item" hint-placeholder-count="4">
+                  <div style="border-bottom:1px solid rgba(255,255,255,0.038); background:{{ item.rowBg }}; transition:background 0.2s; border-radius:4px; margin:0 -4px; padding:0 4px;">
+                    <div style="display:flex; align-items:center; gap:10px; padding:12px 0;">
+                      <!-- Date -->
+                      <div style="width:52px; font-size:12px; color:rgba(214,218,234,0.32); font-variant-numeric:tabular-nums; flex-shrink:0;">{{ item.date }}</div>
+                      <!-- Merchant + AI suggestion hint -->
+                      <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">
+                        <span style="font-size:13.5px; color:{{ item.merchantColor }}; text-decoration:{{ item.merchantDecoration }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;">{{ item.merchant }}</span>
+                        <sc-if value="{{ item.isPending }}">
+                          <span style="font-size:10.5px; color:rgba(245,158,11,0.6); display:flex; align-items:center; gap:3px; white-space:nowrap;">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style="flex-shrink:0;"><path d="M4 1L7.5 7H.5L4 1Z" stroke="rgba(245,158,11,0.5)" stroke-width="1" fill="none" stroke-linejoin="round"/><path d="M4 3.5V5.5" stroke="rgba(245,158,11,0.7)" stroke-width="1" stroke-linecap="round"/><circle cx="4" cy="6.3" r="0.4" fill="rgba(245,158,11,0.7)"/></svg>
+                            AI suggests: {{ item.aiCategory }}
+                          </span>
+                        </sc-if>
+                      </div>
+                      <!-- Amount -->
+                      <div style="width:78px; text-align:right; font-size:13px; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; color:{{ item.amountColor }}; font-weight:520; flex-shrink:0;">{{ item.amountStr }}</div>
+                      <!-- Category selector or confirmed state -->
+                      <div style="width:188px; flex-shrink:0;">
+                        <sc-if value="{{ item.isPending }}">
+                          <div style="position:relative;">
+                            <select onChange="{{ item.onCategoryChange }}" value="{{ item.pendingCategory }}" style="width:100%; background:#1e2030; border:1px solid rgba(245,158,11,0.28); border-radius:7px; padding:7px 24px 7px 10px; font-size:12.5px; color:#d6daea; cursor:pointer; appearance:none; -webkit-appearance:none; outline:none;">
+                              <option value="Groceries">Groceries</option>
+                              <option value="Eating Out">Eating Out</option>
+                              <option value="Transport">Transport</option>
+                              <option value="Subscriptions">Subscriptions</option>
+                              <option value="Health &amp; Wellness">Health &amp; Wellness</option>
+                              <option value="Clothing &amp; Retail">Clothing &amp; Retail</option>
+                              <option value="Entertainment">Entertainment</option>
+                              <option value="Utilities">Utilities</option>
+                              <option value="Vehicle">Vehicle</option>
+                              <option value="Personal Care">Personal Care</option>
+                              <option value="Miscellaneous">Miscellaneous</option>
+                            </select>
+                            <svg style="position:absolute; right:7px; top:50%; transform:translateY(-50%); pointer-events:none;" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5L5 6.5L8 3.5" stroke="rgba(245,158,11,0.45)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ item.isConfirmed }}">
+                          <div style="display:flex; align-items:center; gap:6px;">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5.5" fill="rgba(16,185,129,0.13)" stroke="#10b981" stroke-width="1"/><path d="M3.5 6L5 7.5L8.5 4" stroke="#10b981" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            <span style="font-size:12.5px; color:#10b981; font-weight:480;">{{ item.confirmedCategory }}</span>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ item.isExcluded }}">
+                          <div style="display:flex; align-items:center; gap:6px;">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5.5" stroke="rgba(248,113,113,0.35)" stroke-width="1" fill="none"/><path d="M4 4L8 8M8 4L4 8" stroke="#f87171" stroke-width="1.1" stroke-linecap="round"/></svg>
+                            <span style="font-size:12.5px; color:rgba(248,113,113,0.55);">Excluded</span>
+                          </div>
+                        </sc-if>
+                      </div>
+                      <!-- Action buttons -->
+                      <div style="width:100px; display:flex; align-items:center; gap:5px; justify-content:flex-end; flex-shrink:0;">
+                        <sc-if value="{{ item.isPending }}">
+                          <button onClick="{{ item.onConfirm }}" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.28); border-radius:7px; padding:6px 11px; font-size:12px; color:#f59e0b; cursor:pointer; white-space:nowrap;" style-hover="background:rgba(245,158,11,0.2);">Confirm</button>
+                          <button onClick="{{ item.onExclude }}" style="background:transparent; border:1px solid rgba(255,255,255,0.08); border-radius:7px; padding:6px 7px; font-size:11px; color:rgba(214,218,234,0.28); cursor:pointer; display:flex; align-items:center;" style-hover="background:rgba(248,113,113,0.07); border-color:rgba(248,113,113,0.22); color:#f87171;" title="Exclude">
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                          </button>
+                        </sc-if>
+                        <sc-if value="{{ item.isDone }}">
+                          <button onClick="{{ item.onUndo }}" style="background:transparent; border:none; font-size:11px; color:rgba(214,218,234,0.25); cursor:pointer; padding:4px 8px;" style-hover="color:rgba(214,218,234,0.6);">Undo</button>
+                        </sc-if>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+            </div>
+
+            <!-- ── SUMMARY FOOTER ── -->
+            <div style="height:1px; background:rgba(255,255,255,0.06); flex-shrink:0;"></div>
+            <div style="background:#0f111a; flex-shrink:0;">
+              <!-- Stats bar -->
+              <div style="display:flex; align-items:center; gap:0; padding:9px 24px 0; border-bottom:1px solid rgba(255,255,255,0.045);">
+                <div style="display:flex; align-items:center; gap:5px; padding-right:16px; border-right:1px solid rgba(255,255,255,0.08);">
+                  <span style="font-size:11px; color:rgba(214,218,234,0.28);">Transactions</span>
+                  <span style="font-size:12px; font-weight:560; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; color:#d6daea;">{{ summaryTxCount }}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:5px; padding:0 16px; border-right:1px solid rgba(255,255,255,0.08);">
+                  <span style="font-size:11px; color:rgba(214,218,234,0.28);">Total spend</span>
+                  <span style="font-size:12px; font-weight:560; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; color:#d6daea;">{{ totalSpendingStr }}</span>
+                </div>
+                <div style="flex:1;"></div>
+                <sc-if value="{{ reviewHasPending }}">
+                  <div style="display:flex; align-items:center; gap:5px;">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1L11 10.5H1L6 1Z" stroke="rgba(245,158,11,0.6)" stroke-width="1.1" fill="none" stroke-linejoin="round"/><path d="M6 5V7.5" stroke="rgba(245,158,11,0.8)" stroke-width="1" stroke-linecap="round"/><circle cx="6" cy="8.8" r="0.5" fill="rgba(245,158,11,0.8)"/></svg>
+                    <span style="font-size:11.5px; color:rgba(245,158,11,0.72);">{{ reviewPendingCount }} item(s) in Needs Review still unactioned</span>
+                  </div>
+                </sc-if>
+              </div>
+              <!-- Buttons -->
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:11px 24px 15px;">
+                <button onClick="{{ onCancel }}" style="background:transparent; border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:9px 17px; font-size:13.5px; color:rgba(214,218,234,0.5); cursor:pointer;" style-hover="background:rgba(255,255,255,0.05);">Discard</button>
+                <button onClick="{{ onProceedToConfirm }}" style="background:{{ proceedBg }}; color:{{ proceedTextColor }}; border:none; border-radius:8px; padding:9px 20px; font-size:13.5px; font-weight:520; cursor:{{ proceedCursor }}; transition:background 0.12s; opacity:{{ proceedOpacity }};">Review Summary →</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ─── STEP 4: CONFIRM ─── -->
+        <sc-if value="{{ showConfirm }}">
+          <div data-screen-label="Step 4 — Confirm" style="display:flex; flex-direction:column; overflow:hidden; flex:1;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px 18px; flex-shrink:0;">
+              <div>
+                <h2 style="font-size:15.5px; font-weight:620; color:#e8ecf8; letter-spacing:-0.3px;">Confirm Import</h2>
+                <p style="font-size:12.5px; color:rgba(214,218,234,0.38); margin-top:3px;">Review what will be written to the database</p>
+              </div>
+              <button onClick="{{ onCancel }}" style="width:28px; height:28px; border-radius:7px; background:rgba(255,255,255,0.055); border:1px solid rgba(255,255,255,0.08); color:rgba(214,218,234,0.45); font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; flex-shrink:0;" style-hover="background:rgba(255,255,255,0.1);">×</button>
+            </div>
+            <div style="height:1px; background:rgba(255,255,255,0.06); flex-shrink:0; margin:0 24px;"></div>
+
+            <div style="padding:22px 24px; display:flex; flex-direction:column; gap:14px; overflow-y:auto;">
+
+              <!-- Recurring summary -->
+              <div style="background:#1a1d2a; border:1px solid rgba(167,139,250,0.14); border-radius:11px; padding:18px 20px;">
+                <div style="display:flex; align-items:center; gap:7px; margin-bottom:13px;">
+                  <div style="width:3px; height:13px; background:#a78bfa; border-radius:2px; flex-shrink:0;"></div>
+                  <span style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:rgba(214,218,234,0.38);">Recurring — This Month</span>
+                </div>
+                <sc-if value="{{ noRecurringChanges }}">
+                  <div style="font-size:13px; color:rgba(214,218,234,0.32); padding:6px 0;">No recurring forecasts selected for update</div>
+                </sc-if>
+                <sc-for list="{{ confirmedUpdates }}" as="u" hint-placeholder-count="0">
+                  <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <span style="font-size:13px; color:#d6daea;">{{ u.name }}</span>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span style="font-size:11.5px; color:rgba(214,218,234,0.32);">forecast {{ u.fromStr }}</span>
+                      <span style="font-size:13px; font-weight:560; color:{{ u.diffColor }}; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums;">{{ u.toStr }}</span>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ hasUnchangedConfirmed }}">
+                  <div style="font-size:12px; color:rgba(214,218,234,0.32); margin-top:10px;">{{ confirmedUnchangedCount }} confirmed at same amount — no update needed</div>
+                </sc-if>
+                <sc-if value="{{ hasSkipped }}">
+                  <div style="font-size:12px; color:rgba(214,218,234,0.25); margin-top:6px;">{{ skippedCount }} skipped — forecast unchanged</div>
+                </sc-if>
+              </div>
+
+              <!-- Variable spending summary -->
+              <div style="background:#1a1d2a; border:1px solid rgba(96,165,250,0.14); border-radius:11px; padding:18px 20px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:13px;">
+                  <div style="display:flex; align-items:center; gap:7px;">
+                    <div style="width:3px; height:13px; background:#60a5fa; border-radius:2px; flex-shrink:0;"></div>
+                    <span style="font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:rgba(214,218,234,0.38);">Variable Spending</span>
+                  </div>
+                  <span style="font-size:18px; font-weight:660; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; color:#d6daea; letter-spacing:-0.5px;">{{ totalSpendingStr }}</span>
+                </div>
+                <sc-for list="{{ confirmBreakdown }}" as="cat" hint-placeholder-count="0">
+                  <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <span style="font-size:13px; color:rgba(214,218,234,0.6);">{{ cat.name }}</span>
+                    <span style="font-size:13px; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; color:#d6daea;">{{ cat.amountStr }}</span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ hasExcluded }}">
+                  <div style="font-size:12px; color:rgba(214,218,234,0.28); margin-top:10px;">{{ excludedCatCount }} category excluded from this import</div>
+                </sc-if>
+                <sc-if value="{{ hasConfirmedReview }}">
+                  <div style="font-size:12px; color:rgba(245,158,11,0.5); margin-top:8px; display:flex; align-items:center; gap:4px;">
+                    <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><circle cx="4.5" cy="4.5" r="4" stroke="rgba(245,158,11,0.4)" stroke-width="1" fill="none"/><path d="M4.5 2.5V5" stroke="rgba(245,158,11,0.65)" stroke-width="1" stroke-linecap="round"/><circle cx="4.5" cy="6.2" r="0.4" fill="rgba(245,158,11,0.65)"/></svg>
+                    Includes {{ confirmedReviewCount }} manually categorised transaction(s)
+                  </div>
+                </sc-if>
+              </div>
+
+              <!-- Month + tx note -->
+              <div style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:14px 16px; display:flex; align-items:center; gap:10px;">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="flex-shrink:0;"><rect x="1.5" y="2.5" width="12" height="11" rx="2" stroke="rgba(214,218,234,0.28)" stroke-width="1.3" fill="none"/><path d="M1.5 6.5H13.5" stroke="rgba(214,218,234,0.22)" stroke-width="1.3"/><path d="M4.5 1V3.5M10.5 1V3.5" stroke="rgba(214,218,234,0.28)" stroke-width="1.3" stroke-linecap="round"/></svg>
+                <span style="font-size:13px; color:rgba(214,218,234,0.45); line-height:1.4;">Recording <strong style="color:#d6daea; font-weight:560;">{{ summaryTxCount }} transactions</strong> for <strong style="color:#d6daea; font-weight:560;">{{ selectedMonth }}</strong>. This action cannot be undone.</span>
+              </div>
+
+            </div>
+
+            <div style="height:1px; background:rgba(255,255,255,0.06); flex-shrink:0; margin:0 24px;"></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 24px; flex-shrink:0;">
+              <button onClick="{{ onBackToReview }}" style="background:transparent; border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:9px 17px; font-size:13.5px; color:rgba(214,218,234,0.5); cursor:pointer;" style-hover="background:rgba(255,255,255,0.05);">← Back</button>
+              <button onClick="{{ onCommit }}" style="background:#059669; color:white; border:none; border-radius:8px; padding:9px 22px; font-size:13.5px; font-weight:540; cursor:pointer; transition:background 0.12s;" style-hover="background:#10b981;">Commit to Database</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ─── STEP 5: SUCCESS ─── -->
+        <sc-if value="{{ showSuccess }}">
+          <div data-screen-label="Step 5 — Success" style="display:flex; flex-direction:column; overflow:hidden; flex:1;">
+            <div style="padding:36px 28px 28px; display:flex; flex-direction:column; align-items:center; gap:20px; text-align:center;">
+              <div style="width:54px; height:54px; border-radius:50%; background:rgba(16,185,129,0.1); border:1.5px solid rgba(16,185,129,0.28); display:flex; align-items:center; justify-content:center; animation:fadeIn 0.35s ease;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12L10 17L19 7" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div>
+                <h2 style="font-size:16px; font-weight:630; color:#e8ecf8; letter-spacing:-0.3px; margin-bottom:7px;">Import Complete</h2>
+                <p style="font-size:13px; color:rgba(214,218,234,0.42); line-height:1.55; max-width:320px;">{{ successDetail }}</p>
+              </div>
+              <div style="background:#1a1d2a; border:1px solid rgba(255,255,255,0.065); border-radius:10px; padding:14px 18px; width:100%; display:flex; flex-direction:column; gap:9px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:12.5px; color:rgba(214,218,234,0.38);">Month</span>
+                  <span style="font-size:12.5px; color:#d6daea; font-weight:500;">{{ selectedMonth }}</span>
+                </div>
+                <div style="height:1px; background:rgba(255,255,255,0.05);"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:12.5px; color:rgba(214,218,234,0.38);">Transactions recorded</span>
+                  <span style="font-size:12.5px; color:#d6daea; font-weight:500; font-family:ui-monospace,monospace;">{{ savedTxCount }}</span>
+                </div>
+                <div style="height:1px; background:rgba(255,255,255,0.05);"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:12.5px; color:rgba(214,218,234,0.38);">Variable spending</span>
+                  <span style="font-size:12.5px; color:#10b981; font-weight:500; font-family:ui-monospace,monospace;">{{ savedSpend }}</span>
+                </div>
+              </div>
+            </div>
+            <div style="height:1px; background:rgba(255,255,255,0.06); flex-shrink:0; margin:0 24px;"></div>
+            <div style="display:flex; justify-content:flex-end; padding:16px 24px; flex-shrink:0;">
+              <button onClick="{{ onDone }}" style="background:#7c6ef8; color:white; border:none; border-radius:8px; padding:9px 24px; font-size:13.5px; font-weight:520; cursor:pointer; transition:background 0.12s;" style-hover="background:#917bf9;">Done</button>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1280, &quot;height&quot;: 820}}">
+class Component extends DCLogic {
+  _initialRecurring = [
+    { id: 1, name: 'Salary', forecast: 8000, actual: 9240, context: '3 pay periods this month (LIFENET)', confirmed: false, skipped: false },
+    { id: 2, name: 'Rent', forecast: 790, actual: 790, context: 'DEFT PAYMENTS · $395 incoming from flatmate excluded', confirmed: false, skipped: false },
+    { id: 3, name: 'Gym Membership', forecast: 55, actual: 55, context: null, confirmed: false, skipped: false },
+    { id: 4, name: 'Netflix', forecast: 18.00, actual: 22.99, context: 'Price increase', confirmed: false, skipped: false },
+    { id: 5, name: 'Internet', forecast: 89, actual: 89, context: null, confirmed: false, skipped: false },
+  ];
+
+  _initialCategories = [
+    { id: 1, name: 'Groceries', amount: 312.45, count: 14, excluded: false, expanded: false, txns: [
+      { date: '01 Jun', merchant: 'Woolworths', amount: 67.40 },
+      { date: '05 Jun', merchant: 'Coles', amount: 112.60 },
+      { date: '09 Jun', merchant: 'Woolworths', amount: 43.25 },
+      { date: '14 Jun', merchant: 'ALDI', amount: 28.90 },
+      { date: '20 Jun', merchant: 'Woolworths', amount: 60.30 },
+    ]},
+    { id: 2, name: 'Eating Out', amount: 287.30, count: 11, excluded: false, expanded: false, txns: [
+      { date: '03 Jun', merchant: 'Uber Eats', amount: 34.90 },
+      { date: '07 Jun', merchant: 'Mr Miyagi', amount: 74.00 },
+      { date: '11 Jun', merchant: 'Uber Eats', amount: 28.50 },
+      { date: '16 Jun', merchant: 'Tuck Shop', amount: 22.40 },
+      { date: '21 Jun', merchant: 'Lune Croissanterie', amount: 19.60 },
+    ]},
+    { id: 3, name: 'Transport', amount: 64.00, count: 8, excluded: false, expanded: false, txns: [
+      { date: '02 Jun', merchant: 'Uber', amount: 12.50 },
+      { date: '06 Jun', merchant: 'Uber', amount: 14.80 },
+      { date: '12 Jun', merchant: 'myki top-up', amount: 20.00 },
+      { date: '19 Jun', merchant: 'Uber', amount: 16.70 },
+    ]},
+    { id: 4, name: 'Subscriptions', amount: 47.97, count: 3, excluded: false, expanded: false, txns: [
+      { date: '01 Jun', merchant: 'Spotify', amount: 11.99 },
+      { date: '01 Jun', merchant: 'Netflix', amount: 22.99 },
+      { date: '01 Jun', merchant: 'iCloud+', amount: 12.99 },
+    ]},
+    { id: 5, name: 'Utilities', amount: 178.40, count: 3, excluded: false, expanded: false, txns: [
+      { date: '06 Jun', merchant: 'Ausgrid', amount: 89.20 },
+      { date: '13 Jun', merchant: 'Sydney Water', amount: 54.80 },
+      { date: '23 Jun', merchant: 'Origin Energy', amount: 34.40 },
+    ]},
+  ];
+
+  _initialNeedsReview = [
+    { id: 1, date: '02 Jun', merchant: 'Alchemy Saunas', amount: 45.00, aiCategory: 'Health & Wellness', pendingCategory: 'Health & Wellness', confirmedCategory: null, excluded: false },
+    { id: 2, date: '05 Jun', merchant: "Dan Murphy's", amount: 87.50, aiCategory: 'Eating Out', pendingCategory: 'Eating Out', confirmedCategory: null, excluded: false },
+    { id: 3, date: '09 Jun', merchant: 'Chemist Warehouse', amount: 34.20, aiCategory: 'Health & Wellness', pendingCategory: 'Health & Wellness', confirmedCategory: null, excluded: false },
+    { id: 4, date: '13 Jun', merchant: 'Rebel Sport', amount: 129.99, aiCategory: 'Clothing & Retail', pendingCategory: 'Clothing & Retail', confirmedCategory: null, excluded: false },
+    { id: 5, date: '17 Jun', merchant: 'Bunnings Warehouse', amount: 56.40, aiCategory: 'Vehicle', pendingCategory: 'Vehicle', confirmedCategory: null, excluded: false },
+    { id: 6, date: '22 Jun', merchant: 'Mecca Cosmetica', amount: 78.00, aiCategory: 'Personal Care', pendingCategory: 'Personal Care', confirmedCategory: null, excluded: false },
+    { id: 7, date: '25 Jun', merchant: 'Village Cinemas', amount: 24.00, aiCategory: 'Entertainment', pendingCategory: 'Entertainment', confirmedCategory: null, excluded: false },
+  ];
+
+  state = {
+    step: 'finance',
+    selectedMonth: 'June 2026',
+    commbank: null,
+    amex: null,
+    processingProgress: 0,
+    processingLabel: 'Parsing CSV files...',
+    editingCategory: null,
+    editValue: '',
+    recurring: this._initialRecurring.map(r => ({ ...r })),
+    categories: this._initialCategories.map(c => ({ ...c })),
+    needsReview: this._initialNeedsReview.map(r => ({ ...r })),
+    savedSummary: null,
+  };
+
+  _timer = null;
+
+  componentWillUnmount() {
+    if (this._timer) clearTimeout(this._timer);
+  }
+
+  _freshState() {
+    return {
+      commbank: null,
+      amex: null,
+      processingProgress: 0,
+      processingLabel: 'Parsing CSV files...',
+      editingCategory: null,
+      editValue: '',
+      recurring: this._initialRecurring.map(r => ({ ...r })),
+      categories: this._initialCategories.map(c => ({ ...c })),
+      needsReview: this._initialNeedsReview.map(r => ({ ...r })),
+    };
+  }
+
+  _startProcessing() {
+    const labels = [
+      'Parsing CSV files...',
+      'Matching recurring transactions...',
+      'Applying keyword rules...',
+      'Running AI categorisation...',
+      'Finalising...',
+    ];
+    let p = 0;
+    const tick = () => {
+      p = Math.min(p + 4 + Math.random() * 8, 100);
+      const idx = Math.min(Math.floor(p / 20), labels.length - 1);
+      this.setState({ processingProgress: Math.floor(p), processingLabel: labels[idx] });
+      if (p >= 100) {
+        this._timer = setTimeout(() => this.setState({ step: 'review' }), 380);
+      } else {
+        this._timer = setTimeout(tick, 60 + Math.random() * 50);
+      }
+    };
+    tick();
+  }
+
+  renderVals() {
+    const s = this.state;
+
+    const fmt = n => {
+      const abs = Math.abs(n);
+      return '$' + abs.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    };
+
+    // ── Section A ──
+    const recurringItems = s.recurring.map(item => {
+      const diff = item.actual - item.forecast;
+      return {
+        id: item.id,
+        name: item.name,
+        context: item.context,
+        confirmed: item.confirmed,
+        skipped: item.skipped,
+        forecastStr: fmt(item.forecast),
+        actualStr: fmt(item.actual),
+        diffStr: diff === 0 ? '—' : (diff > 0 ? '+' : '–') + fmt(Math.abs(diff)),
+        diffColor: diff > 0 ? '#10b981' : diff < 0 ? '#f87171' : 'rgba(214,218,234,0.28)',
+        isPending: !item.confirmed && !item.skipped,
+        rowBg: item.confirmed ? 'rgba(16,185,129,0.03)' : 'transparent',
+        onConfirm: () => this.setState(prev => ({ recurring: prev.recurring.map(r => r.id === item.id ? { ...r, confirmed: true, skipped: false } : r) })),
+        onSkip: () => this.setState(prev => ({ recurring: prev.recurring.map(r => r.id === item.id ? { ...r, skipped: true, confirmed: false } : r) })),
+        onUndo: () => this.setState(prev => ({ recurring: prev.recurring.map(r => r.id === item.id ? { ...r, confirmed: false, skipped: false } : r) })),
+      };
+    });
+    const recurringActioned = s.recurring.filter(r => r.confirmed || r.skipped);
+    const recurringSkipped = s.recurring.filter(r => r.skipped);
+    const recurringConfirmedChanged = s.recurring.filter(r => r.confirmed && r.actual !== r.forecast);
+    const recurringConfirmedUnchanged = s.recurring.filter(r => r.confirmed && r.actual === r.forecast);
+
+    // ── Section B ──
+    const categoryItems = s.categories.map(cat => {
+      const txns = cat.txns || [];
+      const sample = txns.slice(0, 5).map(tx => ({ date: tx.date, merchant: tx.merchant, amountStr: fmt(tx.amount) }));
+      return {
+        id: cat.id,
+        name: cat.name,
+        countStr: String(cat.count),
+        excluded: cat.excluded,
+        isIncluded: !cat.excluded,
+        amountStr: fmt(cat.amount),
+        isEditing: s.editingCategory === cat.id,
+        isNotEditing: s.editingCategory !== cat.id,
+        rowOpacity: cat.excluded ? '0.32' : '1',
+        nameDecoration: cat.excluded ? 'line-through' : 'none',
+        isExpanded: cat.expanded,
+        chevronRotate: cat.expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+        sampleTxns: sample,
+        hasMoreTxns: cat.count > 5,
+        moreTxnCount: Math.max(cat.count - 5, 0),
+        onToggleExpand: () => {
+          if (s.editingCategory !== null) return;
+          this.setState(prev => ({ categories: prev.categories.map(c => c.id === cat.id ? { ...c, expanded: !c.expanded } : c) }));
+        },
+        onExclude: () => this.setState(prev => ({ categories: prev.categories.map(c => c.id === cat.id ? { ...c, excluded: !c.excluded, expanded: false } : c) })),
+        onEdit: (e) => {
+          e.stopPropagation();
+          this.setState({ editingCategory: cat.id, editValue: cat.amount.toFixed(2) });
+        },
+      };
+    });
+    const includedCats = s.categories.filter(c => !c.excluded);
+    const excludedCats = s.categories.filter(c => c.excluded);
+    const totalBSpend = includedCats.reduce((sum, c) => sum + c.amount, 0);
+    const includedTxCount = includedCats.reduce((sum, c) => sum + c.count, 0);
+
+    // ── Section C ──
+    const reviewItems = s.needsReview.map(item => {
+      const isPending = !item.confirmedCategory && !item.excluded;
+      const isConfirmed = !!item.confirmedCategory;
+      const isExcluded = item.excluded && !item.confirmedCategory;
+      return {
+        id: item.id,
+        date: item.date,
+        merchant: item.merchant,
+        aiCategory: item.aiCategory,
+        pendingCategory: item.pendingCategory,
+        confirmedCategory: item.confirmedCategory,
+        amountStr: fmt(item.amount),
+        amountColor: item.excluded ? 'rgba(214,218,234,0.25)' : '#d6daea',
+        merchantColor: item.excluded ? 'rgba(214,218,234,0.25)' : '#d6daea',
+        merchantDecoration: item.excluded ? 'line-through' : 'none',
+        rowBg: isConfirmed ? 'rgba(16,185,129,0.025)' : isExcluded ? 'rgba(248,113,113,0.02)' : 'transparent',
+        isPending,
+        isConfirmed,
+        isExcluded,
+        isDone: !isPending,
+        onCategoryChange: e => this.setState(prev => ({ needsReview: prev.needsReview.map(r => r.id === item.id ? { ...r, pendingCategory: e.target.value } : r) })),
+        onConfirm: () => this.setState(prev => ({ needsReview: prev.needsReview.map(r => r.id === item.id ? { ...r, confirmedCategory: r.pendingCategory } : r) })),
+        onExclude: () => this.setState(prev => ({ needsReview: prev.needsReview.map(r => r.id === item.id ? { ...r, excluded: true, confirmedCategory: null } : r) })),
+        onUndo: () => this.setState(prev => ({ needsReview: prev.needsReview.map(r => r.id === item.id ? { ...r, confirmedCategory: null, excluded: false } : r) })),
+      };
+    });
+    const reviewPending = s.needsReview.filter(r => !r.confirmedCategory && !r.excluded);
+    const reviewActioned = s.needsReview.filter(r => r.confirmedCategory || r.excluded);
+    const reviewConfirmed = s.needsReview.filter(r => r.confirmedCategory);
+    const reviewConfirmedSpend = reviewConfirmed.reduce((sum, r) => sum + r.amount, 0);
+
+    // ── Combined totals ──
+    const totalSpending = totalBSpend + reviewConfirmedSpend;
+    const summaryTxCount = includedTxCount + reviewConfirmed.length;
+    const canProceed = reviewPending.length === 0;
+
+    // Confirm breakdown: B cats + C confirmed grouped by category
+    const confirmBreakdown = includedCats.map(c => ({ name: c.name, amountStr: fmt(c.amount) }));
+    if (reviewConfirmed.length > 0) {
+      const extra = {};
+      reviewConfirmed.forEach(r => { extra[r.confirmedCategory] = (extra[r.confirmedCategory] || 0) + r.amount; });
+      Object.entries(extra).forEach(([cat, amt]) => {
+        if (!confirmBreakdown.find(c => c.name === cat)) {
+          confirmBreakdown.push({ name: cat, amountStr: fmt(amt) });
+        }
+      });
+    }
+
+    // Confirmed updates for confirm screen
+    const confirmedUpdates = recurringConfirmedChanged.map(r => ({
+      name: r.name,
+      fromStr: fmt(r.forecast),
+      toStr: fmt(r.actual),
+      diffColor: r.actual > r.forecast ? '#10b981' : '#f87171',
+    }));
+
+    const savedSummary = s.savedSummary || {};
+    const fileCount = (s.commbank ? 1 : 0) + (s.amex ? 1 : 0);
+    const hasFiles = fileCount > 0;
+
+    const widthMap = { upload: '520px', processing: '420px', review: '840px', confirm: '540px', success: '400px' };
+
+    return {
+      selectedMonth: s.selectedMonth,
+      isDone: s.step === 'done',
+      doneMessage: s.savedSummary ? s.savedSummary.msg : '',
+      showModal: ['upload','processing','review','confirm','success'].includes(s.step),
+      showUpload: s.step === 'upload',
+      showProcessing: s.step === 'processing',
+      showReview: s.step === 'review',
+      showConfirm: s.step === 'confirm',
+      showSuccess: s.step === 'success',
+      modalWidth: widthMap[s.step] || '520px',
+
+      // Upload
+      commbankLoaded: !!s.commbank,
+      commbankNotLoaded: !s.commbank,
+      commbankBorder: s.commbank ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)',
+      commbankBg: s.commbank ? 'rgba(16,185,129,0.03)' : 'rgba(255,255,255,0)',
+      commbankLabel: s.commbank || 'No file added',
+      commbankSubColor: s.commbank ? 'rgba(16,185,129,0.7)' : 'rgba(214,218,234,0.28)',
+      amexLoaded: !!s.amex,
+      amexNotLoaded: !s.amex,
+      amexBorder: s.amex ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)',
+      amexBg: s.amex ? 'rgba(16,185,129,0.03)' : 'rgba(255,255,255,0)',
+      amexLabel: s.amex || 'No file added',
+      amexSubColor: s.amex ? 'rgba(16,185,129,0.7)' : 'rgba(214,218,234,0.28)',
+      fileCount,
+      processOpacity: hasFiles ? '1' : '0.42',
+
+      // Processing
+      processingProgress: s.processingProgress,
+      processingLabel: s.processingLabel,
+      progressWidth: s.processingProgress + '%',
+
+      // Section A
+      recurringItems,
+      recurringCount: s.recurring.length,
+      recurringActionedCount: recurringActioned.length,
+      recurringAllActioned: recurringActioned.length === s.recurring.length,
+
+      // Section B
+      categoryItems,
+      totalBSpendStr: fmt(totalBSpend),
+      includedCatCount: includedCats.length,
+      totalCatCount: s.categories.length,
+      excludedCatCount: excludedCats.length,
+      hasExcluded: excludedCats.length > 0,
+      editValue: s.editValue,
+
+      // Section C
+      reviewItems,
+      reviewPendingCount: reviewPending.length,
+      reviewActionedCount: reviewActioned.length,
+      reviewTotalCount: s.needsReview.length,
+      reviewHasPending: reviewPending.length > 0,
+      reviewAllDone: reviewPending.length === 0,
+      confirmedReviewCount: reviewConfirmed.length,
+      hasConfirmedReview: reviewConfirmed.length > 0,
+
+      // Totals
+      totalSpendingStr: fmt(totalSpending),
+      summaryTxCount,
+
+      // Proceed button
+      proceedBg: canProceed ? '#7c6ef8' : 'rgba(124,110,248,0.28)',
+      proceedTextColor: canProceed ? 'white' : 'rgba(255,255,255,0.3)',
+      proceedCursor: canProceed ? 'pointer' : 'not-allowed',
+      proceedOpacity: canProceed ? '1' : '0.7',
+
+      // Confirm screen
+      confirmedUpdates,
+      confirmedUnchangedCount: recurringConfirmedUnchanged.length,
+      hasUnchangedConfirmed: recurringConfirmedUnchanged.length > 0,
+      skippedCount: recurringSkipped.length,
+      hasSkipped: recurringSkipped.length > 0,
+      noRecurringChanges: confirmedUpdates.length === 0 && recurringConfirmedUnchanged.length === 0,
+      confirmBreakdown,
+
+      // Success screen
+      successDetail: confirmedUpdates.length > 0
+        ? confirmedUpdates.length + ' recurring forecast(s) updated. All variable spending recorded.'
+        : 'Variable spending recorded. No recurring forecasts changed.',
+      savedTxCount: (savedSummary.txCount !== undefined) ? savedSummary.txCount : summaryTxCount,
+      savedSpend: (savedSummary.spend !== undefined) ? fmt(savedSummary.spend) : fmt(totalSpending),
+
+      // Handlers
+      onOpenUpload: () => this.setState({ step: 'upload', ...this._freshState() }),
+      onCancel: () => {
+        if (this._timer) { clearTimeout(this._timer); this._timer = null; }
+        this.setState({ step: 'finance', ...this._freshState() });
+      },
+      onOverlayClick: e => {
+        if (e.target === e.currentTarget) {
+          if (this._timer) { clearTimeout(this._timer); this._timer = null; }
+          this.setState({ step: 'finance', ...this._freshState() });
+        }
+      },
+      onModalClick: e => e.stopPropagation(),
+      onStopProp: e => e.stopPropagation(),
+      onAddCommbank: () => { if (!s.commbank) this.setState({ commbank: 'commbank-jun26.csv · 43 KB' }); },
+      onRemoveCommbank: () => this.setState({ commbank: null }),
+      onAddAmex: () => { if (!s.amex) this.setState({ amex: 'amex-jun26.csv · 29 KB' }); },
+      onRemoveAmex: () => this.setState({ amex: null }),
+      onProcessFiles: () => {
+        if (!hasFiles) return;
+        this.setState({ step: 'processing', processingProgress: 0, processingLabel: 'Parsing CSV files...' });
+        this._startProcessing();
+      },
+      onChangeMonth: e => this.setState({ selectedMonth: e.target.value }),
+      onSaveCategoryEdit: () => {
+        const id = s.editingCategory;
+        const val = parseFloat(s.editValue) || 0;
+        this.setState(prev => ({
+          categories: prev.categories.map(c => c.id === id ? { ...c, amount: val } : c),
+          editingCategory: null, editValue: '',
+        }));
+      },
+      onCancelEdit: () => this.setState({ editingCategory: null, editValue: '' }),
+      onEditValueChange: e => this.setState({ editValue: e.target.value }),
+      onProceedToConfirm: () => { if (canProceed) this.setState({ step: 'confirm' }); },
+      onBackToReview: () => this.setState({ step: 'review' }),
+      onCommit: () => {
+        const msg = s.selectedMonth + ' imported — '
+          + (confirmedUpdates.length > 0 ? confirmedUpdates.length + ' recurring forecast(s) updated, ' : '')
+          + fmt(totalSpending) + ' variable spending recorded.';
+        this.setState({ step: 'success', savedSummary: { msg, txCount: summaryTxCount, spend: totalSpending } });
+      },
+      onDone: () => {
+        const ss = this.state.savedSummary;
+        this.setState({ step: 'done', ...this._freshState(), savedSummary: ss });
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

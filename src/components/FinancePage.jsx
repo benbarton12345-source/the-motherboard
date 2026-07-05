@@ -4,6 +4,7 @@ import { useCurrency } from '../CurrencyContext'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import Modal from './Modal'
 import StatementImportModal from './StatementImportModal'
+import BudgetingInsights from './BudgetingInsights'
 
 const CATEGORIES = ['Cash', 'Investments', 'Property', 'Crypto', 'Other']
 const INCOME_CATEGORIES = ['Salary', 'Trading', 'Dividends', 'Bonus', 'Other']
@@ -254,6 +255,7 @@ export default function FinancePage() {
   // ── Data
   const [showImport, setShowImport] = useState(false)
   const [importBanner, setImportBanner] = useState(null)
+  const [insightsReloadKey, setInsightsReloadKey] = useState(0)
   const [snapshots, setSnapshots] = useState([])
   const [recurringItems, setRecurringItems] = useState([])
   const [budgetEntries, setBudgetEntries] = useState([])
@@ -785,6 +787,14 @@ export default function FinancePage() {
         </div>
       </div>
 
+      {/* ── Section 4b: Budgeting Insights ────────────────────────────────────── */}
+      <BudgetingInsights
+        selectedMonth={selectedMonth}
+        snapshots={snapshots}
+        reloadKey={insightsReloadKey}
+        onOpenImport={() => setShowImport(true)}
+      />
+
       {/* ── Section 5: Snapshot History ───────────────────────────────────────── */}
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
@@ -1049,7 +1059,7 @@ export default function FinancePage() {
       {showImport && (
         <StatementImportModal
           onClose={() => setShowImport(false)}
-          onImported={(summary) => { setShowImport(false); setImportBanner(summary); fetchBudgetEntries() }}
+          onImported={(summary) => { setShowImport(false); setImportBanner(summary); fetchBudgetEntries(); setInsightsReloadKey(k => k + 1) }}
         />
       )}
 
