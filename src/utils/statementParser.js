@@ -119,6 +119,14 @@ export function classifyLayer1(txn) {
   if (raw.includes('DEFT PAYMENTS')) return { route: 'recurring', target: 'rent' }
   if (raw.includes('CASH DEPOSIT')) return { route: 'excluded', reason: 'Internal money movement' }
 
+  // Amex bill payment on the Commbank statement — an inter-account transfer, not
+  // real spending; the underlying purchases are captured via the Amex CSV import.
+  // Scoped to Commbank so it can't swallow a genuine Amex line (word boundary on
+  // AMEX avoids matching merchant names like "AMEXICO").
+  if (txn.source === 'commbank' && (raw.includes('AMERICAN EXPRESS') || /\bAMEX\b/.test(raw))) {
+    return { route: 'excluded', reason: 'Amex bill payment — captured via Amex import' }
+  }
+
   if (isCredit) {
     if (raw.includes('LAURA HOLDSWORTH')) return { route: 'reimbursement', laura: true }
     if (/\bTRANSFER FROM\b/.test(raw)) return { route: 'reimbursement', laura: false }
