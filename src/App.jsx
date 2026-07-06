@@ -14,6 +14,10 @@ const LABELS = {
 
 function App() {
   const [activeTab, setActiveTab] = useState('home')
+  // Which sub-item within the active group is selected (null for flat groups).
+  // Interim: groups with sub-items land on subs[0] until overview pages exist,
+  // so this only drives the sidebar highlight — page content is per-group.
+  const [activeSubItem, setActiveSubItem] = useState(null)
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('sidebarCollapsed') === 'true' } catch { return false }
   })
@@ -24,8 +28,9 @@ function App() {
     try { localStorage.setItem('sidebarCollapsed', String(collapsed)) } catch { /* ignore */ }
   }, [collapsed])
 
-  function navigate(id) {
+  function navigate(id, subId = null) {
     setActiveTab(id)
+    setActiveSubItem(subId)
     setMobileOpen(false)
   }
 
@@ -34,6 +39,7 @@ function App() {
 
       <Sidebar
         activeGroup={activeTab}
+        activeSubItem={activeSubItem}
         onNavigate={navigate}
         collapsed={collapsed}
         onToggleCollapse={() => setCollapsed(c => !c)}
@@ -41,6 +47,7 @@ function App() {
       <MobileDrawer
         open={mobileOpen}
         activeGroup={activeTab}
+        activeSubItem={activeSubItem}
         onNavigate={navigate}
         onClose={() => setMobileOpen(false)}
       />
