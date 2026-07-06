@@ -4,6 +4,7 @@ import FinancePage from './components/FinancePage'
 import ProductivityPage from './components/ProductivityPage'
 import HealthPage from './components/HealthPage'
 import TrainingPage from './components/TrainingPage'
+import TrainingOverview from './components/TrainingOverview'
 import Sidebar, { MobileDrawer } from './components/Sidebar'
 import { useCurrency } from './CurrencyContext'
 
@@ -22,6 +23,8 @@ function App() {
     try { return localStorage.getItem('sidebarCollapsed') === 'true' } catch { return false }
   })
   const [mobileOpen, setMobileOpen] = useState(false)
+  // Session id the Training Overview asked to start — consumed once by TrainingPage.
+  const [pendingStartSession, setPendingStartSession] = useState(null)
   const { currency, setCurrency, rate } = useCurrency()
 
   useEffect(() => {
@@ -32,6 +35,12 @@ function App() {
     setActiveTab(id)
     setActiveSubItem(subId)
     setMobileOpen(false)
+  }
+
+  // Deep link from the Overview's Start Session CTA → Log Session, pre-selected.
+  function startSession(sessionId) {
+    setPendingStartSession(sessionId)
+    navigate('training', 'log-session')
   }
 
   return (
@@ -102,7 +111,17 @@ function App() {
             {activeTab === 'trading' && <TradingPlaceholder />}
             {activeTab === 'productivity' && <ProductivityPage />}
             {activeTab === 'health' && <HealthPage />}
-            {activeTab === 'training' && <TrainingPage />}
+            {activeTab === 'training' && (
+              activeSubItem === 'overview' || activeSubItem == null
+                ? <TrainingOverview
+                    onStartSession={startSession}
+                    onOpenSub={(sub) => navigate('training', sub)}
+                  />
+                : <TrainingPage
+                    autoStartSessionId={pendingStartSession}
+                    onAutoStartConsumed={() => setPendingStartSession(null)}
+                  />
+            )}
           </div>
         </main>
       </div>

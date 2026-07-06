@@ -5,7 +5,7 @@ import ProgrammeBuilderModal from './ProgrammeBuilderModal'
 import TrainingSession from './TrainingSession'
 import TrainingAnalysis from './TrainingAnalysis'
 
-export default function TrainingPage() {
+export default function TrainingPage({ autoStartSessionId = null, onAutoStartConsumed }) {
   const [showExerciseBank, setShowExerciseBank] = useState(false)
   const [showProgrammeBuilder, setShowProgrammeBuilder] = useState(false)
   const [showAnalysis, setShowAnalysis] = useState(false)
@@ -37,6 +37,15 @@ export default function TrainingPage() {
       .order('sort_order')
 
     setSessions(data || [])
+
+    // Deep link from the Overview's Start Session CTA — open the requested
+    // session straight into the logging flow, then consume the request.
+    if (autoStartSessionId) {
+      const target = (data || []).find(s => s.id === autoStartSessionId)
+      if (target) setActiveSession(target)
+      onAutoStartConsumed?.()
+    }
+
     setLoading(false)
   }
 

@@ -67,6 +67,7 @@ const NAV = [
   {
     id: 'training', label: 'Training', icon: TrainingIcon,
     subs: [
+      { id: 'overview', label: 'Overview' },
       { id: 'log-session', label: 'Log Session' },
       { id: 'programmes', label: 'Programmes' },
       { id: 'exercise-bank', label: 'Exercise Bank' },

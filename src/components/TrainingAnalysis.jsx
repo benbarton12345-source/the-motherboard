@@ -7,98 +7,11 @@ import {
 import Modal from './Modal'
 import SessionHistoryModal from './SessionHistoryModal'
 import { localDate, shiftDate } from '../utils/taskHelpers'
-
-// Accent colours — emerald/amber/red match the app's Tailwind tokens; teal/blue
-// are the approved data-series hues for this screen. Charts only (Recharts needs hex).
-const ACCENT = {
-  emerald: '#34d399', amber: '#fbbf24', red: '#f87171',
-  purple: '#a78bfa', teal: '#2dd4bf', blue: '#60a5fa', greyBlue: '#8aa0b6',
-}
-// Chart internals matched to HealthPage's weight chart (gray-800 grid, gray-500 ticks)
-const CHART_GRID = '#1f2937'
-const CHART_TICK = '#6b7280'
-
-const statusHex = (s) => (s === 'progressing' ? ACCENT.emerald : s === 'skipped' ? ACCENT.red : ACCENT.amber)
-
-// ── Muscle bucketing — collapse the bank's 11 groups into the design's 6 ─
-const BUCKETS = ['Chest', 'Back', 'Shoulders', 'Legs', 'Arms', 'Core']
-const BUCKET_MAP = {
-  chest: 'Chest', back: 'Back', shoulders: 'Shoulders', core: 'Core', arms: 'Arms',
-  legs: 'Legs', quads: 'Legs', hamstrings: 'Legs', glutes: 'Legs', calves: 'Legs',
-  biceps: 'Arms', triceps: 'Arms', forearms: 'Arms',
-}
-const bucketOf = (mg) => BUCKET_MAP[(mg || '').trim().toLowerCase()] || null
-
-// Weekly hard-set targets per muscle [low, high] — domain defaults from the design
-const SET_TARGETS = {
-  Chest: [12, 16], Back: [14, 20], Shoulders: [12, 16], Legs: [14, 20], Arms: [10, 16], Core: [8, 12],
-}
-const setStatus = (s, lo) => (s >= lo ? 'ok' : (s >= lo * 0.6 ? 'low' : 'under'))
-const SETCOL = { ok: ACCENT.emerald, low: ACCENT.amber, under: ACCENT.red }
-
-// ── Pure helpers ────────────────────────────────────────────────────
-const epley = (w, r) => w * (1 + r / 30)
-const fmtTop = (v) => (v % 1 === 0 ? String(v) : v.toFixed(1))
-
-function pearson(xs, ys) {
-  const n = xs.length
-  if (n < 2) return 0
-  const mx = xs.reduce((a, b) => a + b, 0) / n
-  const my = ys.reduce((a, b) => a + b, 0) / n
-  let sxy = 0, sx = 0, sy = 0
-  xs.forEach((x, i) => { const dx = x - mx, dy = ys[i] - my; sxy += dx * dy; sx += dx * dx; sy += dy * dy })
-  return (sx && sy) ? sxy / Math.sqrt(sx * sy) : 0
-}
-
-// Least-squares endpoints over (xs,ys) at the given x bounds
-function trendSegment(xs, ys, xmin, xmax) {
-  const n = xs.length
-  if (n < 2) return null
-  const mx = xs.reduce((a, b) => a + b, 0) / n
-  const my = ys.reduce((a, b) => a + b, 0) / n
-  let sxy = 0, sxx = 0
-  xs.forEach((x, i) => { sxy += (x - mx) * (ys[i] - my); sxx += (x - mx) * (x - mx) })
-  const slope = sxx ? sxy / sxx : 0
-  const b = my - slope * mx
-  return [{ x: xmin, y: slope * xmin + b }, { x: xmax, y: slope * xmax + b }]
-}
-
-// classify() — exact logic from the design, over the last 3 sessions
-function classify(weights, reps) {
-  const k = Math.min(3, weights.length)
-  const w = weights.slice(-k), r = reps.slice(-k)
-  if (w.length === 0) return { status: 'stalled', why: 'flat' }
-  if (w[w.length - 1] > w[0] + 1e-9) return { status: 'progressing', why: 'load' }
-  if (r[r.length - 1] > r[0]) return { status: 'progressing', why: 'reps' }
-  return { status: 'stalled', why: 'flat' }
-}
-
-function daysBetween(dateStr, today) {
-  const [y1, m1, d1] = dateStr.split('-').map(Number)
-  const [y2, m2, d2] = today.split('-').map(Number)
-  return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86400000)
-}
-
-function weekStartMonday(today) {
-  const [y, m, d] = today.split('-').map(Number)
-  const dt = new Date(y, m - 1, d)
-  const offset = (dt.getDay() + 6) % 7 // 0 = Mon
-  return shiftDate(today, -offset)
-}
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-function fmtShort(dateStr) {
-  const [, m, d] = dateStr.split('-').map(Number)
-  return `${MONTHS[m - 1]} ${String(d).padStart(2, '0')}`
-}
-
-// Top set of a session for one exercise: set_number === 1, else heaviest valid set
-function topSetOf(sets) {
-  const valid = sets.filter(s => s.actual_weight != null && s.actual_reps != null)
-  if (!valid.length) return null
-  return valid.find(s => s.set_number === 1)
-    || valid.slice().sort((a, b) => (b.actual_weight - a.actual_weight) || (b.actual_reps - a.actual_reps))[0]
-}
+import {
+  ACCENT, CHART_GRID, CHART_TICK, statusHex, BUCKETS, bucketOf,
+  fmtTop, pearson, trendSegment, daysBetween, fmtShort,
+  buildSeriesByExercise, buildStatusByExercise, buildWeeklySets,
+} from '../utils/trainingAnalytics'
 
 // ── Component ───────────────────────────────────────────────────────
 export default function TrainingAnalysis({ onClose }) {
@@ -148,43 +61,10 @@ export default function TrainingAnalysis({ onClose }) {
   const latestBodyweight = weightLogs[0]?.weight_kg ?? null
 
   // ── Per-exercise session series (oldest → newest) ─────────────────
-  const seriesByExercise = useMemo(() => {
-    const byEx = {}
-    for (const sess of sessions) {
-      const well = (sess.session_rating != null && sess.energy_rating != null)
-        ? (sess.session_rating + sess.energy_rating) / 2 : null
-      for (const pe of sess.performed_exercises || []) {
-        const top = topSetOf(pe.performed_sets || [])
-        if (!top) continue
-        const volume = (pe.performed_sets || [])
-          .filter(s => s.actual_weight != null && s.actual_reps != null)
-          .reduce((a, s) => a + s.actual_weight * s.actual_reps, 0)
-        ;(byEx[pe.exercise_id] ||= []).push({
-          date: sess.performed_date,
-          weight: top.actual_weight,
-          reps: top.actual_reps,
-          volume,
-          well,
-          e1rm: epley(top.actual_weight, top.actual_reps),
-        })
-      }
-    }
-    for (const id in byEx) byEx[id].sort((a, b) => a.date.localeCompare(b.date))
-    return byEx
-  }, [sessions])
+  const seriesByExercise = useMemo(() => buildSeriesByExercise(sessions), [sessions])
 
   // ── Per-exercise status (classifier + 14-day skip) ────────────────
-  const statusByExercise = useMemo(() => {
-    const out = {}
-    for (const id in seriesByExercise) {
-      const s = seriesByExercise[id]
-      const cls = classify(s.map(x => x.weight), s.map(x => x.reps))
-      const last = s[s.length - 1].date
-      const status = daysBetween(last, today) >= 14 ? 'skipped' : cls.status
-      out[id] = { status, why: cls.why, lastDate: last }
-    }
-    return out
-  }, [seriesByExercise, today])
+  const statusByExercise = useMemo(() => buildStatusByExercise(seriesByExercise, today), [seriesByExercise, today])
 
   // ── Status tally ──────────────────────────────────────────────────
   const tally = useMemo(() => {
@@ -194,25 +74,7 @@ export default function TrainingAnalysis({ onClose }) {
   }, [statusByExercise])
 
   // ── Weekly set volume per bucket (current week) ───────────────────
-  const weeklySets = useMemo(() => {
-    const wkStart = weekStartMonday(today)
-    const counts = Object.fromEntries(BUCKETS.map(b => [b, 0]))
-    for (const sess of sessions) {
-      if (sess.performed_date < wkStart) continue
-      for (const pe of sess.performed_exercises || []) {
-        const bucket = exerciseMap[pe.exercise_id]?.bucket
-        if (!bucket) continue
-        const hard = (pe.performed_sets || []).filter(s => s.actual_reps != null).length
-        counts[bucket] += hard
-      }
-    }
-    return BUCKETS.map(m => {
-      const [lo, hi] = SET_TARGETS[m]
-      const sets = counts[m]
-      const st = setStatus(sets, lo)
-      return { muscle: m, sets, low: lo, high: hi, range: `${lo}–${hi}`, color: SETCOL[st], pct: Math.min(sets / hi, 1) * 100 }
-    })
-  }, [sessions, exerciseMap, today])
+  const weeklySets = useMemo(() => buildWeeklySets(sessions, exerciseMap, today), [sessions, exerciseMap, today])
   const weekTotal = weeklySets.reduce((a, b) => a + b.sets, 0)
   const weeklyByBucket = Object.fromEntries(weeklySets.map(w => [w.muscle, w]))
 
