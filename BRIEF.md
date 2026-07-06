@@ -150,6 +150,17 @@ Two post-build fixes applied (30 June 2026): the mobile drawer's entrance/exit a
 
 **Design-token mapping (handoff hex → existing Tailwind, no parallel system introduced):** accent `#34d399` → `emerald-400`; active tint `rgba(52,211,153,.12)` → `bg-emerald-400/10`; sidebar bg `#111118` → `bg-gray-900`; page bg kept as existing `bg-[#0a0a0a]`; subtle borders → `border-gray-800`; primary text → `text-white`; inactive label `#8888a8` → `text-gray-400`; muted → `text-gray-500`; very-muted/SOON → `text-gray-600`; logo/avatar gradient `#052e16→#064e3b` → `from-emerald-950 to-emerald-900`. **Font:** Plus Jakarta Sans was NOT added — nav uses the app's default system sans; the wordmark keeps `font-syne`.
 
+### Sidebar sub-navigation shell (complete as of 6 July 2026)
+
+A second nav level was added inside the existing shell (`Sidebar.jsx`, `App.jsx`), built to an approved handoff and pixel-matched. Sidebar widths, colours, logo, and top-level group styling are unchanged — this only adds the sub-item layer. **State model:** `activeGroup` (= `activeTab`) + `activeSubItem` in App; clicking a group with sub-items navigates to `subs[0]` (interim routing — a group with no overview page lands on its first sub). Locked structure — **Finance:** Net Worth · Budgeting · Projections; **Productivity:** Overview · Habits & Goals · Tasks · Reading; **Health:** Daily Metrics · Nutrition · Mood · Insights; **Training:** Overview · Log Session · Programmes · Exercise Bank · Analysis; **Home** and **Trading** stay flat (`activeSubItem` null).
+
+Three modes:
+- **Desktop expanded:** the active group's sub-items render inline below its row (24px indent, 32px rows, 2px emerald left border + `bg-white/5` on the active sub). Switching groups collapses the previous list automatically.
+- **Desktop collapsed:** clicking a group icon opens a click-to-open flyout popover (uppercase header + divider + sub rows), **fixed-positioned** (anchored via `getBoundingClientRect`) so it escapes the rail's clipped overflow; closes on selection or click-outside; only one open at a time. Flat items navigate directly with no flyout.
+- **Mobile drawer:** each group row has **two independent tap targets** — the label area (navigates to `subs[0]`, closes the drawer) and a chevron button (toggles an inline accordion via `event.stopPropagation()`, does **not** navigate or close). Multiple accordions can be open at once; accordion open/closed state is local UI, independent of `activeGroup`.
+
+`flyoutIn` keyframe added to `src/index.css`. Verified across all three modes in headless Chrome.
+
 ---
 
 ## Build Phases
@@ -588,7 +599,16 @@ Persistence is **save-as-you-go** (changed from save-at-end on 22 June 2026):
 
 **Session History added within Analysis (30 June 2026).** `src/components/SessionHistoryModal.jsx`, opened via a "Session history" button on the Analysis overview. Read-only browser of past logged sessions — reverse-chronological list (date, session name; `session_id` null → "Ad hoc"), click through to a detail view (exercises with sets `weight × reps · target`, session rating, energy rating, session notes, per-exercise notes). No new schema — reads existing `performed_sessions`/`performed_exercises`/`performed_sets` joined to `sessions` (name) + the already-loaded `exerciseMap`. No editing, filtering, or search in this first pass.
 
-**Training module is now fully built (steps 1–4 complete).** Remaining nicety: the placeholder trend icon in `TrainingSession.jsx` overview is still static — could later be wired to the classifier's per-lift direction.
+**Step 5 — Training Overview landing page complete (6 July 2026).** `src/components/TrainingOverview.jsx`. The Training group's new first sub-item (`Overview` = `subs[0]`) and its landing page, rendered in the normal content area (not a full-screen overlay); the other Training sub-items still render the existing `TrainingPage`. All derived client-side from `performed_*` + programme/sessions — no new tables.
+
+- **Shared analytics extracted to `src/utils/trainingAnalytics.js`** — the stall classifier, weekly set-volume, `buildSeriesByExercise`/`buildStatusByExercise`/`buildWeeklySets`, plus Epley/helpers/bucketing/accent constants. `TrainingAnalysis.jsx` now imports from it instead of owning its own copies (single source of truth, no duplication). Analysis behaviour unchanged.
+- **Sections:** status strip (sessions this week as an N-of-M-planned dot row; weeks on current programme derived from the earliest `performed_session` with the active `programme_id` — there is no `programme_enrolments` table; adherence % = completed vs planned over a rolling 4 weeks), GitHub-style sessions heatmap (current year, cells by session count, header shows week-streak + total sessions this year), Making Gains, Needs Attention (Stalled Lifts + Volume Gaps, reusing the classifier + weekly-set logic rather than reimplementing), and a **Right Now** card whose Start Session CTA deep-links into Log Session with the next programme session pre-selected (App holds a one-shot `pendingStartSession`, consumed once by `TrainingPage` after its sessions load).
+- **New PRs This Month uses actual logged numbers, not Epley** (an earlier pass showed `50kg × 14` projecting to a fictional "~73kg"). A PR = heavier top set at ≥ the same reps, **or** more reps at the same top-set weight, vs the *previous logged session* for that exercise; shows `weight × reps` + date + a plain delta ("+2.5kg" or "+1 rep"). First-ever logs this month are NEW LIFT entries, **capped at 3**, with repeat-improvement PRs prioritised. Both PR and NEW LIFT rows render **emerald** — the distinction is the badge text only (`PR` vs `NEW LIFT`).
+- **Fastest Progressing** = plain top-set **weight** gain over the trailing ~4 weeks (last-minus-first logged, e.g. "+5kg over 3 weeks"), not a per-week extrapolation — honest with only a few sessions logged.
+- **Bodyweight Ratios** (a third Making Gains tile) is intentionally left as a labelled gap until exercise → canonical-lift matching is worked out.
+- Every section has a sensible empty state (e.g. Volume Gaps shows "no sets this week yet" rather than six false red bars).
+
+**Training module steps 1–5 complete.** Remaining nicety: the placeholder trend icon in `TrainingSession.jsx` overview is still static — could later be wired to the classifier's per-lift direction.
 
 ---
 
@@ -607,22 +627,22 @@ A book/audiobook reading-goal tracker built from an approved design handoff, in 
 
 ## Planned Work
 
-### Confirmed sub-page structure (decided, not yet built)
+### Sub-page structure (shell built; group overview pages in progress)
 
-The sidebar groups will gain sub-navigation in a future round, once properly designed. Agreed structure:
+Sub-navigation mechanic and structure are **built** (see "Sidebar sub-navigation shell", 6 July 2026). Agreed sub-item structure:
 
 - **Finance:** Net Worth, Budgeting, Projections (placeholder, to be scoped properly later)
 - **Productivity:** Overview, Habits & Goals (weekly / yearly / long-term goal tiers, manual entry for now), Tasks, Reading
 - **Health:** Daily Metrics, Nutrition, Mood (placeholder), Insights (placeholder)
-- **Training:** Log Session, Programmes, Exercise Bank, Analysis (ordered by frequency of use)
+- **Training:** Overview, Log Session, Programmes, Exercise Bank, Analysis (ordered by frequency of use)
 - **Home** and **Trading** remain flat — no sub-navigation
 
-**Sub-navigation mechanic (agreed):** the sidebar itself expands inline to show sub-items under the active group (not a separate tab row). When the desktop sidebar is collapsed, sub-items appear as a flyout popover beside the icon rather than auto-expanding. Only one group's sub-items are expanded at a time.
+**Group overview / landing pages** are the remaining work: only **Training → Overview** is built so far (`TrainingOverview.jsx`, 6 July 2026). Until a group has its own overview page, the interim routing rule lands it on `subs[0]`; the individual sub-items (Log Session, Programmes, etc.) are not yet split into their own routed views — they still open from within the existing page/modals.
 
 ### Next up — agreed build order
 
-1. **Sub-navigation design brief** — comparing the three states (expanded inline, collapsed flyout, mobile drawer inline). Already sent to Claude Design; awaiting mockups.
-2. **Build sub-navigation + overview pages** — once mockups approved. One group at a time, not all at once. Recommended order: Training first (structure most settled), then Health, then Productivity (new goal tiers add complexity), then Finance last (Projections needs separate scoping).
+1. ~~Sub-navigation design brief~~ — done; mockups approved and shell built (6 July 2026).
+2. **Group overview / landing pages** — one group at a time. **Training Overview done.** Remaining recommended order: Health, then Productivity (new goal tiers add complexity), then Finance last (Projections needs separate scoping). Wiring the non-overview sub-items to their own routed views (rather than opening from within `TrainingPage`/modals) is also still open.
 3. **Statement import and recurring reconciliation** — design brief written and approved; build queued to land against the new sub-page structure, not the old flat Finance page.
 4. **Auto-linking engine for goals** — one reusable sync mechanism (not built per-feature): net worth snapshots auto-fill linked net-worth goals, habit completions auto-increment linked habit goals, steps data feeds linked step goals. The goals table needs a `linked_source` field reserved from the start.
 5. **Remaining horizon items** (sequenced as makes sense): app icon/logo (brief sent), Export Coach Data build (mockup approved), mood tracker, AI health insights, MyFitnessPal exploration, Trading tab proper build, password gate, Telegram bot for voice meal logging.
