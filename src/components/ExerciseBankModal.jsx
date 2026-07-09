@@ -8,7 +8,7 @@ export default function ExerciseBankModal({ onClose }) {
   const [loading, setLoading] = useState(true)
   const [mode, setMode] = useState('list') // 'list' | 'add' | 'edit'
   const [editingId, setEditingId] = useState(null)
-  const [form, setForm] = useState({ name: '', muscle_group: '' })
+  const [form, setForm] = useState({ name: '', muscle_group: '', include_in_bodyweight_ratio: false })
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
 
@@ -25,13 +25,13 @@ export default function ExerciseBankModal({ onClose }) {
   }
 
   function openAdd() {
-    setForm({ name: '', muscle_group: '' })
+    setForm({ name: '', muscle_group: '', include_in_bodyweight_ratio: false })
     setEditingId(null)
     setMode('add')
   }
 
   function openEdit(ex) {
-    setForm({ name: ex.name, muscle_group: ex.muscle_group })
+    setForm({ name: ex.name, muscle_group: ex.muscle_group, include_in_bodyweight_ratio: !!ex.include_in_bodyweight_ratio })
     setEditingId(ex.id)
     setMode('edit')
   }
@@ -39,7 +39,7 @@ export default function ExerciseBankModal({ onClose }) {
   function backToList() {
     setMode('list')
     setEditingId(null)
-    setForm({ name: '', muscle_group: '' })
+    setForm({ name: '', muscle_group: '', include_in_bodyweight_ratio: false })
   }
 
   async function handleSave() {
@@ -49,11 +49,13 @@ export default function ExerciseBankModal({ onClose }) {
       await supabase.from('exercises').insert({
         name: form.name.trim(),
         muscle_group: form.muscle_group.trim(),
+        include_in_bodyweight_ratio: form.include_in_bodyweight_ratio,
       })
     } else {
       await supabase.from('exercises').update({
         name: form.name.trim(),
         muscle_group: form.muscle_group.trim(),
+        include_in_bodyweight_ratio: form.include_in_bodyweight_ratio,
       }).eq('id', editingId)
     }
     await fetchExercises()
@@ -170,6 +172,15 @@ export default function ExerciseBankModal({ onClose }) {
                   {MUSCLE_GROUPS.map(g => <option key={g} value={g} />)}
                 </datalist>
               </div>
+              <label className="flex items-center gap-2.5 cursor-pointer select-none pt-1">
+                <input
+                  type="checkbox"
+                  checked={form.include_in_bodyweight_ratio}
+                  onChange={e => setForm(f => ({ ...f, include_in_bodyweight_ratio: e.target.checked }))}
+                  className="w-4 h-4 rounded bg-gray-800 border-gray-700 accent-emerald-400"
+                />
+                <span className="text-sm text-gray-300">Include in Bodyweight Ratios</span>
+              </label>
             </div>
           )}
         </div>

@@ -21,7 +21,8 @@ export default function TrainingOverview({ onStartSession, onOpenSub }) {
   const [programme, setProgramme] = useState(null)      // { id, name } | null
   const [planned, setPlanned] = useState([])            // [{ id, name, sort_order, count }]
   const [perf, setPerf] = useState([])                  // performed_sessions (asc by date) + nested ex/sets
-  const [exerciseMap, setExerciseMap] = useState({})    // id -> { name, muscle_group, bucket }
+  const [exerciseMap, setExerciseMap] = useState({})    // id -> { name, muscle_group, bucket, bwr }
+  const [bodyweight, setBodyweight] = useState(null)    // latest logged bodyweight (kg) | null
 
   const today = localDate()
 
@@ -44,21 +45,27 @@ export default function TrainingOverview({ onStartSession, onOpenSub }) {
         }))
       }
 
-      const [{ data: exs }, { data: ps }] = await Promise.all([
+      const [{ data: exs }, { data: ps }, { data: wl }, bwr] = await Promise.all([
         supabase.from('exercises').select('id, name, muscle_group'),
         supabase.from('performed_sessions').select(`
           id, performed_date, session_id, programme_id, session_rating, energy_rating,
           performed_exercises ( exercise_id, performed_sets ( set_number, actual_weight, actual_reps ) )
         `).order('performed_date'),
+        supabase.from('weight_logs').select('weight_kg').order('date', { ascending: false }).limit(1),
+        // Bodyweight-ratio tags — separate + tolerant so the page still works
+        // before the include_in_bodyweight_ratio column migration is run.
+        supabase.from('exercises').select('id, include_in_bodyweight_ratio').eq('include_in_bodyweight_ratio', true),
       ])
 
       if (cancelled) return
+      const bwrIds = bwr?.error ? new Set() : new Set((bwr?.data || []).map(r => r.id))
       const map = {}
-      for (const e of exs || []) map[e.id] = { name: e.name, muscle_group: e.muscle_group, bucket: bucketOf(e.muscle_group) }
+      for (const e of exs || []) map[e.id] = { name: e.name, muscle_group: e.muscle_group, bucket: bucketOf(e.muscle_group), bwr: bwrIds.has(e.id) }
       setProgramme(prog || null)
       setPlanned(plannedSessions)
       setExerciseMap(map)
       setPerf(ps || [])
+      setBodyweight(wl?.[0]?.weight_kg ?? null)
       setLoading(false)
     })()
     return () => { cancelled = true }
@@ -66,7 +73,13 @@ export default function TrainingOverview({ onStartSession, onOpenSub }) {
 
   const series = useMemo(() => buildSeriesByExercise(perf), [perf])
   const status = useMemo(() => buildStatusByExercise(series, today), [series, today])
-  const weeklySets = useMemo(() => buildWeeklySets(perf, exerciseMap, today), [perf, exerciseMap, today])
+  // Volume gaps use a trailing 7-day window (not the strict Mon-start week) so
+  // recent training — e.g. a weekend session logged just before a new week —
+  // still counts, matching what Stalled Lifts shows as "N days ago".
+  const weeklySets = useMemo(
+    () => buildWeeklySets(perf, exerciseMap, today, shiftDate(today, -6)),
+    [perf, exerciseMap, today],
+  )
 
   const m = useMemo(() => {
     const weekStart = weekStartMonday(today)
@@ -183,6 +196,19 @@ export default function TrainingOverview({ onStartSession, onOpenSub }) {
     const weekTotalSets = weeklySets.reduce((a, b) => a + b.sets, 0)
     const gaps = weeklySets.filter(w => w.status !== 'ok')
 
+    // Bodyweight ratios — tagged exercises only, most recent top set ÷ bodyweight
+    const taggedIds = Object.keys(exerciseMap).filter(id => exerciseMap[id]?.bwr)
+    const bwRatios = []
+    if (bodyweight) {
+      for (const id of taggedIds) {
+        const s = series[id]
+        if (!s || !s.length) continue
+        const topSet = s[s.length - 1].weight
+        bwRatios.push({ id, name: exerciseMap[id].name, topSet, ratio: topSet / bodyweight })
+      }
+      bwRatios.sort((a, b) => b.ratio - a.ratio)
+    }
+
     // Right Now — last session + next in the programme rotation
     const byId = Object.fromEntries(planned.map(s => [s.id, s]))
     const lastPerf = perf.length ? perf[perf.length - 1] : null
@@ -202,9 +228,10 @@ export default function TrainingOverview({ onStartSession, onOpenSub }) {
       plannedPerWeek, sessionsThisWeek, weeksOn, adherence, completed4w, planned4w,
       columns, totalThisYear, streak,
       newPRs, fastest, stalled, gaps, weekTotalSets,
+      taggedCount: taggedIds.length, bodyweight, bwRatios,
       lastPerf, lastName, nextSession,
     }
-  }, [perf, planned, programme, exerciseMap, series, status, weeklySets, today])
+  }, [perf, planned, programme, exerciseMap, series, status, weeklySets, bodyweight, today])
 
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-sm text-gray-600">Loading…</div>
@@ -366,11 +393,28 @@ export default function TrainingOverview({ onStartSession, onOpenSub }) {
             )}
           </Panel>
 
-          {/* Bodyweight Ratios — intentionally left as a gap for this build */}
-          <div className="hidden lg:flex flex-col items-center justify-center bg-gray-900/40 border border-dashed border-gray-800 rounded-lg p-4 text-center">
-            <div className="text-xs tracking-widest uppercase text-gray-600 font-semibold">Bodyweight Ratios</div>
-            <div className="text-[11px] text-gray-700 mt-1.5">Coming in a later build</div>
-          </div>
+          {/* Bodyweight Ratios — top set ÷ latest logged bodyweight, tagged lifts only */}
+          <Panel title="Bodyweight ratios" badge={m.bwRatios.length || null} badgeColor={ACCENT.purple}>
+            {m.taggedCount === 0 ? (
+              <EmptyRow>Tag exercises in Exercise Bank to see bodyweight ratios here.</EmptyRow>
+            ) : m.bodyweight == null ? (
+              <EmptyRow>Add your bodyweight in Health to see ratios.</EmptyRow>
+            ) : m.bwRatios.length === 0 ? (
+              <EmptyRow>No sets logged yet for your tagged exercises.</EmptyRow>
+            ) : (
+              <div className="space-y-2 max-h-[224px] overflow-y-auto">
+                {m.bwRatios.map(r => (
+                  <div key={r.id} className="flex items-center gap-3 bg-gray-800/50 rounded-lg px-3 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-white truncate">{r.name}</div>
+                      <div className="text-[11px] text-gray-500">{fmtTop(r.topSet)}kg top set</div>
+                    </div>
+                    <div className="text-base font-bold flex-none" style={{ color: ACCENT.purple }}>{r.ratio.toFixed(1)}×</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
         </div>
       </div>
 
@@ -404,9 +448,9 @@ export default function TrainingOverview({ onStartSession, onOpenSub }) {
           {/* Volume gaps */}
           <Panel title="Volume gaps" badge={m.weekTotalSets > 0 ? (m.gaps.length || null) : null} badgeColor={ACCENT.red}>
             {m.weekTotalSets === 0 ? (
-              <EmptyRow>No sets logged this week yet — volume by muscle group appears once you train.</EmptyRow>
+              <EmptyRow>No sets logged in the last 7 days — volume by muscle group appears once you train.</EmptyRow>
             ) : m.gaps.length === 0 ? (
-              <EmptyRow>Every muscle group is on target for hard sets this week. Nice work.</EmptyRow>
+              <EmptyRow>Every muscle group is on target for hard sets over the last 7 days. Nice work.</EmptyRow>
             ) : (
               <div className="space-y-2.5">
                 {m.gaps.map(g => (

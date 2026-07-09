@@ -92,13 +92,15 @@ export default function TrainingAnalysis({ onClose }) {
       const wDelta = lastV - prevV
       const rDelta = s[s.length - 1].reps - prevR
       let delta
-      if (st.status === 'skipped') delta = '—'
+      if (st.status === 'skipped' || st.status === 'insufficient') delta = '—'
       else if (wDelta > 0) delta = '+' + fmtTop(wDelta)
       else if (st.why === 'reps' && rDelta > 0) delta = '+' + rDelta + ' rep'
       else delta = '0'
       const label = st.status === 'progressing'
         ? (st.why === 'reps' ? 'PROGRESSING · REPS' : 'PROGRESSING')
-        : (st.status === 'skipped' ? 'NOT TRAINED' : 'STALLED')
+        : st.status === 'skipped' ? 'NOT TRAINED'
+        : st.status === 'insufficient' ? 'BUILDING'
+        : 'STALLED'
       ;(byBucket[meta.bucket] ||= []).push({
         id, name: meta.name, top: fmtTop(lastV), delta, color: statusHex(st.status), label,
         daysAgo: daysBetween(st.lastDate, today),
@@ -563,7 +565,7 @@ function PerLiftView({ exercise, series, status, bodyweightOn, latestBodyweight,
 
 function LiftHeader({ exercise, bucket, onOpenSelector, status, headline }) {
   const statusColor = statusHex(status?.status)
-  const statusLabel = status?.status === 'progressing' ? (status.why === 'reps' ? 'PROGRESSING · REPS' : 'PROGRESSING') : (status?.status === 'skipped' ? 'NOT TRAINED' : 'STALLED')
+  const statusLabel = status?.status === 'progressing' ? (status.why === 'reps' ? 'PROGRESSING · REPS' : 'PROGRESSING') : status?.status === 'skipped' ? 'NOT TRAINED' : status?.status === 'insufficient' ? 'BUILDING' : 'STALLED'
   return (
     <div className="flex justify-between items-start mb-6 gap-4">
       <div className="flex items-center gap-4 flex-wrap">

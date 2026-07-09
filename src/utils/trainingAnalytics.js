@@ -15,7 +15,11 @@ export const ACCENT = {
 export const CHART_GRID = '#1f2937'
 export const CHART_TICK = '#6b7280'
 
-export const statusHex = (s) => (s === 'progressing' ? ACCENT.emerald : s === 'skipped' ? ACCENT.red : ACCENT.amber)
+export const statusHex = (s) => (s === 'progressing' ? ACCENT.emerald : s === 'skipped' ? ACCENT.red : s === 'insufficient' ? ACCENT.greyBlue : ACCENT.amber)
+
+// Minimum logged sessions before a lift can be classified progressing/stalled.
+// Below this it's 'insufficient' (not enough history) — excluded from both counts.
+export const MIN_SESSIONS_FOR_STATUS = 3
 
 // ── Muscle bucketing — collapse the bank's 11 groups into the design's 6 ─
 export const BUCKETS = ['Chest', 'Back', 'Shoulders', 'Legs', 'Arms', 'Core']
@@ -141,19 +145,27 @@ export function buildStatusByExercise(seriesByExercise, today) {
   const out = {}
   for (const id in seriesByExercise) {
     const s = seriesByExercise[id]
-    const cls = classify(s.map(x => x.weight), s.map(x => x.reps))
     const last = s[s.length - 1].date
+    // Not enough history to judge progression — neither progressing nor stalled.
+    if (s.length < MIN_SESSIONS_FOR_STATUS) {
+      out[id] = { status: 'insufficient', why: 'new', lastDate: last }
+      continue
+    }
+    const cls = classify(s.map(x => x.weight), s.map(x => x.reps))
     const status = daysBetween(last, today) >= 14 ? 'skipped' : cls.status
     out[id] = { status, why: cls.why, lastDate: last }
   }
   return out
 }
 
-// Weekly hard-set volume per muscle bucket for the current (Mon-start) week,
-// each scored against its target range.
+// Weekly hard-set volume per muscle bucket, each scored against its target range.
 //   exerciseMap: exercise_id -> { bucket }
-export function buildWeeklySets(sessions, exerciseMap, today) {
-  const wkStart = weekStartMonday(today)
+//   windowStart: inclusive lower bound (YYYY-MM-DD); defaults to the current
+//     Mon-start week. Callers wanting a rolling window (e.g. the Overview's
+//     Volume Gaps, so recent weekend training isn't hidden early in a new week)
+//     pass a trailing date instead.
+export function buildWeeklySets(sessions, exerciseMap, today, windowStart) {
+  const wkStart = windowStart || weekStartMonday(today)
   const counts = Object.fromEntries(BUCKETS.map(b => [b, 0]))
   for (const sess of sessions) {
     if (sess.performed_date < wkStart) continue
