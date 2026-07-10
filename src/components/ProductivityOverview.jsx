@@ -7,12 +7,12 @@ import {
 } from '../utils/productivityHelpers'
 import HabitTracker from './HabitTracker'
 import TodaysTasks from './TodaysTasks'
-import Modal from './Modal'
+import WeeklyReviewModal from './WeeklyReviewModal'
 
 // Productivity Overview — a 10-second pulse across all four sub-pages. Reads
 // live data where the source is already built (habits, weekly/yearly goals,
-// weekly review, reading, tasks). The Weekly Review modal is built in Session 3;
-// its button is wired here to a placeholder.
+// weekly review, reading, tasks). The Weekly Review card opens the full
+// WeeklyReviewModal (edit or history mode) and refreshes on seal.
 export default function ProductivityOverview({ onOpenSub }) {
   const today = localDate()
   const monday = isoMonday(0)
@@ -28,7 +28,14 @@ export default function ProductivityOverview({ onOpenSub }) {
   const [readingGoal, setReadingGoal] = useState(24)
   const [review, setReview] = useState(null)
   const [sealedWeeks, setSealedWeeks] = useState(new Set())
-  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [reviewModal, setReviewModal] = useState(null) // null | { history: bool }
+
+  function refreshReview() {
+    supabase.from('weekly_reviews').select('*').eq('week_start', monday).maybeSingle()
+      .then(({ data }) => { setReview(data || null) })
+    supabase.from('weekly_reviews').select('week_start, sealed_at').not('sealed_at', 'is', null)
+      .then(({ data }) => { if (data) setSealedWeeks(new Set(data.map(r => r.week_start))) })
+  }
 
   useEffect(() => {
     const windowStart = shiftDate(today, -365)
@@ -212,14 +219,20 @@ export default function ProductivityOverview({ onOpenSub }) {
               </div>
             </div>
           </div>
-          {reviewSealed ? (
-            <button onClick={() => setShowReviewModal(true)} className="text-xs text-emerald-400 hover:text-emerald-300 uppercase tracking-widest transition-colors">View this week's review →</button>
-          ) : (
+          <div className="flex items-center gap-4">
             <button
-              onClick={() => setShowReviewModal(true)}
-              className="px-4 py-2 bg-amber-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-amber-300 transition-colors"
-            >{reviewInProgress ? 'Continue Review' : 'Start Weekly Review'}</button>
-          )}
+              onClick={() => setReviewModal({ history: true })}
+              className="text-xs text-gray-500 hover:text-white uppercase tracking-widest transition-colors"
+            >View past reviews</button>
+            {reviewSealed ? (
+              <button onClick={() => setReviewModal({ history: false })} className="text-xs text-emerald-400 hover:text-emerald-300 uppercase tracking-widest transition-colors">View this week's review →</button>
+            ) : (
+              <button
+                onClick={() => setReviewModal({ history: false })}
+                className="px-4 py-2 bg-amber-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-amber-300 transition-colors"
+              >{reviewInProgress ? 'Continue Review' : 'Start Weekly Review'}</button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -255,13 +268,12 @@ export default function ProductivityOverview({ onOpenSub }) {
         </div>
       </div>
 
-      {showReviewModal && (
-        <Modal title="Weekly Review" onClose={() => setShowReviewModal(false)} hideSave cancelLabel="Close">
-          <p className="text-sm text-gray-400 leading-relaxed">
-            The Weekly Review modal is built in the next session. This button is wired and ready — the full
-            reflection flow (six fields, seal week, streak) will open here.
-          </p>
-        </Modal>
+      {reviewModal && (
+        <WeeklyReviewModal
+          startInHistory={reviewModal.history}
+          onClose={() => setReviewModal(null)}
+          onSealed={refreshReview}
+        />
       )}
     </div>
   )
