@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import HomePage from './components/HomePage'
 import FinancePage from './components/FinancePage'
 import ProductivityPage from './components/ProductivityPage'
+import ProductivityOverview from './components/ProductivityOverview'
+import HabitsGoalsPage from './components/HabitsGoalsPage'
 import HealthPage from './components/HealthPage'
 import TrainingPage from './components/TrainingPage'
 import TrainingOverview from './components/TrainingOverview'
@@ -109,7 +111,13 @@ function App() {
             {activeTab === 'home' && <HomePage />}
             {activeTab === 'finance' && <FinancePage />}
             {activeTab === 'trading' && <TradingPlaceholder />}
-            {activeTab === 'productivity' && <ProductivityPage />}
+            {activeTab === 'productivity' && (
+              activeSubItem === 'habits-goals'
+                ? <HabitsGoalsPage />
+                : (activeSubItem === 'overview' || activeSubItem == null)
+                  ? <ProductivityOverview onOpenSub={(sub) => navigate('productivity', sub)} />
+                  : <ProductivityPage />
+            )}
             {activeTab === 'health' && <HealthPage />}
             {activeTab === 'training' && (
               activeSubItem === 'overview' || activeSubItem == null

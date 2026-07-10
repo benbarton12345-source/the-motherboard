@@ -654,6 +654,32 @@ Sub-navigation mechanic and structure are **built** (see "Sidebar sub-navigation
 
 **Group overview / landing pages** are the remaining work: only **Training → Overview** is built so far (`TrainingOverview.jsx`, 6 July 2026). Until a group has its own overview page, the interim routing rule lands it on `subs[0]`; the individual sub-items (Log Session, Programmes, etc.) are not yet split into their own routed views — they still open from within the existing page/modals.
 
+#### Productivity redesign — Session 2 of 3 complete (10 July 2026): Habits & Goals + Overview
+
+Two new Productivity sub-pages built to the approved design handoff (`design-handoffs/productivity/`), all-emerald (no purple), matching Finance page tokens. Routing added in `App.jsx`: `habits-goals` → `HabitsGoalsPage`, `overview`/null → `ProductivityOverview`; `tasks` and `reading` still render the existing `ProductivityPage` untouched (Session 3 splits those out).
+
+New files:
+- **`src/utils/productivityHelpers.js`** — pure helpers: `isoMonday(offset)`, `weekDates`, `streakEndingToday`, `yearFraction`, `yearlyPaceStatus` + `PACE_META` (ON TRACK/BEHIND/WAY BEHIND), `isoWeekNumber`, `weekRangeLabel`, `weekOffsetLabel`, `dayLabel`. Reuses `localDate`/`shiftDate` from `taskHelpers.js`.
+- **`src/components/ConfirmPopover.jsx`** — fixed-position backfill-confirm popover anchored at tap coords (escapes overflow clipping); used by habits + weekly-goal grids.
+- **`src/components/HabitTracker.jsx`** — habits section, `compact` prop for the two placements. Optional-controlled (parent passes habits/completions + setters) like `TodaysTasks`; self-fetches when uncontrolled. Full mode: week navigator (‹ This week / Last week / N weeks ago ›, capped at current week), 7-dot grid, inline ✎ edit (rename/delete), + Add Habit. Tapping today toggles instantly; any past day opens the confirm popover; future days inert. Per-habit streak = consecutive days ending today in `habit_completions`.
+- **`src/components/WeeklyGoalsSection.jsx`** — current-week-only 7-day grid on `weekly_goal_completions` (keyed by `week_start_date`), current/target counter (red until hit, emerald when hit), inline edit (name + target + numeric/boolean type), add. Same backfill-confirm pattern.
+- **`src/components/YearlyGoalsSection.jsx`** — numeric cards (pace badge, progress bar, Update value or "Auto-updating via {source}" when `linked_source` set) + boolean cards (checkbox, strikethrough + sorted to bottom when done). Inline edit + add (numeric/boolean).
+- **`src/components/LongTermGoalsSection.jsx`** — expandable cards with phase pills (not_started/in_progress/done, stopPropagation), numeric value update, and a dated journal (`long_term_goal_journal`). Done goals collapse into an "Achieved (N)" section. Add supports boolean (name only) and numeric (name/target/unit) paths.
+- **`src/components/HabitsGoalsPage.jsx`** — owns all Habits & Goals data (so the 4-stat summary strip + sections stay in sync) and composes the four sections.
+- **`src/components/ProductivityOverview.jsx`** — week snapshot strip, Habits This Week (interactive compact `HabitTracker`) + Goals Pulse (2-4 numeric yearly bars), Weekly Review card (amber/emerald by state + streak), Today's Tasks (reuses `TodaysTasks compact`) + Reading card.
+
+Data decisions made this session:
+- **Streak** (per-habit and top): consecutive calendar days ending today with a `habit_completions` row; `habits.streak` cache column is ignored (recomputed live).
+- **Week rollover** for weekly goals is implicit: completions are keyed by `week_start_date`, so the current week is naturally fresh and past weeks remain permanent history. Last-week hit/total is derivable live from the rows — **no separate persistence table was added** (schema is frozen; the brief's "persist last week's tally" is satisfied by the retained rows).
+- **Weekly goals are shared** with the existing Tasks page (`weekly_goals` table). The Tasks page still uses the legacy aggregate `weekly_goal_logs` counter; the new Habits & Goals grid uses `weekly_goal_completions`. The two counters are independent by design — the new per-day table is the redesign's source of truth.
+- **Overview shows real Tasks + Reading data** rather than stubs (the underlying `tasks`/`books` tables are already live and stable): Tasks Today = today's regular (non-recurring) tasks done/total + overdue count; Reading = current book + finished-this-year from `books`, on-track vs `reading_settings.goal`. Recurring tasks are excluded from the glance stat (the Tasks sub-page owns the recurrence engine). Today's Tasks list reuses `TodaysTasks compact`.
+- **Weekly Review modal is wired but not built** — the Overview button opens a placeholder `Modal`; the full six-field seal/streak flow is Session 3. Card state derives from `weekly_reviews` (`sealed_at` = source of truth); streak walks back over sealed weeks.
+- **Freedom Figure** is excluded from Yearly Goals display (defensive `/freedom figure/i` filter) and belongs in Long-term Goals via its numeric add path. No such row exists in the DB yet, so no relocation was needed.
+
+**Open tension flagged for Ben:** the brief asked to remove purple from the whole Productivity *section*, but also to not touch the Tasks/Reading pages. The two new pages are fully purple-free. The **existing** `ProductivityPage` (recurring-task purple in the calendar/REC badges) and `ReadingPanel`/`ReadingCard` (violet accent) still contain purple — removing it now means editing the pages Session 3 will rebuild anyway. Left as-is; purple removal on Tasks/Reading should happen when those sub-pages are split out in Session 3.
+
+Not built this session (unchanged): the Tasks and Reading sub-pages (still the old combined `ProductivityPage`), the Weekly Review modal, and any cross-metric auto-linking (`linked_source` is read-only for the indicator).
+
 ### Next up — agreed build order
 
 1. ~~Sub-navigation design brief~~ — done; mockups approved and shell built (6 July 2026).
