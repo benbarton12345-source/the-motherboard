@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Inter',system-ui,sans-serif;background:#0c0f1e}
+*{box-sizing:border-box}
+button{font-family:inherit}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
+.nav-item{cursor:pointer;transition:background .12s,color .12s}
+.nav-item:hover{background:rgba(255,255,255,0.04)}
+.day-cell{cursor:pointer;transition:transform .1s,background .12s}
+.day-cell:hover{transform:scale(1.08)}
+.btn{cursor:pointer;transition:opacity .12s,transform .08s}
+.btn:hover{opacity:0.85}
+.btn:active{transform:scale(0.97)}
+.link:hover{text-decoration:underline;cursor:pointer}
+.card-click:hover{border-color:rgba(16,185,129,0.3) !important}
+textarea,input{font-family:inherit}
+</style>
+</helmet>
+
+<div style="display:flex;height:940px;width:1360px;max-width:100%;font-family:'Inter',system-ui,sans-serif;background:#0c0f1e;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);position:relative" data-screen-label="App Shell">
+
+  <!-- Sidebar -->
+  <div style="width:200px;flex-shrink:0;background:#090c18;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,0.06)">
+    <div style="padding:13px 14px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:8px">
+      <div style="width:22px;height:22px;border-radius:5px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);display:grid;place-items:center;flex-shrink:0"><div style="width:9px;height:9px;border:1.5px solid #10b981;border-radius:1.5px"></div></div>
+      <span style="font-size:12.5px;font-weight:600;color:#d4d8e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">The Motherbo…</span>
+    </div>
+    <nav style="flex:1;padding:8px 6px;display:flex;flex-direction:column;gap:1px;overflow:hidden">
+      <div class="nav-item" style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;color:#4e5e79;font-size:12.5px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2 7l6-5 6 5v7H10v-4H6v4H2V7z"/></svg>Home</div>
+      <div class="nav-item" style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;color:#4e5e79;font-size:12.5px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l3.5-3.5 3 2.5 4.5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>Finance</div>
+      <div style="border-radius:6px;background:rgba(16,185,129,0.06)">
+        <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;color:#10b981;font-size:12.5px;font-weight:500"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>Productivity</div>
+        <div style="padding:1px 6px 6px 28px;display:flex;flex-direction:column;gap:1px">
+          <div class="nav-item" onClick="{{ goTo_overview }}" style="padding:4px 8px;border-radius:4px;font-size:11.5px;{{ navStyle_overview }}">Overview</div>
+          <div class="nav-item" onClick="{{ goTo_habits }}" style="padding:4px 8px;border-radius:4px;font-size:11.5px;{{ navStyle_habits }}">Habits &amp; Goals</div>
+          <div class="nav-item" onClick="{{ goTo_tasks }}" style="padding:4px 8px;border-radius:4px;font-size:11.5px;{{ navStyle_tasks }}">Tasks</div>
+          <div class="nav-item" onClick="{{ goTo_reading }}" style="padding:4px 8px;border-radius:4px;font-size:11.5px;{{ navStyle_reading }}">Reading</div>
+        </div>
+      </div>
+      <div class="nav-item" style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;color:#4e5e79;font-size:12.5px"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 13S2 9 2 5.5a3.5 3.5 0 016-2.45A3.5 3.5 0 0114 5.5C14 9 8 13 8 13z"/></svg>Health</div>
+    </nav>
+    <div style="padding:11px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:9px">
+      <div style="width:24px;height:24px;border-radius:50%;background:rgba(16,185,129,0.15);border:1.5px solid rgba(16,185,129,0.4);display:grid;place-items:center;font-size:10px;font-weight:700;color:#10b981;flex-shrink:0">B</div>
+      <div><div style="font-size:12px;font-weight:500;color:#d4d8e8">Ben</div><div style="font-size:10px;color:#313b52">Personal</div></div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0">
+    <div style="height:48px;border-bottom:1px solid rgba(255,255,255,0.06);padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:6px"><span style="font-size:15px;font-weight:600;color:#e2e5ef">Productivity</span><sc-if value="{{ subLabel }}"><span style="color:#313b52;font-size:13px">/</span><span style="font-size:13px;color:#5a6882">{{ subLabel }}</span></sc-if></div>
+      <span style="font-size:11px;color:#313b52">1 GBP = A$2.0580</span>
+    </div>
+
+    <!-- ═══ OVERVIEW ═══ -->
+    <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px">
+          <div style="font-size:9px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:8px">Tasks Today</div>
+          <div style="font-size:24px;font-weight:700;color:#5a6882;line-height:1">{{ tasksDoneToday }}<span style="font-size:13px;font-weight:400"> / {{ tasksTotalToday }}</span></div>
+          <sc-if value="{{ hasOverdue }}"><div style="font-size:10px;color:#ef4444;font-weight:600;margin-top:3px">{{ overdueCount }} overdue</div></sc-if>
+          <sc-if value="{{ noOverdue }}"><div style="font-size:10px;color:#3a4255;margin-top:3px">done today</div></sc-if>
+        </div>
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px">
+          <div style="font-size:9px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:8px">Habit Score</div>
+          <div style="font-size:24px;font-weight:700;color:#e2e5ef;line-height:1">{{ habitScoreDone }}<span style="font-size:13px;color:#5a6882;font-weight:400"> / {{ habitScoreTotal }}</span></div>
+          <div style="font-size:10px;color:#5a6882;margin-top:3px">top streak {{ topStreak }}d 🔥</div>
+        </div>
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px">
+          <div style="font-size:9px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:8px">Goals This Week</div>
+          <div style="font-size:24px;font-weight:700;color:{{ weeklyGoalsColor }};line-height:1">{{ weeklyGoalsHit }}<span style="font-size:13px;color:#5a6882;font-weight:400"> / {{ weeklyGoalsTotal }}</span></div>
+          <div style="font-size:10px;color:#3a4255;margin-top:3px">hit this week</div>
+        </div>
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px">
+          <div style="font-size:9px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:8px">Reading</div>
+          <div style="font-size:13px;font-weight:600;color:#e2e5ef;line-height:1.3;margin-bottom:3px">{{ reading.book }}</div>
+          <div style="font-size:10px;color:#5a6882">ch {{ reading.chapter }}/{{ reading.totalChapters }} · {{ reading.pct }}% · {{ reading.booksThisYear }}/{{ reading.booksTarget }} books</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:3fr 2fr;gap:12px">
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase">Habits This Week</div>
+            <a class="link" onClick="{{ goTo_habits }}" style="font-size:11px;color:#5a6882;text-decoration:none">View all →</a>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ habitsOverview }}" as="h" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:14px">
+                <div style="width:100px;flex-shrink:0"><div style="font-size:12.5px;font-weight:500;color:#d4d8e8">{{ h.name }}</div><div style="font-size:10px;color:#5a6882">streak {{ h.streak }}d</div></div>
+                <div style="display:flex;gap:4px;flex:1">
+                  <sc-for list="{{ h.days }}" as="d" hint-placeholder-count="7">
+                    <div class="day-cell" onClick="{{ d.onClick }}" title="{{ d.title }}" style="flex:1;height:24px;border-radius:4px;background:{{ d.bg }};border:{{ d.border }}"></div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase">Goals Pulse</div>
+            <a class="link" onClick="{{ goTo_habits }}" style="font-size:11px;color:#5a6882;text-decoration:none">View all →</a>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ goalsPulse }}" as="g" hint-placeholder-count="3">
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+                  <span style="font-size:12px;font-weight:500;color:#d4d8e8">{{ g.name }}</span>
+                  <span style="font-size:9px;font-weight:600;padding:2px 5px;border-radius:3px;background:{{ g.badgeBg }};color:{{ g.badgeColor }}">{{ g.badgeLabel }}</span>
+                </div>
+                <sc-if value="{{ g.isNumeric }}">
+                  <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.07)"><div style="height:100%;background:{{ g.barColor }};width:{{ g.pctStr }};border-radius:2px"></div></div><span style="font-size:10px;color:#5a6882;white-space:nowrap">{{ g.valueLabel }}</span></div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#131726;border:1.5px solid {{ reviewCardBorder }};border-radius:8px;padding:16px 20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div style="width:40px;height:40px;border-radius:8px;background:{{ reviewIconBg }};border:1px solid {{ reviewIconBorder }};display:grid;place-items:center;flex-shrink:0">
+              <sc-if value="{{ reviewSealed }}" hint-placeholder-val="{{ false }}">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#10b981" stroke-width="2"><path d="M4 10l4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </sc-if>
+              <sc-if value="{{ reviewNotSealed }}">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#f59e0b" stroke-width="1.5"><path d="M4 6h12M4 10h8M4 14h5" stroke-linecap="round"/><rect x="1.5" y="2" width="17" height="16" rx="2.5" stroke="#f59e0b"/></svg>
+              </sc-if>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#e2e5ef;margin-bottom:2px">Week {{ weekNumber }} Review — {{ reviewStatusLabel }}</div>
+              <div style="font-size:11px;color:#5a6882">Streak: <span style="color:#10b981;font-weight:600">{{ reviewStreak }} weeks</span> · {{ reviewSubtext }}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            <sc-if value="{{ reviewSealed }}" hint-placeholder-val="{{ false }}">
+              <button class="btn" onClick="{{ openReview }}" style="font-size:12px;font-weight:600;padding:8px 18px;border-radius:5px;background:transparent;border:1px solid rgba(16,185,129,0.35);color:#10b981;white-space:nowrap">View this week's review</button>
+            </sc-if>
+            <sc-if value="{{ reviewNotSealed }}">
+              <button class="btn" onClick="{{ openReview }}" style="font-size:12px;font-weight:600;padding:8px 18px;border-radius:5px;background:#f59e0b;border:none;color:#0c0f1e;white-space:nowrap">{{ reviewCtaLabel }}</button>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase">Today's Tasks</div>
+            <a class="link" onClick="{{ goTo_tasks }}" style="font-size:11px;color:#5a6882;text-decoration:none">View all →</a>
+          </div>
+          <sc-if value="{{ noTasksToday }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:20px;text-align:center">
+              <div style="font-size:13px;color:#5a6882;margin-bottom:4px">No tasks for today</div>
+              <div style="font-size:11px;color:#3a4255">{{ nextTaskPreview }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ hasTasksToday }}">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <sc-for list="{{ tasksTodayPreview }}" as="t" hint-placeholder-count="3">
+                <div onClick="{{ t.toggle }}" class="btn" style="display:flex;align-items:center;gap:8px;padding:6px 4px">
+                  <div style="width:15px;height:15px;border-radius:4px;border:1.5px solid {{ t.boxBorder }};background:{{ t.boxBg }};flex-shrink:0;display:grid;place-items:center">
+                    <sc-if value="{{ t.done }}"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="#0c0f1e" stroke-width="2"><path d="M1 5l3 3 5-6"/></svg></sc-if>
+                  </div>
+                  <span style="font-size:12.5px;color:{{ t.textColor }};text-decoration:{{ t.strike }}">{{ t.name }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase">Reading</div>
+            <a class="link" onClick="{{ goTo_reading }}" style="font-size:11px;color:#5a6882;text-decoration:none">View all →</a>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:44px;height:60px;border-radius:3px;background:linear-gradient(135deg,#1e2535,#141a2a);border:1px solid rgba(255,255,255,0.07);flex-shrink:0"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;color:#e2e5ef;margin-bottom:2px">{{ reading.book }}</div>
+              <div style="font-size:11px;color:#5a6882;margin-bottom:8px">{{ reading.author }} · ch {{ reading.chapter }}/{{ reading.totalChapters }}</div>
+              <div style="height:4px;border-radius:2px;background:rgba(255,255,255,0.07);overflow:hidden;margin-bottom:5px"><div style="height:100%;background:#10b981;width:{{ reading.pctStr }};border-radius:2px"></div></div>
+              <div style="display:flex;justify-content:space-between"><span style="font-size:10px;color:#5a6882">{{ reading.pct }}% · {{ reading.booksThisYear }}/{{ reading.booksTarget }} books this year</span><span style="font-size:10px;color:#10b981">on track</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ═══ HABITS & GOALS ═══ -->
+    <sc-if value="{{ isHabits }}">
+    <div style="flex:1;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:20px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px">
+          <div style="font-size:9px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:8px">Yearly Goals</div>
+          <div style="font-size:22px;font-weight:700;color:#e2e5ef;line-height:1">{{ yearlyOnTrackCount }}<span style="font-size:12px;color:#5a6882;font-weight:400"> / {{ yearlyTotalCount }}</span></div>
+          <div style="font-size:10px;color:#5a6882;margin-top:3px">on track</div>
+        </div>
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px">
+          <div style="font-size:9px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:8px">Top Habit Streak</div>
+          <div style="font-size:22px;font-weight:700;color:#e2e5ef;line-height:1">{{ topStreak }}<span style="font-size:12px;color:#5a6882;font-weight:400"> days</span></div>
+          <div style="font-size:10px;color:#5a6882;margin-top:3px">{{ topStreakHabit }}</div>
+        </div>
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px">
+          <div style="font-size:9px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:8px">Long-term Goals</div>
+          <div style="font-size:22px;font-weight:700;color:#e2e5ef;line-height:1">{{ longTermTotal }}<span style="font-size:12px;color:#5a6882;font-weight:400"> / {{ longTermDone }}</span></div>
+          <div style="font-size:10px;color:#5a6882;margin-top:3px">total / achieved</div>
+        </div>
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px">
+          <div style="font-size:9px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:8px">Weekly Goals</div>
+          <div style="font-size:22px;font-weight:700;color:#e2e5ef;line-height:1">{{ weeklyGoalsHit }}<span style="font-size:12px;color:#5a6882;font-weight:400"> / {{ weeklyGoalsTotal }}</span></div>
+          <div style="font-size:10px;color:#5a6882;margin-top:3px">hit this week</div>
+        </div>
+      </div>
+
+      <!-- Habits -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:#e2e5ef">Habits</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <button class="btn" onClick="{{ prevHabitWeek }}" style="width:22px;height:22px;border-radius:4px;background:rgba(255,255,255,0.06);border:none;color:#5a6882;font-size:11px">‹</button>
+              <span style="font-size:11px;color:#5a6882;min-width:64px;text-align:center">{{ habitWeekLabel }}</span>
+              <button class="btn" onClick="{{ nextHabitWeek }}" style="width:22px;height:22px;border-radius:4px;background:rgba(255,255,255,0.06);border:none;color:#5a6882;font-size:11px">›</button>
+            </div>
+            <button class="btn" onClick="{{ addHabit }}" style="font-size:11px;padding:5px 10px;border-radius:4px;background:transparent;border:1px solid rgba(16,185,129,0.3);color:#10b981">+ Add Habit</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ habits }}" as="h" hint-placeholder-count="2">
+            <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px">
+              <sc-if value="{{ h.isEditing }}">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input value="{{ editDraft.name }}" onChange="{{ setEditDraftName }}" style="flex:1;background:#0c0f1e;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:8px 10px;font-size:13px;color:#e2e5ef"/>
+                  <button class="btn" onClick="{{ saveEdit }}" style="font-size:11px;font-weight:600;padding:7px 12px;border-radius:5px;background:#10b981;border:none;color:#0c0f1e">Save</button>
+                  <button class="btn" onClick="{{ cancelEdit }}" style="font-size:11px;padding:7px 12px;border-radius:5px;background:transparent;border:1px solid rgba(255,255,255,0.12);color:#8892aa">Cancel</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ h.isNotEditing }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:flex-start;gap:16px">
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                    <span style="font-size:13px;font-weight:600;color:#e2e5ef">{{ h.name }}</span>
+                    <button class="btn" onClick="{{ h.edit }}" style="font-size:10px;color:#5a6882;background:none;border:none;padding:0">✎ edit</button>
+                  </div>
+                  <div>
+                    <div style="display:flex;gap:5px;margin-bottom:4px">
+                      <sc-for list="{{ h.dayLabels }}" as="dl" hint-placeholder-count="7"><div style="width:24px;text-align:center;font-size:9px;color:#3a4255">{{ dl }}</div></sc-for>
+                    </div>
+                    <div style="display:flex;gap:5px">
+                      <sc-for list="{{ h.days }}" as="d" hint-placeholder-count="7">
+                        <div class="day-cell" onClick="{{ d.onClick }}" title="{{ d.title }}" style="width:24px;height:24px;border-radius:50%;background:{{ d.bg }};border:{{ d.border }}"></div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+                <div style="text-align:right;flex-shrink:0">
+                  <div style="font-size:10px;color:#5a6882;margin-bottom:2px">streak</div>
+                  <div style="font-size:28px;font-weight:700;color:#e2e5ef;line-height:1">{{ h.streak }}</div>
+                  <div style="font-size:10px;color:#5a6882;margin-top:2px">days</div>
+                </div>
+              </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noHabits }}"><div style="background:#131726;border:1px dashed rgba(255,255,255,0.12);border-radius:8px;padding:28px;text-align:center"><div style="font-size:13px;color:#5a6882;margin-bottom:8px">No habits added yet</div><button class="btn" onClick="{{ addHabit }}" style="font-size:12px;padding:7px 14px;border-radius:5px;background:transparent;border:1px solid rgba(16,185,129,0.3);color:#10b981">+ Add your first habit</button></div></sc-if>
+        </div>
+      </div>
+
+      <!-- Weekly Goals -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:#e2e5ef">Weekly Goals</div>
+          <button class="btn" onClick="{{ addWeeklyGoal }}" style="font-size:11px;padding:5px 10px;border-radius:4px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#5a6882">+ Add</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ weeklyGoals }}" as="w" hint-placeholder-count="4">
+            <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:12px 16px">
+              <sc-if value="{{ w.isEditing }}">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input value="{{ editDraft.name }}" onChange="{{ setEditDraftName }}" style="flex:1;background:#0c0f1e;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:7px 10px;font-size:13px;color:#e2e5ef"/>
+                  <input type="number" value="{{ editDraft.target }}" onChange="{{ setEditDraftTarget }}" style="width:60px;background:#0c0f1e;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:7px 10px;font-size:13px;color:#e2e5ef"/>
+                  <button class="btn" onClick="{{ saveEdit }}" style="font-size:11px;font-weight:600;padding:7px 12px;border-radius:5px;background:#10b981;border:none;color:#0c0f1e">Save</button>
+                  <button class="btn" onClick="{{ cancelEdit }}" style="font-size:11px;padding:7px 12px;border-radius:5px;background:transparent;border:1px solid rgba(255,255,255,0.12);color:#8892aa">Cancel</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ w.isNotEditing }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+                <div style="min-width:150px">
+                  <div style="display:flex;align-items:center;gap:7px">
+                    <span style="font-size:13px;font-weight:600;color:#e2e5ef">{{ w.name }}</span>
+                    <button class="btn" onClick="{{ w.edit }}" style="font-size:10px;color:#5a6882;background:none;border:none;padding:0">✎</button>
+                  </div>
+                  <div style="font-size:10px;color:#5a6882;margin-top:2px">{{ w.target }}x per week</div>
+                </div>
+                <div style="display:flex;gap:5px;flex:1;min-width:180px;max-width:280px">
+                  <sc-for list="{{ w.days }}" as="d" hint-placeholder-count="7">
+                    <div class="day-cell" onClick="{{ d.onClick }}" title="{{ d.title }}" style="flex:1;height:26px;border-radius:5px;background:{{ d.bg }};border:{{ d.border }}"></div>
+                  </sc-for>
+                </div>
+                <span style="font-size:15px;font-weight:700;color:{{ w.color }};flex-shrink:0;min-width:34px;text-align:right">{{ w.current }}/{{ w.target }}</span>
+              </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noWeeklyGoals }}"><div style="background:#131726;border:1px dashed rgba(255,255,255,0.12);border-radius:8px;padding:20px;text-align:center;font-size:12px;color:#5a6882">No weekly goals yet</div></sc-if>
+        </div>
+      </div>
+
+      <!-- Yearly Goals -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:#e2e5ef">Yearly Goals — 2026</div>
+          <button class="btn" onClick="{{ addYearlyGoal }}" style="font-size:11px;padding:5px 10px;border-radius:4px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#5a6882">+ Add Goal</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <sc-for list="{{ yearlyNumeric }}" as="y" hint-placeholder-count="2">
+            <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px">
+              <sc-if value="{{ y.isEditing }}">
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <input value="{{ editDraft.name }}" onChange="{{ setEditDraftName }}" style="background:#0c0f1e;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:6px 8px;font-size:12px;color:#e2e5ef"/>
+                  <input type="number" value="{{ editDraft.target }}" onChange="{{ setEditDraftTarget }}" placeholder="target" style="background:#0c0f1e;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:6px 8px;font-size:12px;color:#e2e5ef"/>
+                  <div style="display:flex;gap:6px"><button class="btn" onClick="{{ saveEdit }}" style="flex:1;font-size:11px;font-weight:600;padding:6px;border-radius:5px;background:#10b981;border:none;color:#0c0f1e">Save</button><button class="btn" onClick="{{ cancelEdit }}" style="flex:1;font-size:11px;padding:6px;border-radius:5px;background:transparent;border:1px solid rgba(255,255,255,0.12);color:#8892aa">Cancel</button></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ y.isNotEditing }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;font-weight:600;color:#d4d8e8">{{ y.name }}</span><button class="btn" onClick="{{ y.edit }}" style="font-size:10px;color:#5a6882;background:none;border:none;padding:0">✎</button></div>
+                <span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;background:{{ y.badgeBg }};color:{{ y.badgeColor }}">{{ y.badgeLabel }}</span>
+              </div>
+              <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px"><span style="font-size:20px;font-weight:700;color:#e2e5ef">{{ y.currentLabel }}</span><span style="font-size:11px;color:#5a6882">/ {{ y.targetLabel }}</span></div>
+              <div style="height:5px;border-radius:3px;background:rgba(255,255,255,0.07);overflow:hidden;margin-bottom:6px"><div style="height:100%;background:{{ y.barColor }};width:{{ y.pctStr }};border-radius:3px"></div></div>
+              <sc-if value="{{ y.autoLinked }}"><div style="font-size:10px;color:#3a4255;display:flex;align-items:center;gap:4px"><div style="width:6px;height:6px;border-radius:50%;background:{{ y.barColor }}"></div>Auto-updating via {{ y.linkedSource }}</div></sc-if>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-for list="{{ yearlyBoolean }}" as="b" hint-placeholder-count="1">
+            <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px">
+              <sc-if value="{{ b.isEditing }}">
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <input value="{{ editDraft.name }}" onChange="{{ setEditDraftName }}" style="background:#0c0f1e;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:6px 8px;font-size:12px;color:#e2e5ef"/>
+                  <input value="{{ editDraft.target }}" onChange="{{ setEditDraftTarget }}" placeholder="target date" style="background:#0c0f1e;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:6px 8px;font-size:12px;color:#e2e5ef"/>
+                  <div style="display:flex;gap:6px"><button class="btn" onClick="{{ saveEdit }}" style="flex:1;font-size:11px;font-weight:600;padding:6px;border-radius:5px;background:#10b981;border:none;color:#0c0f1e">Save</button><button class="btn" onClick="{{ cancelEdit }}" style="flex:1;font-size:11px;padding:6px;border-radius:5px;background:transparent;border:1px solid rgba(255,255,255,0.12);color:#8892aa">Cancel</button></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ b.isNotEditing }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:flex-start;gap:10px">
+                <div class="btn" onClick="{{ b.toggle }}" style="width:18px;height:18px;border-radius:4px;border:1.5px solid {{ b.boxBorder }};background:{{ b.boxBg }};margin-top:2px;flex-shrink:0;display:grid;place-items:center">
+                  <sc-if value="{{ b.done }}"><svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="#0c0f1e" stroke-width="2"><path d="M1 5l3 3 5-6"/></svg></sc-if>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                    <span style="font-size:12px;font-weight:600;color:#d4d8e8;text-decoration:{{ b.strike }}">{{ b.name }}</span>
+                    <button class="btn" onClick="{{ b.edit }}" style="font-size:10px;color:#5a6882;background:none;border:none;padding:0">✎</button>
+                  </div>
+                  <div style="font-size:11px;color:#5a6882;margin-bottom:8px">Target: {{ b.targetDate }}</div>
+                  <div style="font-size:10px;color:{{ b.statusColor }}">{{ b.statusLabel }}</div>
+                </div>
+              </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- Long-term Goals -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:#e2e5ef">Long-term Goals</div>
+          <button class="btn" onClick="{{ addLongTermGoal }}" style="font-size:11px;padding:5px 10px;border-radius:4px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#5a6882">+ Add</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ longTermActive }}" as="l" hint-placeholder-count="2">
+            <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;overflow:hidden">
+              <div class="card-click btn" onClick="{{ l.toggleExpand }}" style="padding:14px 16px;border:1px solid transparent">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                  <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+                    <sc-if value="{{ l.isBoolean }}">
+                      <div style="width:18px;height:18px;border-radius:4px;border:1.5px solid {{ l.boxBorder }};background:{{ l.boxBg }};flex-shrink:0;display:grid;place-items:center">
+                        <sc-if value="{{ l.done }}"><svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="#0c0f1e" stroke-width="2"><path d="M1 5l3 3 5-6"/></svg></sc-if>
+                      </div>
+                    </sc-if>
+                    <div style="min-width:0">
+                      <div style="font-size:13px;font-weight:600;color:#d4d8e8;text-decoration:{{ l.strike }}">{{ l.name }}</div>
+                      <div style="font-size:11px;color:#5a6882">{{ l.timeframe }}<sc-if value="{{ l.note }}"> · {{ l.note }}</sc-if></div>
+                    </div>
+                  </div>
+                  <sc-if value="{{ l.isNumeric }}">
+                    <div style="text-align:right;flex-shrink:0;min-width:140px">
+                      <div style="font-size:13px;font-weight:600;color:#e2e5ef">{{ l.currentLabel }} <span style="color:#5a6882;font-weight:400">/ {{ l.targetLabel }}</span></div>
+                      <div style="height:4px;border-radius:2px;background:rgba(255,255,255,0.07);overflow:hidden;margin-top:5px"><div style="height:100%;background:#10b981;width:{{ l.pctStr }};border-radius:2px"></div></div>
+                    </div>
+                  </sc-if>
+                  <span style="font-size:9px;color:{{ l.statusColor }};background:{{ l.statusBg }};padding:2px 6px;border-radius:3px;flex-shrink:0">{{ l.statusLabel }}</span>
+                  <span style="font-size:11px;color:#3a4255;flex-shrink:0">{{ l.expandIcon }}</span>
+                </div>
+              </div>
+              <sc-if value="{{ l.expanded }}">
+                <div style="padding:14px 16px;border-top:1px solid rgba(255,255,255,0.06);background:#0f1220">
+                  <div style="margin-bottom:14px">
+                    <div style="font-size:10px;font-weight:600;letter-spacing:0.07em;color:#8892aa;text-transform:uppercase;margin-bottom:7px">Phase</div>
+                    <div style="display:inline-flex;background:#131726;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:2px;gap:2px">
+                      <button class="btn" onClick="{{ l.setNotStarted }}" style="font-size:11px;font-weight:600;padding:6px 10px;border-radius:4px;border:none;background:{{ l.pillBgNotStarted }};color:{{ l.pillColorNotStarted }}">Not Started</button>
+                      <button class="btn" onClick="{{ l.setInProgress }}" style="font-size:11px;font-weight:600;padding:6px 10px;border-radius:4px;border:none;background:{{ l.pillBgInProgress }};color:{{ l.pillColorInProgress }}">In Progress</button>
+                      <button class="btn" onClick="{{ l.setDone }}" style="font-size:11px;font-weight:600;padding:6px 10px;border-radius:4px;border:none;background:{{ l.pillBgDone }};color:{{ l.pillColorDone }}">Done</button>
+                    </div>
+                  </div>
+                  <sc-if value="{{ l.isNumeric }}"><div style="margin-bottom:10px"><button class="btn" onClick="{{ l.updateValue }}" style="font-size:11px;padding:5px 10px;border-radius:4px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:#10b981">Update current value</button></div></sc-if>
+                  <div style="font-size:10px;font-weight:600;letter-spacing:0.07em;color:#8892aa;text-transform:uppercase;margin-bottom:8px">Journal</div>
+                  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;max-height:160px;overflow-y:auto">
+                    <sc-for list="{{ l.journal }}" as="j" hint-placeholder-count="1">
+                      <div style="background:#131726;border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:8px 10px">
+                        <div style="font-size:9px;color:#3a4255;margin-bottom:3px">{{ j.date }}</div>
+                        <div style="font-size:12px;color:#c4c9dc;line-height:1.4;white-space:pre-wrap">{{ j.text }}</div>
+                      </div>
+                    </sc-for>
+                    <sc-if value="{{ l.noJournal }}"><div style="font-size:11px;color:#3a4255">No entries yet — jot down a thought below.</div></sc-if>
+                  </div>
+                  <textarea value="{{ l.draftText }}" onChange="{{ l.setDraft }}" placeholder="Add a note…" style="width:100%;background:#0c0f1e;border:1px solid rgba(255,255,255,0.08);border-radius:5px;padding:8px 10px;min-height:44px;font-size:12px;color:#d4d8e8;resize:vertical;margin-bottom:8px"></textarea>
+                  <button class="btn" onClick="{{ l.addEntry }}" style="font-size:11px;font-weight:600;padding:6px 12px;border-radius:5px;background:#10b981;border:none;color:#0c0f1e">Add Entry</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noLongTerm }}"><div style="background:#131726;border:1px dashed rgba(255,255,255,0.12);border-radius:8px;padding:24px;text-align:center;font-size:12px;color:#5a6882">No long-term goals added yet — click + Add to start your someday list</div></sc-if>
+        </div>
+        <sc-if value="{{ hasLongTermAchieved }}">
+          <div style="margin-top:12px">
+            <div class="btn" onClick="{{ toggleAchievedCollapse }}" style="font-size:11px;color:#5a6882;margin-bottom:8px">{{ achievedToggleLabel }}</div>
+            <sc-if value="{{ achievedExpanded }}">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <sc-for list="{{ longTermAchieved }}" as="la" hint-placeholder-count="1">
+                  <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px;opacity:0.6">
+                    <span style="font-size:12px;font-weight:600;color:#e2e5ef;text-decoration:line-through">{{ la.name }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ═══ TASKS ═══ -->
+    <sc-if value="{{ isTasks }}">
+    <div style="flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:16px">
+      <!-- Calendar full width -->
+      <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:16px 18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase">Weekly Calendar</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn" onClick="{{ prevTaskWeek }}" style="width:24px;height:24px;border-radius:4px;background:rgba(255,255,255,0.06);border:none;color:#5a6882;font-size:12px">‹</button>
+            <span style="font-size:11px;color:#5a6882;min-width:110px;text-align:center">{{ taskWeekRangeLabel }}</span>
+            <button class="btn" onClick="{{ nextTaskWeek }}" style="width:24px;height:24px;border-radius:4px;background:rgba(255,255,255,0.06);border:none;color:#5a6882;font-size:12px">›</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px">
+          <sc-for list="{{ calendarDays }}" as="cd" hint-placeholder-count="7">
+            <div>
+              <div style="font-size:10px;color:#5a6882;margin-bottom:5px;text-align:center">{{ cd.label }}</div>
+              <div style="background:{{ cd.bg }};border:1px solid {{ cd.border }};border-radius:6px;padding:8px 6px;min-height:120px">
+                <div style="font-size:16px;font-weight:700;color:{{ cd.numColor }};text-align:center;margin-bottom:8px">{{ cd.num }}</div>
+                <sc-for list="{{ cd.tasks }}" as="ct" hint-placeholder-count="1">
+                  <div onClick="{{ ct.toggle }}" class="btn" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);border-radius:4px;padding:5px 6px;margin-bottom:4px">
+                    <div style="font-size:10px;font-weight:500;color:#d4d8e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:{{ ct.strike }}">{{ ct.time }} {{ ct.name }}</div>
+                    <sc-if value="{{ ct.recurring }}"><span style="font-size:8px;font-weight:600;padding:1px 4px;border-radius:2px;border:1px solid rgba(16,185,129,0.4);color:#10b981;letter-spacing:0.04em">REC</span></sc-if>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ cd.empty }}"><div style="font-size:10px;color:#3a4255;text-align:center;margin-top:14px">No tasks</div></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <button class="btn" onClick="{{ addTask }}" style="margin-top:14px;font-size:12px;font-weight:500;padding:8px 14px;border-radius:5px;background:transparent;border:1px solid rgba(16,185,129,0.3);color:#10b981">+ Add Task</button>
+      </div>
+
+      <!-- Task list full width -->
+      <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:16px 18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase">Task List</div>
+          <button class="btn" onClick="{{ addTask }}" style="font-size:11px;font-weight:500;padding:5px 10px;border-radius:4px;background:transparent;border:1px solid rgba(16,185,129,0.3);color:#10b981">+ Add Task</button>
+        </div>
+
+        <sc-if value="{{ hasOverdue }}">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#ef4444;text-transform:uppercase;margin-bottom:10px">Overdue ({{ overdueCount }})</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+            <sc-for list="{{ tasksOverdue }}" as="to" hint-placeholder-count="1">
+              <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:12px 14px">
+                <sc-if value="{{ to.isEditing }}">
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <input value="{{ editDraft.name }}" onChange="{{ setEditDraftName }}" style="background:#0c0f1e;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:6px 8px;font-size:12px;color:#e2e5ef"/>
+                    <div style="display:flex;gap:6px"><button class="btn" onClick="{{ saveEdit }}" style="flex:1;font-size:11px;font-weight:600;padding:6px;border-radius:5px;background:#10b981;border:none;color:#0c0f1e">Save</button><button class="btn" onClick="{{ cancelEdit }}" style="flex:1;font-size:11px;padding:6px;border-radius:5px;background:transparent;border:1px solid rgba(255,255,255,0.12);color:#8892aa">Cancel</button></div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ to.isNotEditing }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:flex-start;gap:10px">
+                  <div onClick="{{ to.toggle }}" class="btn" style="width:16px;height:16px;border-radius:4px;border:1.5px solid rgba(239,68,68,0.4);margin-top:1px;flex-shrink:0"></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:13px;font-weight:500;color:#d4d8e8;margin-bottom:4px">{{ to.name }}</div>
+                    <div style="font-size:11px;color:#ef4444;font-weight:600">{{ to.overdueLabel }}</div>
+                  </div>
+                  <div style="display:flex;gap:6px;flex-shrink:0">
+                    <button class="btn" onClick="{{ to.edit }}" style="font-size:11px;color:#5a6882;background:none;border:none">✎</button>
+                    <button class="btn" onClick="{{ to.delete }}" style="font-size:11px;color:#ef4444;background:none;border:none">🗑</button>
+                  </div>
+                </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:10px">Today</div>
+        <sc-if value="{{ noTasksToday }}" hint-placeholder-val="{{ true }}">
+          <div style="background:#0f1220;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:22px;text-align:center;margin-bottom:16px">
+            <div style="font-size:13px;color:#5a6882;margin-bottom:4px">No tasks for today</div>
+            <div style="font-size:11px;color:#3a4255">Add a task to get started</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasTasksToday }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+            <sc-for list="{{ tasksToday }}" as="tt" hint-placeholder-count="2">
+              <div style="background:#0f1220;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:12px 14px">
+                <sc-if value="{{ tt.isEditing }}">
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <input value="{{ editDraft.name }}" onChange="{{ setEditDraftName }}" style="background:#0c0f1e;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:6px 8px;font-size:12px;color:#e2e5ef"/>
+                    <div style="display:flex;gap:6px"><button class="btn" onClick="{{ saveEdit }}" style="flex:1;font-size:11px;font-weight:600;padding:6px;border-radius:5px;background:#10b981;border:none;color:#0c0f1e">Save</button><button class="btn" onClick="{{ cancelEdit }}" style="flex:1;font-size:11px;padding:6px;border-radius:5px;background:transparent;border:1px solid rgba(255,255,255,0.12);color:#8892aa">Cancel</button></div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ tt.isNotEditing }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:flex-start;gap:10px">
+                  <div onClick="{{ tt.toggle }}" class="btn" style="width:16px;height:16px;border-radius:4px;border:1.5px solid {{ tt.boxBorder }};background:{{ tt.boxBg }};margin-top:1px;flex-shrink:0;display:grid;place-items:center">
+                    <sc-if value="{{ tt.done }}"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="#0c0f1e" stroke-width="2"><path d="M1 5l3 3 5-6"/></svg></sc-if>
+                  </div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:13px;font-weight:500;color:{{ tt.textColor }};margin-bottom:4px;text-decoration:{{ tt.strike }}">{{ tt.name }}</div>
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                      <span style="font-size:11px;color:#5a6882">{{ tt.dateLabel }}</span>
+                      <sc-if value="{{ tt.recurring }}"><span style="font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;border:1px solid rgba(16,185,129,0.4);color:#10b981;letter-spacing:0.04em">REC</span></sc-if>
+                      <span style="font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;background:{{ tt.priorityBg }};color:{{ tt.priorityColor }};border:1px solid {{ tt.priorityBorder }}">{{ tt.priorityLabel }}</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:6px;flex-shrink:0">
+                    <button class="btn" onClick="{{ tt.edit }}" style="font-size:11px;color:#5a6882;background:none;border:none">✎</button>
+                    <button class="btn" onClick="{{ tt.delete }}" style="font-size:11px;color:#5a6882;background:none;border:none">🗑</button>
+                  </div>
+                </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:10px">Upcoming</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <sc-for list="{{ tasksUpcoming }}" as="tu" hint-placeholder-count="1">
+            <div style="background:#0f1220;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:12px 14px">
+              <sc-if value="{{ tu.isEditing }}">
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <input value="{{ editDraft.name }}" onChange="{{ setEditDraftName }}" style="background:#0c0f1e;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:6px 8px;font-size:12px;color:#e2e5ef"/>
+                  <div style="display:flex;gap:6px"><button class="btn" onClick="{{ saveEdit }}" style="flex:1;font-size:11px;font-weight:600;padding:6px;border-radius:5px;background:#10b981;border:none;color:#0c0f1e">Save</button><button class="btn" onClick="{{ cancelEdit }}" style="flex:1;font-size:11px;padding:6px;border-radius:5px;background:transparent;border:1px solid rgba(255,255,255,0.12);color:#8892aa">Cancel</button></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ tu.isNotEditing }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:flex-start;gap:10px">
+                <div onClick="{{ tu.toggle }}" class="btn" style="width:16px;height:16px;border-radius:4px;border:1.5px solid {{ tu.boxBorder }};background:{{ tu.boxBg }};margin-top:1px;flex-shrink:0"></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:500;color:#d4d8e8;margin-bottom:4px">{{ tu.name }}</div>
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                    <span style="font-size:11px;color:#5a6882">{{ tu.dateLabel }}</span>
+                    <sc-if value="{{ tu.recurring }}"><span style="font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;border:1px solid rgba(16,185,129,0.4);color:#10b981;letter-spacing:0.04em">REC</span></sc-if>
+                    <span style="font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;background:{{ tu.priorityBg }};color:{{ tu.priorityColor }};border:1px solid {{ tu.priorityBorder }}">{{ tu.priorityLabel }}</span>
+                  </div>
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0">
+                  <button class="btn" onClick="{{ tu.edit }}" style="font-size:11px;color:#5a6882;background:none;border:none">✎</button>
+                  <button class="btn" onClick="{{ tu.delete }}" style="font-size:11px;color:#5a6882;background:none;border:none">🗑</button>
+                </div>
+              </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ hasCompleted }}">
+          <div onClick="{{ toggleCompletedCollapse }}" class="btn" style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;margin-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
+            <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#5a6882;text-transform:uppercase">Completed ({{ completedCount }})</span>
+            <span style="font-size:11px;color:#5a6882">{{ completedToggleIcon }}</span>
+          </div>
+          <sc-if value="{{ completedExpanded }}">
+            <sc-for list="{{ tasksCompleted }}" as="tc" hint-placeholder-count="1">
+              <div style="padding:8px 4px;opacity:0.5;display:flex;align-items:center;justify-content:space-between">
+                <div onClick="{{ tc.toggle }}" class="btn" style="display:flex;align-items:center;gap:10px;flex:1">
+                  <div style="width:16px;height:16px;border-radius:4px;background:#10b981;flex-shrink:0;display:grid;place-items:center"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="#0c0f1e" stroke-width="2"><path d="M1 5l3 3 5-6"/></svg></div>
+                  <span style="font-size:13px;color:#8892aa;text-decoration:line-through">{{ tc.name }}</span>
+                </div>
+                <button class="btn" onClick="{{ tc.delete }}" style="font-size:11px;color:#5a6882;background:none;border:none">🗑</button>
+              </div>
+            </sc-for>
+          </sc-if>
+        </sc-if>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ═══ READING ═══ -->
+    <sc-if value="{{ isReading }}">
+    <div style="flex:1;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:18px">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:14px">Currently Reading</div>
+          <div style="display:flex;gap:14px;align-items:flex-start">
+            <div style="width:64px;height:88px;border-radius:4px;background:linear-gradient(135deg,#1e2535 0%,#141a2a 100%);border:1px solid rgba(255,255,255,0.08);flex-shrink:0;display:flex;align-items:center;justify-content:center">
+              <div style="text-align:center;padding:6px"><div style="font-size:7px;font-weight:700;color:#10b981;letter-spacing:0.04em;text-transform:uppercase;line-height:1.3">Can't<br>Hurt<br>Me</div></div>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:18px;font-weight:700;color:#e2e5ef;line-height:1.2;margin-bottom:4px">{{ reading.book }}</div>
+              <div style="font-size:12px;color:#5a6882;margin-bottom:10px">{{ reading.author }}</div>
+              <div style="height:5px;border-radius:3px;background:rgba(255,255,255,0.07);overflow:hidden;margin-bottom:6px"><div style="height:100%;background:#10b981;width:{{ reading.pctStr }};border-radius:3px"></div></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:11px;color:#5a6882">ch {{ reading.chapter }} / {{ reading.totalChapters }} · {{ reading.minutesThisWeek }} min this week</span><span style="font-size:12px;font-weight:600;color:#10b981">{{ reading.pct }}%</span></div>
+              <button class="btn" onClick="{{ logReadingMinutes }}" style="width:100%;font-size:12px;font-weight:600;padding:9px;border-radius:5px;background:#10b981;border:none;color:#0c0f1e;margin-bottom:8px">📖 Log 10 min reading</button>
+              <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn" onClick="{{ undoReadingMinutes }}" style="font-size:10px;color:#5a6882;background:none;border:none;padding:0">undo last log</button></div>
+              <div style="display:flex;gap:8px">
+                <button class="btn" onClick="{{ readingDec }}" style="flex:1;font-size:11px;padding:5px;border-radius:5px;background:transparent;border:1px solid rgba(255,255,255,0.12);color:#5a6882">−5%</button>
+                <button class="btn" onClick="{{ readingInc }}" style="flex:1;font-size:11px;padding:5px;border-radius:5px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:#10b981">+5%</button>
+                <button class="btn" onClick="{{ markFinished }}" style="flex:1.4;font-size:11px;padding:5px;border-radius:5px;background:transparent;border:1px solid rgba(16,185,129,0.3);color:#10b981;font-weight:600">✓ Finished</button>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);font-size:10px;color:#3a4255;display:flex;align-items:center;gap:5px"><div style="width:6px;height:6px;border-radius:50%;background:#10b981"></div>Logging reading also checks off today's "Read 10 mins" habit</div>
+        </div>
+        <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:18px">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:14px">2026 Progress</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px"><span style="font-size:40px;font-weight:700;color:#e2e5ef;line-height:1">{{ reading.booksThisYear }}</span><span style="font-size:14px;color:#5a6882">of {{ reading.booksTarget }} read</span></div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:16px"><span style="font-size:11px;font-weight:500;color:#10b981">on track</span><span style="font-size:11px;color:#4e5e79">·</span><span style="font-size:11px;color:#4e5e79">{{ reading.yearPct }}% of goal</span></div>
+          <div style="font-size:10px;color:#4e5e79;margin-bottom:8px">FINISHED THIS YEAR</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ finishedBooks }}" as="fb" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.05)">
+                <div><div style="font-size:12.5px;font-weight:500;color:#d4d8e8">{{ fb.title }}</div><div style="font-size:10.5px;color:#5a6882">{{ fb.author }} · {{ fb.genre }}</div></div>
+                <span style="font-size:9.5px;color:#3a4255;flex-shrink:0">{{ fb.date }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase">Reading Activity</div>
+          <span style="font-size:11px;color:#5a6882">{{ readingStreak }}-day streak</span>
+        </div>
+        <div style="display:flex;gap:2px">
+          <sc-for list="{{ heatmapWeeks }}" as="week" hint-placeholder-count="26">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <sc-for list="{{ week }}" as="day" hint-placeholder-count="7">
+                <div style="width:12px;height:12px;border-radius:2px;background:{{ day }}"></div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background:#131726;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase">Reading Queue</div>
+          <button class="btn" onClick="{{ addQueueItem }}" style="font-size:11px;padding:5px 10px;border-radius:4px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#5a6882">+ Add Book</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ readingQueue }}" as="q" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:28px;height:38px;border-radius:3px;background:linear-gradient(135deg,#1e2535,#141a2a);border:1px solid rgba(255,255,255,0.07);flex-shrink:0"></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12.5px;font-weight:500;color:#d4d8e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.title }}</div>
+                <div style="font-size:11px;color:#5a6882">{{ q.author }}</div>
+              </div>
+              <sc-if value="{{ q.isNext }}"><span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:rgba(16,185,129,0.08);color:#10b981;flex-shrink:0">NEXT</span></sc-if>
+              <div style="display:flex;gap:6px;flex-shrink:0">
+                <button class="btn" onClick="{{ q.edit }}" style="font-size:11px;color:#5a6882;background:none;border:none">✎</button>
+                <button class="btn" onClick="{{ q.remove }}" style="font-size:11px;color:#5a6882;background:none;border:none">🗑</button>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noQueue }}"><div style="font-size:12px;color:#5a6882;text-align:center;padding:12px">Queue is empty — add your next read</div></sc-if>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+  </div>
+
+  <!-- ═══ WEEKLY REVIEW MODAL ═══ -->
+  <sc-if value="{{ modalOpen }}">
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.55);z-index:10;display:flex;align-items:center;justify-content:center">
+      <div style="width:580px;max-height:90%;background:#131726;border:1px solid rgba(255,255,255,0.1);border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,0.6);overflow:hidden;display:flex;flex-direction:column">
+        <div style="padding:18px 22px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+          <div>
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#10b981;text-transform:uppercase;margin-bottom:4px">Weekly Review</div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="font-size:13px;font-weight:600;color:#e2e5ef">Week {{ weekNumber }} · {{ weekRangeLabel }}</span>
+              <sc-if value="{{ reviewSealed }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:rgba(16,185,129,0.12);color:#10b981">SEALED</span></sc-if>
+            </div>
+          </div>
+          <button class="btn" onClick="{{ closeReview }}" style="width:28px;height:28px;border-radius:5px;background:rgba(255,255,255,0.06);border:none;color:#5a6882;font-size:14px">×</button>
+        </div>
+        <div style="padding:10px 22px;background:{{ streakBannerBg }};border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span style="font-size:13px">🔥</span>
+          <span style="font-size:12px;color:#8892aa">{{ streakBannerText }} <span style="color:#10b981;font-weight:600">{{ reviewStreak }}-week streak</span></span>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1">
+          <div>
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.07em;color:#8892aa;text-transform:uppercase;margin-bottom:7px">What went well this week?</div>
+            <textarea disabled="{{ reviewSealed }}" value="{{ draft.wentWell }}" onChange="{{ setWentWell }}" style="width:100%;background:#0c0f1e;border:1px solid rgba(255,255,255,0.08);border-radius:5px;padding:10px 12px;min-height:56px;font-size:12px;color:#d4d8e8;resize:vertical"></textarea>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.07em;color:#8892aa;text-transform:uppercase;margin-bottom:7px">One challenge I overcame</div>
+            <textarea disabled="{{ reviewSealed }}" value="{{ draft.challenge }}" onChange="{{ setChallenge }}" style="width:100%;background:#0c0f1e;border:1px solid rgba(255,255,255,0.08);border-radius:5px;padding:10px 12px;min-height:56px;font-size:12px;color:#d4d8e8;resize:vertical"></textarea>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.07em;color:#8892aa;text-transform:uppercase;margin-bottom:7px">One thing I can improve next week</div>
+            <textarea disabled="{{ reviewSealed }}" value="{{ draft.improve }}" onChange="{{ setImprove }}" style="width:100%;background:#0c0f1e;border:1px solid rgba(255,255,255,0.08);border-radius:5px;padding:10px 12px;min-height:56px;font-size:12px;color:#d4d8e8;resize:vertical"></textarea>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.07em;color:#8892aa;text-transform:uppercase;margin-bottom:7px">One thing I am proud of</div>
+            <textarea disabled="{{ reviewSealed }}" value="{{ draft.proud }}" onChange="{{ setProud }}" style="width:100%;background:#0c0f1e;border:1px solid rgba(255,255,255,0.08);border-radius:5px;padding:10px 12px;min-height:56px;font-size:12px;color:#d4d8e8;resize:vertical"></textarea>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div>
+              <div style="font-size:10px;font-weight:600;letter-spacing:0.07em;color:#8892aa;text-transform:uppercase;margin-bottom:7px">Consistency Score 1–10</div>
+              <input disabled="{{ reviewSealed }}" type="number" min="1" max="10" value="{{ draft.score }}" onChange="{{ setScore }}" style="width:100%;background:#0c0f1e;border:1px solid rgba(255,255,255,0.08);border-radius:5px;padding:10px 12px;font-size:12px;color:#d4d8e8"/>
+            </div>
+            <div>
+              <div style="font-size:10px;font-weight:600;letter-spacing:0.07em;color:#8892aa;text-transform:uppercase;margin-bottom:7px">Anything else?</div>
+              <textarea disabled="{{ reviewSealed }}" value="{{ draft.extra }}" onChange="{{ setExtra }}" style="width:100%;background:#0c0f1e;border:1px solid rgba(255,255,255,0.08);border-radius:5px;padding:10px 12px;min-height:40px;font-size:12px;color:#d4d8e8;resize:vertical"></textarea>
+            </div>
+          </div>
+        </div>
+        <div style="padding:14px 22px;border-top:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+          <sc-if value="{{ reviewSealed }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:#5a6882">✓ Sealed — read only</span></sc-if>
+          <sc-if value="{{ reviewNotSealed }}"><button class="btn" onClick="{{ sealWeek }}" style="font-size:12px;font-weight:600;padding:8px 16px;border-radius:5px;background:transparent;border:1px solid rgba(255,255,255,0.12);color:#8892aa">SEAL WEEK</button></sc-if>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="btn" onClick="{{ closeReview }}" style="font-size:12px;color:#5a6882;background:none;border:none">CLOSE</button>
+            <button class="btn" onClick="{{ closeReview }}" style="font-size:12px;font-weight:600;padding:8px 20px;border-radius:5px;background:#10b981;border:none;color:#0c0f1e">DONE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Backfill confirm popover -->
+  <sc-if value="{{ backfillOpen }}">
+    <div onClick="{{ closeBackfill }}" style="position:absolute;inset:0;z-index:20"></div>
+    <div style="position:absolute;top:{{ backfillTop }}px;left:{{ backfillLeft }}px;z-index:21;background:#1a1e2e;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.5);width:210px">
+      <div style="font-size:12px;color:#d4d8e8;margin-bottom:10px">Mark {{ backfillDayLabel }} as done for {{ backfillHabitName }}?</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onClick="{{ confirmBackfill }}" style="flex:1;font-size:11px;font-weight:600;padding:6px;border-radius:5px;background:#10b981;border:none;color:#0c0f1e">Confirm</button>
+        <button class="btn" onClick="{{ closeBackfill }}" style="flex:1;font-size:11px;padding:6px;border-radius:5px;background:transparent;border:1px solid rgba(255,255,255,0.12);color:#8892aa">Cancel</button>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const DAY_LABELS = ['M','T','W','T','F','S','S'];
+const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAY_NUMS = [6,7,8,9,10,11,12];
+const TODAY_IDX = 0; // Monday = "today" for this prototype
+
+function fmtGBP(n){ return '£' + Math.round(n).toLocaleString('en-GB'); }
+function todayStamp(){ return '10 Jul 2026'; }
+
+const WEEK_ANCHOR = new Date(2026, 6, 6); // Monday 6 Jul 2026 = "today" reference (dueOffset/dayIdx 0)
+const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function dateForDayOffset(offset){
+  const d = new Date(WEEK_ANCHOR);
+  d.setDate(d.getDate() + offset);
+  return d;
+}
+function fmtCalDate(offset){
+  const d = dateForDayOffset(offset);
+  return { num: d.getDate(), month: MONTH_ABBR[d.getMonth()] };
+}
+function fmtDateRange(startOffset, endOffset){
+  const a = fmtCalDate(startOffset), b = fmtCalDate(endOffset);
+  return a.month === b.month ? (a.num + ' – ' + b.num + ' ' + b.month) : (a.num + ' ' + a.month + ' – ' + b.num + ' ' + b.month);
+}
+
+function buildHeatmap(){
+  // 26 weeks x 7 days, deterministic pseudo-pattern trending up, weekends slightly higher
+  const weeks = [];
+  for (let w = 0; w < 26; w++){
+    const days = [];
+    for (let d = 0; d < 7; d++){
+      const seed = (w * 7 + d * 13) % 17;
+      const weekendBoost = (d >= 5) ? 2 : 0;
+      const trend = w > 18 ? 1 : 0;
+      let level = ((seed % 5) + weekendBoost + trend) % 5;
+      if (w < 2 && d < 3) level = 0;
+      days.push(level);
+    }
+    weeks.push(days);
+  }
+  return weeks;
+}
+const LEVEL_COLORS = ['#141726','rgba(16,185,129,0.22)','rgba(16,185,129,0.4)','rgba(16,185,129,0.65)','#10b981'];
+
+let _uid = 100;
+function uid(prefix){ return prefix + (_uid++); }
+
+class Component extends DCLogic {
+  state = {
+    page: 'overview',
+    modalOpen: false,
+    backfill: null,
+    completedExpanded: false,
+    achievedExpanded: false,
+    habitWeekOffset: 0,
+    taskWeekOffset: 0,
+
+    editing: null, // {kind, id}
+    editDraft: {},
+
+    reviewSealed: false,
+    reviewStreak: 6,
+    draft: { wentWell:'', challenge:'', improve:'', proud:'', score:'', extra:'' },
+
+    // Habits: daily habits with streaks, completions keyed "offset_dayIdx"
+    habits: [
+      { id:'running', name:'Running', streak: 5, completions: { '0_0': false, '-1_0': true, '-1_1': true, '-1_3': true, '-1_5': true, '-2_1': true, '-2_4': true } },
+      { id:'reading-habit', name:'Read 10 mins', streak: 3, completions: { '0_0': false, '-1_1': true, '-1_2': true, '-1_3': true } },
+    ],
+
+    // Weekly Goals: frequency-based, current-week 7-day tap grid contributing to target
+    weeklyGoals: [
+      { id:'wg-gym', name:'Gym', target:3, days:[false,false,false,false,false,false,false] },
+      { id:'wg-sauna', name:'Sauna Ice Bath', target:1, days:[false,false,false,false,false,false,false] },
+      { id:'wg-facetime', name:'Facetime Mum', target:1, days:[false,false,false,false,false,false,false] },
+      { id:'wg-muaythai', name:'Muay Thai', target:1, days:[false,false,false,false,false,false,false] },
+    ],
+
+    yearlyNumeric: [
+      { id:'y-read', name:'Read 6 Books', current:3, target:6, unit:'books', autoLinked:true, linkedSource:'Reading' },
+      { id:'y-saunax', name:'Sauna 200x', current:38, target:200, unit:'x', autoLinked:true, linkedSource:'Weekly Goals' },
+    ],
+    yearlyBoolean: [
+      { id:'y-marathon', name:'Run a Marathon', done:false, targetDate:'Dec 2026' },
+    ],
+
+    longTerm: [
+      { id:'lt-house', type:'boolean', name:'Buy a House', status:'in_progress', timeframe:'Someday', note:'saving towards deposit', journal:[
+        { date:'22 Jun 2026', text:'Started looking at areas within commuting distance. Need to get the deposit sorted first.' }
+      ] },
+      { id:'lt-biz', type:'boolean', name:'Start a Business', status:'not_started', timeframe:'Someday', note:'exploring ideas', journal:[] },
+      { id:'lt-ultra', type:'boolean', name:'Run an Ultramarathon', status:'not_started', timeframe:'2027 target', note:'', journal:[] },
+      { id:'lt-freedom', type:'numeric', status:'in_progress', name:'Freedom Figure', current:120967, target:1500000, unit:'gbp', timeframe:'Someday', note:'net worth target', journal:[
+        { date:'1 Jul 2026', text:'Net worth ticking up steadily with the new savings plan. Long way to go but the trend is right.' }
+      ] },
+    ],
+    expandedLongTerm: null,
+    journalDrafts: {},
+
+    tasks: [
+      { id:'t1', name:'Facetime Mum', dueOffset:0, time:'18:00', done:false, recurring:true, priority:'medium' },
+      { id:'t2', name:'Book dentist appointment', dueOffset:2, time:'', done:false, recurring:false, priority:'low' },
+      { id:'t3', name:'Pay rent', dueOffset:0, time:'09:00', done:true, recurring:true, priority:'high' },
+      { id:'t4', name:'Submit expense report', dueOffset:-2, time:'', done:false, recurring:false, priority:'high' },
+      { id:'t5', name:'Renew car insurance', dueOffset:-5, time:'', done:false, recurring:false, priority:'medium' },
+    ],
+
+    reading: { book:"Can't Hurt Me", author:'David Goggins', chapter:6, totalChapters:11, booksThisYear:3, booksTarget:6, minutesThisWeek:95 },
+
+    finishedBooks: [
+      { title:'Ikigai', author:'Hector Garcia', genre:'Psychology', date:'27 Jun' },
+      { title:'4-Hour Working Week', author:'Tim Ferriss', genre:'Self-development', date:'27 Jun' },
+      { title:'Deep Work', author:'Cal Newport', genre:'Self-development', date:'1 Jun' },
+    ],
+
+    readingQueue: [
+      { id:'q1', title:'Think Faster Talk Smarter', author:'Matt Abrahams' },
+      { id:'q2', title:"Poor Charlie's Almanack", author:'Charlie Munger' },
+      { id:'q3', title:'The Almanack of Naval Ravikant', author:'Eric Jorgenson' },
+      { id:'q4', title:'Meditations', author:'Marcus Aurelius' },
+    ],
+
+    heatmap: buildHeatmap(),
+  };
+
+  goTo(page){ this.setState({ page }); }
+
+  openReview(){ this.setState({ modalOpen: true }); }
+  closeReview(){ this.setState({ modalOpen: false }); }
+  sealWeek(){ this.setState(s => ({ reviewSealed: true, reviewStreak: s.reviewStreak + 1 })); }
+  setDraftField(field, val){ this.setState(s => ({ draft: { ...s.draft, [field]: val } })); }
+
+  // ── generic inline edit ──
+  startEdit(kind, id, draft){ this.setState({ editing: { kind, id }, editDraft: draft }); }
+  setEditDraftName(e){ this.setState(s => ({ editDraft: { ...s.editDraft, name: e.target.value } })); }
+  setEditDraftTarget(e){ this.setState(s => ({ editDraft: { ...s.editDraft, target: e.target.value } })); }
+  cancelEdit(){ this.setState({ editing: null, editDraft: {} }); }
+  saveEdit(){
+    const ed = this.state.editing;
+    if (!ed) return;
+    const d = this.state.editDraft;
+    if (ed.kind === 'habit') {
+      this.setState(s => ({ habits: s.habits.map(h => h.id === ed.id ? { ...h, name: d.name } : h) }));
+    } else if (ed.kind === 'weeklyGoal') {
+      this.setState(s => ({ weeklyGoals: s.weeklyGoals.map(w => w.id === ed.id ? { ...w, name: d.name, target: Math.max(1, parseInt(d.target)||w.target) } : w) }));
+    } else if (ed.kind === 'yearlyNumeric') {
+      this.setState(s => ({ yearlyNumeric: s.yearlyNumeric.map(y => y.id === ed.id ? { ...y, name: d.name, target: parseFloat(d.target)||y.target } : y) }));
+    } else if (ed.kind === 'yearlyBoolean') {
+      this.setState(s => ({ yearlyBoolean: s.yearlyBoolean.map(b => b.id === ed.id ? { ...b, name: d.name, targetDate: d.target || b.targetDate } : b) }));
+    } else if (ed.kind === 'task') {
+      this.setState(s => ({ tasks: s.tasks.map(t => t.id === ed.id ? { ...t, name: d.name } : t) }));
+    }
+    this.setState({ editing: null, editDraft: {} });
+  }
+
+  // ── habits (week-nav + backfill) ──
+  prevHabitWeek(){ this.setState(s => ({ habitWeekOffset: s.habitWeekOffset - 1 })); }
+  nextHabitWeek(){ this.setState(s => ({ habitWeekOffset: Math.min(0, s.habitWeekOffset + 1) })); }
+  prevTaskWeek(){ this.setState(s => ({ taskWeekOffset: s.taskWeekOffset - 1 })); }
+  nextTaskWeek(){ this.setState(s => ({ taskWeekOffset: s.taskWeekOffset + 1 })); }
+
+  openBackfill(kind, itemId, dayIdx, evt, label){
+    let top = 200, left = 400;
+    try {
+      const rect = evt.target.getBoundingClientRect();
+      const parentRect = evt.target.closest('[data-screen-label]').getBoundingClientRect();
+      top = rect.top - parentRect.top + 30;
+      left = Math.min(rect.left - parentRect.left - 80, parentRect.width - 220);
+    } catch(e){}
+    this.setState({ backfill: { kind, itemId, dayIdx, top, left, label } });
+  }
+  closeBackfill(){ this.setState({ backfill: null }); }
+  confirmBackfill(){
+    const bf = this.state.backfill;
+    if (!bf) return;
+    if (bf.kind === 'habit') {
+      const offset = this.state.habitWeekOffset;
+      const key = offset + '_' + bf.dayIdx;
+      this.setState(s => ({
+        habits: s.habits.map(h => h.id === bf.itemId
+          ? { ...h, completions: { ...h.completions, [key]: true }, streak: h.streak + 1 }
+          : h),
+        backfill: null,
+      }));
+    } else if (bf.kind === 'weeklyGoal') {
+      this.setState(s => ({
+        weeklyGoals: s.weeklyGoals.map(w => {
+          if (w.id !== bf.itemId) return w;
+          const days = w.days.slice(); days[bf.dayIdx] = true;
+          return { ...w, days };
+        }),
+        backfill: null,
+      }));
+      this.maybeLinkYearlySauna(bf.itemId, 1);
+    }
+  }
+
+  toggleHabitDay(habitId, dayIdx, evt){
+    const offset = this.state.habitWeekOffset;
+    const habit = this.state.habits.find(h => h.id === habitId);
+    if (!habit) return;
+    const key = offset + '_' + dayIdx;
+    const isToday = offset === 0 && dayIdx === TODAY_IDX;
+    if (isToday) {
+      const wasDone = !!habit.completions[key];
+      this.setState(s => ({
+        habits: s.habits.map(h => h.id === habitId
+          ? { ...h, completions: { ...h.completions, [key]: !wasDone }, streak: wasDone ? Math.max(0,h.streak-1) : h.streak+1 }
+          : h),
+      }));
+    } else if (!habit.completions[key]) {
+      this.openBackfill('habit', habitId, dayIdx, evt, habit.name);
+    }
+  }
+
+  toggleWeeklyGoalDay(goalId, dayIdx, evt){
+    const goal = this.state.weeklyGoals.find(w => w.id === goalId);
+    if (!goal) return;
+    const isToday = dayIdx === TODAY_IDX;
+    const wasDone = goal.days[dayIdx];
+    if (isToday || wasDone) {
+      this.setState(s => ({
+        weeklyGoals: s.weeklyGoals.map(w => {
+          if (w.id !== goalId) return w;
+          const days = w.days.slice(); days[dayIdx] = !days[dayIdx];
+          return { ...w, days };
+        }),
+      }));
+      this.maybeLinkYearlySauna(goalId, wasDone ? -1 : 1);
+    } else {
+      this.openBackfill('weeklyGoal', goalId, dayIdx, evt, goal.name);
+    }
+  }
+  maybeLinkYearlySauna(goalId, delta){
+    if (goalId !== 'wg-sauna') return;
+    this.setState(s => ({
+      yearlyNumeric: s.yearlyNumeric.map(y => y.id === 'y-saunax' ? { ...y, current: Math.max(0, y.current + delta) } : y),
+    }));
+  }
+
+  incrementYearlyNumeric(id){
+    this.setState(s => ({ yearlyNumeric: s.yearlyNumeric.map(y => y.id === id ? { ...y, current: y.current + 1 } : y) }));
+  }
+  toggleYearlyBoolean(id){
+    this.setState(s => ({ yearlyBoolean: s.yearlyBoolean.map(b => b.id === id ? { ...b, done: !b.done } : b) }));
+  }
+
+  // ── long-term goals ──
+  toggleLongTermExpand(id){
+    this.setState(s => ({ expandedLongTerm: s.expandedLongTerm === id ? null : id }));
+  }
+  cycleLongTerm(id, evt){
+    if (evt && evt.stopPropagation) evt.stopPropagation();
+    const order = ['not_started','in_progress','done'];
+    this.setState(s => ({
+      longTerm: s.longTerm.map(l => l.id === id ? { ...l, status: order[(order.indexOf(l.status)+1) % order.length] } : l),
+    }));
+  }
+  setLongTermStatus(id, status){
+    this.setState(s => ({ longTerm: s.longTerm.map(l => l.id === id ? { ...l, status } : l) }));
+  }
+  setJournalDraft(id, val){ this.setState(s => ({ journalDrafts: { ...s.journalDrafts, [id]: val } })); }
+  addJournalEntry(id){
+    const text = (this.state.journalDrafts[id] || '').trim();
+    if (!text) return;
+    this.setState(s => ({
+      longTerm: s.longTerm.map(l => l.id === id ? { ...l, journal: [{ date: todayStamp(), text }, ...l.journal] } : l),
+      journalDrafts: { ...s.journalDrafts, [id]: '' },
+    }));
+  }
+  updateLongTermValue(id){
+    const cur = this.state.longTerm.find(l => l.id === id);
+    if (!cur) return;
+    const input = window.prompt('Update current value for ' + cur.name, cur.current);
+    if (input === null) return;
+    const val = parseFloat(input.replace(/[^0-9.]/g,''));
+    if (isNaN(val)) return;
+    this.setState(s => ({ longTerm: s.longTerm.map(l => l.id === id ? { ...l, current: val } : l) }));
+  }
+  toggleAchievedCollapse(){ this.setState(s => ({ achievedExpanded: !s.achievedExpanded })); }
+
+  // ── tasks ──
+  toggleTask(id){ this.setState(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, done: !t.done } : t) })); }
+  deleteTask(id){ this.setState(s => ({ tasks: s.tasks.filter(t => t.id !== id) })); }
+  toggleCompletedCollapse(){ this.setState(s => ({ completedExpanded: !s.completedExpanded })); }
+  addTask(){
+    const name = window.prompt('Task name?');
+    if (!name) return;
+    this.setState(s => ({ tasks: [...s.tasks, { id: uid('t'), name, dueOffset: 0, time:'', done:false, recurring:false, priority:'medium' }] }));
+  }
+
+  // ── reading ──
+  readingPct(s){ return Math.round((s.reading.chapter / s.reading.totalChapters) * 100); }
+  adjustReading(delta){
+    this.setState(s => {
+      const pct = Math.max(0, Math.min(100, this.readingPct(s) + delta));
+      const chapter = Math.max(1, Math.min(s.reading.totalChapters, Math.round((pct/100) * s.reading.totalChapters)));
+      return { reading: { ...s.reading, chapter } };
+    });
+  }
+  markFinished(){
+    this.setState(s => ({
+      finishedBooks: [{ title: s.reading.book, author: s.reading.author, genre:'Biography', date:'Today' }, ...s.finishedBooks],
+      reading: { ...s.reading, book:'Think Faster Talk Smarter', author:'Matt Abrahams', chapter:0, totalChapters:10, booksThisYear: s.reading.booksThisYear + 1, minutesThisWeek: s.reading.minutesThisWeek },
+    }));
+  }
+  logReadingMinutes(){
+    this.setState(s => {
+      const pct = Math.min(100, this.readingPct(s) + 2);
+      const chapter = Math.max(1, Math.min(s.reading.totalChapters, Math.round((pct/100) * s.reading.totalChapters)));
+      const habits = s.habits.map(h => {
+        if (h.id !== 'reading-habit') return h;
+        const key = '0_' + TODAY_IDX;
+        if (h.completions[key]) return h;
+        return { ...h, completions: { ...h.completions, [key]: true }, streak: h.streak + 1 };
+      });
+      return { reading: { ...s.reading, chapter, minutesThisWeek: s.reading.minutesThisWeek + 10 }, habits };
+    });
+  }
+  undoReadingMinutes(){
+    this.setState(s => {
+      const pct = Math.max(0, this.readingPct(s) - 2);
+      const chapter = Math.max(0, Math.min(s.reading.totalChapters, Math.round((pct/100) * s.reading.totalChapters)));
+      const habits = s.habits.map(h => {
+        if (h.id !== 'reading-habit') return h;
+        const key = '0_' + TODAY_IDX;
+        if (!h.completions[key]) return h;
+        const completions = { ...h.completions }; delete completions[key];
+        return { ...h, completions, streak: Math.max(0, h.streak - 1) };
+      });
+      return { reading: { ...s.reading, chapter, minutesThisWeek: Math.max(0, s.reading.minutesThisWeek - 10) }, habits };
+    });
+  }
+  addQueueItem(){
+    const title = window.prompt('Book title?');
+    if (!title) return;
+    const author = window.prompt('Author?') || '';
+    this.setState(s => ({ readingQueue: [...s.readingQueue, { id: uid('q'), title, author }] }));
+  }
+  editQueueItem(id){
+    const item = this.state.readingQueue.find(q => q.id === id);
+    if (!item) return;
+    const title = window.prompt('Book title?', item.title);
+    if (title === null) return;
+    this.setState(s => ({ readingQueue: s.readingQueue.map(q => q.id === id ? { ...q, title } : q) }));
+  }
+  removeQueueItem(id){ this.setState(s => ({ readingQueue: s.readingQueue.filter(q => q.id !== id) })); }
+
+  addHabit(){
+    const name = window.prompt('Habit name?');
+    if (!name) return;
+    this.setState(s => ({ habits: [...s.habits, { id: uid('h'), name, streak:0, completions:{} }] }));
+  }
+  addWeeklyGoal(){
+    const name = window.prompt('Weekly goal name?');
+    if (!name) return;
+    const kind = (window.prompt('Type: enter "numeric" for a count target (e.g. 3x per week), or leave blank for a simple completion goal (1x)', 'numeric') || 'numeric').toLowerCase();
+    let target = 1;
+    if (kind.startsWith('n')) {
+      const t = window.prompt('Target count this week?', '3');
+      target = Math.max(1, parseInt(t) || 1);
+    }
+    this.setState(s => ({ weeklyGoals: [...s.weeklyGoals, { id: uid('wg'), name, target, days:[false,false,false,false,false,false,false] }] }));
+  }
+  addYearlyGoal(){
+    const name = window.prompt('Yearly goal name?');
+    if (!name) return;
+    const kind = (window.prompt('Type: enter "numeric" for a number target (e.g. read 6 books), or "boolean" for a simple completion goal (e.g. run a marathon)', 'numeric') || 'numeric').toLowerCase();
+    if (kind.startsWith('b')) {
+      const targetDate = window.prompt('Target date? (e.g. Dec 2026)', 'Dec 2026') || '';
+      this.setState(s => ({ yearlyBoolean: [...s.yearlyBoolean, { id: uid('yb'), name, done:false, targetDate }] }));
+    } else {
+      const target = parseFloat(window.prompt('Target value?', '10')) || 10;
+      this.setState(s => ({ yearlyNumeric: [...s.yearlyNumeric, { id: uid('yn'), name, current:0, target, unit:'x', autoLinked:false, linkedSource:null }] }));
+    }
+  }
+  addLongTermGoal(){
+    const name = window.prompt('Long-term goal name?');
+    if (!name) return;
+    this.setState(s => ({ longTerm: [...s.longTerm, { id: uid('lt'), type:'boolean', name, status:'not_started', timeframe:'Someday', note:'', journal:[] }] }));
+  }
+
+  renderVals() {
+    const s = this.state;
+    const readingPct = this.readingPct(s);
+    const weekNumber = 28;
+    const weekRangeLabel = '6 Jul – 12 Jul';
+    const ed = s.editing;
+
+    const habitWeekLabel = s.habitWeekOffset === 0 ? 'This week' : (s.habitWeekOffset === -1 ? 'Last week' : (s.habitWeekOffset) + ' weeks ago');
+
+    const habits = s.habits.map(h => {
+      const isEditing = ed && ed.kind === 'habit' && ed.id === h.id;
+      return {
+        ...h,
+        isEditing, isNotEditing: !isEditing,
+        edit: () => this.startEdit('habit', h.id, { name: h.name }),
+        dayLabels: DAY_LABELS,
+        days: DAY_LABELS.map((_, i) => {
+          const key = s.habitWeekOffset + '_' + i;
+          const done = !!h.completions[key];
+          const isToday = s.habitWeekOffset === 0 && i === TODAY_IDX;
+          const isFuture = s.habitWeekOffset === 0 && i > TODAY_IDX;
+          let bg, border;
+          if (done) { bg = '#10b981'; border = '1.5px solid rgba(16,185,129,0.6)'; }
+          else if (isToday) { bg = 'rgba(16,185,129,0.15)'; border = '1.5px solid rgba(16,185,129,0.4)'; }
+          else if (isFuture) { bg = 'rgba(255,255,255,0.02)'; border = '1px solid rgba(255,255,255,0.05)'; }
+          else { bg = 'rgba(255,255,255,0.04)'; border = '1px solid rgba(255,255,255,0.08)'; }
+          return { bg, border, title: isToday ? 'Today — tap to toggle' : (done ? 'Completed' : 'Tap to backfill'), onClick: (e) => this.toggleHabitDay(h.id, i, e) };
+        }),
+      };
+    });
+    const habitsOverview = habits.map(h => ({ ...h }));
+    const topStreakHabitObj = habits.reduce((a,b) => b.streak > a.streak ? b : a, habits[0] || { streak:0, name:'' });
+
+    const weeklyGoalsHit = s.weeklyGoals.filter(w => w.days.filter(Boolean).length >= w.target).length;
+    const weeklyGoals = s.weeklyGoals.map(w => {
+      const current = w.days.filter(Boolean).length;
+      const isEditing = ed && ed.kind === 'weeklyGoal' && ed.id === w.id;
+      return {
+        ...w, current,
+        isEditing, isNotEditing: !isEditing,
+        edit: () => this.startEdit('weeklyGoal', w.id, { name: w.name, target: w.target }),
+        color: current >= w.target ? '#10b981' : '#ef4444',
+        days: w.days.map((done, i) => {
+          const isToday = i === TODAY_IDX;
+          const isFuture = i > TODAY_IDX;
+          let bg, border;
+          if (done) { bg = '#10b981'; border = '1.5px solid rgba(16,185,129,0.6)'; }
+          else if (isToday) { bg = 'rgba(16,185,129,0.15)'; border = '1.5px solid rgba(16,185,129,0.4)'; }
+          else if (isFuture) { bg = 'rgba(255,255,255,0.02)'; border = '1px solid rgba(255,255,255,0.05)'; }
+          else { bg = 'rgba(255,255,255,0.04)'; border = '1px solid rgba(255,255,255,0.08)'; }
+          return { bg, border, title: isToday ? 'Today — tap to toggle' : (done ? 'Completed — tap to undo' : 'Tap to backfill'), onClick: (e) => this.toggleWeeklyGoalDay(w.id, i, e) };
+        }),
+      };
+    });
+
+    const yearFrac = 0.52; // ~ 10 Jul through the year
+    const yearlyNumeric = s.yearlyNumeric.map(y => {
+      const pct = Math.min(100, (y.current / y.target) * 100);
+      const pace = pct / 100 - yearFrac;
+      let badgeLabel, badgeColor, badgeBg, barColor;
+      if (pace >= -0.03) { badgeLabel='ON TRACK'; badgeColor='#10b981'; badgeBg='rgba(16,185,129,0.12)'; barColor='#10b981'; }
+      else if (pace >= -0.15) { badgeLabel='BEHIND'; badgeColor='#f59e0b'; badgeBg='rgba(245,158,11,0.12)'; barColor='#f59e0b'; }
+      else { badgeLabel='WAY BEHIND'; badgeColor='#ef4444'; badgeBg='rgba(239,68,68,0.12)'; barColor='#ef4444'; }
+      const isEditing = ed && ed.kind === 'yearlyNumeric' && ed.id === y.id;
+      return {
+        ...y,
+        isEditing, isNotEditing: !isEditing,
+        edit: () => this.startEdit('yearlyNumeric', y.id, { name: y.name, target: y.target }),
+        currentLabel: y.unit === 'gbp' ? fmtGBP(y.current) : y.current,
+        targetLabel: y.unit === 'gbp' ? fmtGBP(y.target) : (y.unit === 'books' ? y.target + ' books' : y.target + 'x'),
+        pctStr: pct + '%',
+        badgeLabel, badgeColor, badgeBg, barColor,
+      };
+    });
+    const yearlyBoolean = s.yearlyBoolean.map(b => {
+      const isEditing = ed && ed.kind === 'yearlyBoolean' && ed.id === b.id;
+      return {
+        ...b,
+        isEditing, isNotEditing: !isEditing,
+        edit: () => this.startEdit('yearlyBoolean', b.id, { name: b.name, target: b.targetDate }),
+        boxBg: b.done ? '#10b981' : 'transparent',
+        boxBorder: b.done ? '#10b981' : 'rgba(255,255,255,0.15)',
+        strike: b.done ? 'line-through' : 'none',
+        statusLabel: b.done ? 'Completed' : 'Not yet complete',
+        statusColor: b.done ? '#10b981' : '#3a4255',
+        toggle: () => this.toggleYearlyBoolean(b.id),
+      };
+    });
+    const yearlyOnTrackCount = yearlyNumeric.filter(y => y.badgeLabel === 'ON TRACK').length + yearlyBoolean.filter(b=>b.done).length;
+    const yearlyTotalCount = yearlyNumeric.length + yearlyBoolean.length;
+
+    const statusMeta = {
+      not_started: { label:'NOT STARTED', color:'#5a6882', bg:'rgba(255,255,255,0.06)' },
+      in_progress: { label:'IN PROGRESS', color:'#f59e0b', bg:'rgba(245,158,11,0.1)' },
+      done: { label:'DONE', color:'#10b981', bg:'rgba(16,185,129,0.1)' },
+    };
+    const longTermActive = s.longTerm.filter(l => l.status !== 'done').map(l => {
+      const expanded = s.expandedLongTerm === l.id;
+      const isNumeric = l.type === 'numeric';
+      const pct = isNumeric ? Math.min(100, (l.current / l.target) * 100) : 0;
+      const pillActive = { bg: '#10b981', color: '#0c0f1e' };
+      const pillInactive = { bg: 'transparent', color: '#8892aa' };
+      const pNotStarted = l.status === 'not_started' ? pillActive : pillInactive;
+      const pInProgress = l.status === 'in_progress' ? pillActive : pillInactive;
+      const pDone = l.status === 'done' ? pillActive : pillInactive;
+      return {
+        ...l,
+        isBoolean: !isNumeric, isNumeric,
+        expanded, expandIcon: expanded ? '▲' : '▼',
+        toggleExpand: () => this.toggleLongTermExpand(l.id),
+        setNotStarted: (e) => { e.stopPropagation(); this.setLongTermStatus(l.id, 'not_started'); },
+        setInProgress: (e) => { e.stopPropagation(); this.setLongTermStatus(l.id, 'in_progress'); },
+        setDone: (e) => { e.stopPropagation(); this.setLongTermStatus(l.id, 'done'); },
+        pillBgNotStarted: pNotStarted.bg, pillColorNotStarted: pNotStarted.color,
+        pillBgInProgress: pInProgress.bg, pillColorInProgress: pInProgress.color,
+        pillBgDone: pDone.bg, pillColorDone: pDone.color,
+        done: l.status === 'done',
+        boxBg: l.status === 'done' ? '#10b981' : 'transparent',
+        boxBorder: l.status === 'done' ? '#10b981' : 'rgba(255,255,255,0.15)',
+        strike: l.status === 'done' ? 'line-through' : 'none',
+        statusLabel: (statusMeta[l.status] || statusMeta.not_started).label,
+        statusColor: (statusMeta[l.status] || statusMeta.not_started).color,
+        statusBg: (statusMeta[l.status] || statusMeta.not_started).bg,
+        currentLabel: isNumeric ? (l.unit === 'gbp' ? fmtGBP(l.current) : l.current) : '',
+        targetLabel: isNumeric ? (l.unit === 'gbp' ? fmtGBP(l.target) : l.target) : '',
+        pctStr: pct + '%',
+        updateValue: () => this.updateLongTermValue(l.id),
+        journal: l.journal, noJournal: l.journal.length === 0,
+        draftText: s.journalDrafts[l.id] || '',
+        setDraft: (e) => this.setJournalDraft(l.id, e.target.value),
+        addEntry: () => this.addJournalEntry(l.id),
+      };
+    });
+    const longTermAchieved = s.longTerm.filter(l => l.status === 'done');
+
+    const goalsPulse = [
+      ...yearlyNumeric.map(y => ({
+        name: y.name, isNumeric: true, badgeLabel: y.badgeLabel, badgeColor: y.badgeColor, badgeBg: y.badgeBg,
+        barColor: y.barColor, pctStr: y.pctStr, valueLabel: y.currentLabel + ' / ' + y.targetLabel,
+      })),
+      ...yearlyBoolean.map(b => ({
+        name: b.name, isNumeric: false, badgeLabel: b.done ? 'DONE' : 'NOT DONE',
+        badgeColor: b.done ? '#10b981' : '#5a6882', badgeBg: b.done ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.06)',
+      })),
+    ].slice(0,3);
+
+    // Tasks
+    const priorityMeta = {
+      high: { label:'HIGH', color:'#ef4444', bg:'rgba(239,68,68,0.12)', border:'rgba(239,68,68,0.25)' },
+      medium: { label:'MEDIUM', color:'#f59e0b', bg:'rgba(245,158,11,0.12)', border:'rgba(245,158,11,0.25)' },
+      low: { label:'LOW', color:'#5a6882', bg:'rgba(255,255,255,0.06)', border:'rgba(255,255,255,0.1)' },
+    };
+    const makeTaskView = (t) => {
+      const pm = priorityMeta[t.priority];
+      const isEditing = ed && ed.kind === 'task' && ed.id === t.id;
+      const dayIdx = ((t.dueOffset % 7) + 7) % 7;
+      return {
+        ...t,
+        isEditing, isNotEditing: !isEditing,
+        edit: () => this.startEdit('task', t.id, { name: t.name }),
+        delete: () => this.deleteTask(t.id),
+        toggle: () => this.toggleTask(t.id),
+        boxBorder: t.done ? '#10b981' : 'rgba(255,255,255,0.15)',
+        boxBg: t.done ? '#10b981' : 'transparent',
+        textColor: t.done ? '#8892aa' : '#d4d8e8',
+        strike: t.done ? 'line-through' : 'none',
+        dateLabel: DAY_NAMES[dayIdx] + ' ' + DAY_NUMS[dayIdx] + (t.time ? ' · ' + t.time : ''),
+        overdueLabel: Math.abs(t.dueOffset) + ' day' + (Math.abs(t.dueOffset)===1?'':'s') + ' overdue',
+        priorityLabel: pm.label, priorityColor: pm.color, priorityBg: pm.bg, priorityBorder: pm.border,
+      };
+    };
+    const overdueRaw = s.tasks.filter(t => t.dueOffset < 0 && !t.done);
+    const todayRaw = s.tasks.filter(t => t.dueOffset === 0 && !t.done);
+    const upcomingRaw = s.tasks.filter(t => t.dueOffset > 0 && !t.done);
+    const completedRaw = s.tasks.filter(t => t.done);
+    const tasksOverdue = overdueRaw.map(makeTaskView);
+    const tasksToday = todayRaw.map(makeTaskView);
+    const tasksUpcoming = upcomingRaw.map(makeTaskView);
+    const tasksCompleted = completedRaw.map(t => ({ ...makeTaskView(t), delete: () => this.deleteTask(t.id) }));
+    const noTasksToday = todayRaw.length === 0;
+    const nextUpcoming = upcomingRaw[0];
+
+    const calendarDays = DAY_NAMES.map((label, i) => {
+      const dueOffsetForCell = i + 7 * s.taskWeekOffset;
+      const dayTasks = s.tasks.filter(t => t.dueOffset === dueOffsetForCell);
+      const isToday = s.taskWeekOffset === 0 && i === TODAY_IDX;
+      const cal = fmtCalDate(dueOffsetForCell);
+      return {
+        label, num: cal.num,
+        bg: isToday ? 'rgba(16,185,129,0.1)' : '#0f1220',
+        border: isToday ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.07)',
+        numColor: isToday ? '#10b981' : '#8892aa',
+        empty: dayTasks.length === 0,
+        tasks: dayTasks.map(t => ({ name: t.name, time: t.time, recurring: t.recurring, strike: t.done ? 'line-through' : 'none', toggle: () => this.toggleTask(t.id) })),
+      };
+    });
+    const taskWeekRangeLabel = fmtDateRange(7 * s.taskWeekOffset, 6 + 7 * s.taskWeekOffset);
+
+    const reading = { ...s.reading, pct: readingPct, pctStr: readingPct + '%', yearPct: Math.round((s.reading.booksThisYear / s.reading.booksTarget) * 100) };
+
+    const reviewSealed = s.reviewSealed;
+    const reviewNotSealed = !reviewSealed;
+
+    const backfill = s.backfill;
+
+    return {
+      page: s.page,
+      isOverview: s.page === 'overview', isHabits: s.page === 'habits', isTasks: s.page === 'tasks', isReading: s.page === 'reading',
+      subLabel: s.page === 'overview' ? '' : (s.page === 'habits' ? 'Habits & Goals' : (s.page === 'tasks' ? 'Tasks' : 'Reading')),
+      goTo_overview: () => this.goTo('overview'), goTo_habits: () => this.goTo('habits'), goTo_tasks: () => this.goTo('tasks'), goTo_reading: () => this.goTo('reading'),
+      navStyle_overview: s.page==='overview' ? 'color:#10b981;font-weight:500;background:rgba(16,185,129,0.1)' : 'color:#4e5e79',
+      navStyle_habits: s.page==='habits' ? 'color:#10b981;font-weight:500;background:rgba(16,185,129,0.1)' : 'color:#4e5e79',
+      navStyle_tasks: s.page==='tasks' ? 'color:#10b981;font-weight:500;background:rgba(16,185,129,0.1)' : 'color:#4e5e79',
+      navStyle_reading: s.page==='reading' ? 'color:#10b981;font-weight:500;background:rgba(16,185,129,0.1)' : 'color:#4e5e79',
+
+      tasksDoneToday: completedRaw.filter(t=>t.dueOffset===0).length,
+      tasksTotalToday: s.tasks.filter(t=>t.dueOffset===0).length,
+      hasOverdue: overdueRaw.length > 0, noOverdue: overdueRaw.length === 0, overdueCount: overdueRaw.length,
+      habitScoreDone: habits.reduce((a,h)=>a + h.days.filter(d=>d.bg==='#10b981').length,0),
+      habitScoreTotal: habits.length * 7,
+      topStreak: topStreakHabitObj.streak || 0,
+      topStreakHabit: topStreakHabitObj.name ? topStreakHabitObj.name + ' habit' : '',
+      weeklyGoalsHit, weeklyGoalsTotal: s.weeklyGoals.length,
+      weeklyGoalsColor: weeklyGoalsHit === s.weeklyGoals.length && s.weeklyGoals.length>0 ? '#10b981' : '#ef4444',
+      reading,
+
+      habits, habitsOverview, noHabits: habits.length === 0,
+      habitWeekLabel, prevHabitWeek: () => this.prevHabitWeek(), nextHabitWeek: () => this.nextHabitWeek(),
+      goalsPulse,
+
+      editDraft: s.editDraft,
+      setEditDraftName: (e) => this.setEditDraftName(e), setEditDraftTarget: (e) => this.setEditDraftTarget(e),
+      saveEdit: () => this.saveEdit(), cancelEdit: () => this.cancelEdit(),
+
+      weekNumber, weekRangeLabel,
+      reviewSealed, reviewNotSealed,
+      reviewStatusLabel: reviewSealed ? 'Sealed' : 'Not Started',
+      reviewCardBorder: reviewSealed ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.35)',
+      reviewIconBg: reviewSealed ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+      reviewIconBorder: reviewSealed ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)',
+      reviewSubtext: reviewSealed ? 'Review complete for this week' : 'Complete before Sunday to keep it going',
+      reviewCtaLabel: 'Start Weekly Review',
+      streakBannerBg: reviewSealed ? 'rgba(16,185,129,0.06)' : 'rgba(245,158,11,0.06)',
+      streakBannerText: reviewSealed ? 'You kept your' : 'Complete this review to continue your',
+      reviewStreak: s.reviewStreak,
+      openReview: () => this.openReview(), closeReview: () => this.closeReview(),
+      modalOpen: s.modalOpen, draft: s.draft,
+      setWentWell: (e) => this.setDraftField('wentWell', e.target.value),
+      setChallenge: (e) => this.setDraftField('challenge', e.target.value),
+      setImprove: (e) => this.setDraftField('improve', e.target.value),
+      setProud: (e) => this.setDraftField('proud', e.target.value),
+      setScore: (e) => this.setDraftField('score', e.target.value),
+      setExtra: (e) => this.setDraftField('extra', e.target.value),
+      sealWeek: () => this.sealWeek(),
+
+      noTasksToday, hasTasksToday: !noTasksToday,
+      tasksTodayPreview: tasksToday.slice(0,4),
+      nextTaskPreview: nextUpcoming ? ('Upcoming: ' + nextUpcoming.name) : 'No upcoming tasks',
+      tasksOverdue, tasksToday, tasksUpcoming, tasksCompleted,
+      hasCompleted: tasksCompleted.length > 0, completedCount: tasksCompleted.length,
+      completedExpanded: s.completedExpanded, toggleCompletedCollapse: () => this.toggleCompletedCollapse(),
+      completedToggleIcon: s.completedExpanded ? '▲' : '▼',
+      calendarDays, addTask: () => this.addTask(),
+      taskWeekRangeLabel, prevTaskWeek: () => this.prevTaskWeek(), nextTaskWeek: () => this.nextTaskWeek(),
+
+      yearlyOnTrackCount, yearlyTotalCount, yearlyNumeric, yearlyBoolean,
+      longTermTotal: s.longTerm.length, longTermDone: s.longTerm.filter(l=>l.status==='done').length,
+      longTermActive, longTermAchieved, noLongTerm: s.longTerm.length === 0,
+      hasLongTermAchieved: longTermAchieved.length > 0,
+      achievedExpanded: s.achievedExpanded, toggleAchievedCollapse: () => this.toggleAchievedCollapse(),
+      achievedToggleLabel: (s.achievedExpanded ? '▲ Hide' : '▼ Show') + ' Achieved (' + longTermAchieved.length + ')',
+
+      weeklyGoals, noWeeklyGoals: s.weeklyGoals.length === 0,
+      addHabit: () => this.addHabit(), addWeeklyGoal: () => this.addWeeklyGoal(),
+      addYearlyGoal: () => this.addYearlyGoal(), addLongTermGoal: () => this.addLongTermGoal(),
+
+      finishedBooks: s.finishedBooks,
+      readingInc: () => this.adjustReading(5), readingDec: () => this.adjustReading(-5),
+      markFinished: () => this.markFinished(), logReadingMinutes: () => this.logReadingMinutes(),
+      undoReadingMinutes: () => this.undoReadingMinutes(),
+      readingStreak: 7,
+      heatmapWeeks: s.heatmap.map(week => week.map(level => LEVEL_COLORS[level])),
+
+      readingQueue: s.readingQueue.map((q,i) => ({ ...q, isNext: i === 0, edit: () => this.editQueueItem(q.id), remove: () => this.removeQueueItem(q.id) })),
+      noQueue: s.readingQueue.length === 0,
+      addQueueItem: () => this.addQueueItem(),
+
+      backfillOpen: !!backfill,
+      backfillTop: backfill ? backfill.top : 0,
+      backfillLeft: backfill ? backfill.left : 0,
+      backfillDayLabel: backfill ? DAY_NAMES[backfill.dayIdx] : '',
+      backfillHabitName: backfill ? backfill.label : '',
+      confirmBackfill: () => this.confirmBackfill(),
+      closeBackfill: () => this.closeBackfill(),
+    };
+  }
+}
+</script>
+</body>
+</html>

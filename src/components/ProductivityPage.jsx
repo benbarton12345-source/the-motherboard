@@ -53,8 +53,8 @@ export default function ProductivityPage() {
 
   // Week summary
   const [weekTasks, setWeekTasks] = useState([])
-  const [habitLogs, setHabitLogs] = useState([])
-  const [habitDefsCount, setHabitDefsCount] = useState(0)
+  const [habitCompletions, setHabitCompletions] = useState([])
+  const [habitsCount, setHabitsCount] = useState(0)
 
   // Upcoming tasks
   const [upcomingTasks, setUpcomingTasks] = useState([])
@@ -95,11 +95,11 @@ export default function ProductivityPage() {
     supabase.from('tasks').select('*').eq('is_recurring', false)
       .gte('task_date', currentWeekMonStr).lte('task_date', currentWeekSunStr)
       .then(({ data }) => { if (data) setWeekTasks(data) })
-    supabase.from('habit_definitions').select('id')
-      .then(({ data }) => { if (data) setHabitDefsCount(data.length) })
+    supabase.from('habits').select('id')
+      .then(({ data }) => { if (data) setHabitsCount(data.length) })
     const thirtyDaysAgo = shiftDate(todayStr, -30)
-    supabase.from('habit_logs').select('*').gte('date', thirtyDaysAgo)
-      .then(({ data }) => { if (data) setHabitLogs(data) })
+    supabase.from('habit_completions').select('habit_id, completed_date').gte('completed_date', thirtyDaysAgo)
+      .then(({ data }) => { if (data) setHabitCompletions(data) })
     supabase.from('tasks').select('*').eq('is_recurring', false)
       .gte('task_date', tomorrowStr).lte('task_date', in7DaysStr)
       .then(({ data }) => { if (data) setUpcomingTasks(data) })
@@ -351,20 +351,16 @@ export default function ProductivityPage() {
   const weekTasksDone = weekTasks.filter(t => t.done).length
   const weekTasksTotal = weekTasks.length
 
-  const weekHabitLogs = habitLogs.filter(l => l.date >= currentWeekMonStr && l.date <= currentWeekSunStr)
-  const habitScore = weekHabitLogs.reduce((sum, l) => sum + (Array.isArray(l.habits) ? l.habits.filter(Boolean).length : 0), 0)
-  const habitMax = habitDefsCount * 7
+  const habitScore = habitCompletions.filter(c => c.completed_date >= currentWeekMonStr && c.completed_date <= currentWeekSunStr).length
+  const habitMax = habitsCount * 7
 
   const weekGoalsHit = weeklyGoals.filter(g => getGoalCount(g.id) >= g.target_count).length
 
   function computeStreak() {
-    const logMap = {}
-    habitLogs.forEach(l => { logMap[l.date] = l.habits })
+    const daysWithCompletion = new Set(habitCompletions.map(c => c.completed_date))
     let streak = 0
     let dateStr = todayStr
-    while (true) {
-      const habits = logMap[dateStr]
-      if (!habits || !habits.some(Boolean)) break
+    while (daysWithCompletion.has(dateStr)) {
       streak++
       dateStr = shiftDate(dateStr, -1)
     }

@@ -436,13 +436,13 @@ File: `src/components/FinancePage.jsx`
 | `budget_entries` | month, category, type (income/expense), amount, currency, notes, recurring_item_id (FK, nullable), **one_off (boolean, default false)** — one_off marks a single imported transaction split into its own row so the insights layer can exclude it from category averages |
 | `statement_imports` | id (uuid), imported_at, statement_month (date, first-of-month), commbank_filename, amex_filename, transaction_count (int), category_totals (jsonb), reimbursements_total (numeric) — one audit row per statement import; RLS disabled |
 | `app_settings` | id (uuid), savings_target (numeric, fraction of income), fi_target (numeric, GBP), fi_target_date (date), created_at — single row holding Budgeting Insights targets; RLS disabled; created via `sql/app_settings.sql` |
-| `habit_definitions` | position, label — editable ordered list of habits; seeded with 6 defaults on first load |
-| `habit_logs` | date (unique), habits (jsonb array of booleans, length matches habit_definitions count) |
+| ~~`habit_definitions`~~ | **RETIRED 10 July 2026.** Legacy positional-array habit list. Home page + Productivity migrated onto `habits`/`habit_completions`; data moved via `sql/migrate_habits_to_new_model.sql`, dropped via `sql/drop_legacy_habit_tables.sql` |
+| ~~`habit_logs`~~ | **RETIRED 10 July 2026.** See `habit_definitions` note |
 | `tasks` | text, priority (HIGH/MEDIUM/LOW), done boolean, saved_at timestamptz, task_date date (nullable), task_time time (nullable), is_recurring boolean, recurrence_frequency text (daily/weekly/monthly), recurrence_day_of_week int (0=Mon…6=Sun), recurrence_day_of_month int (1–31), recurrence_parent_id uuid FK→tasks(id) ON DELETE CASCADE, snoozed_from date, add_to_cal boolean |
-| `weekly_reviews` | week_start (unique Monday date), went_well, challenge_overcome, improve_next_week, consistency_score (int 1–10), proud_of, sealed_at timestamptz |
+| `weekly_reviews` | week_start (unique Monday date — the key, NOT `week_start_date`), went_well, challenge_overcome, improve_next_week, consistency_score (int 1–10), proud_of, **anything_else (text — 6th field, added Productivity redesign)**, sealed_at timestamptz, **sealed (boolean, default false — redundant with sealed_at; treat sealed_at as source of truth)**. Dead legacy columns wins/slipped/open_loops/next_week_top_3 remain nullable/unused |
 | `recurring_items` | name, type (subscription/fixed_cost/income), amount, frequency, currency (GBP/AUD), active boolean |
-| `weekly_goals` | name, target_count, active boolean, created_at |
-| `weekly_goal_logs` | goal_id (FK→weekly_goals), week_start date, count int, updated_at — unique on (goal_id, week_start) |
+| `weekly_goals` | name, target_count int, active boolean, created_at, **goal_type text ('numeric'/'boolean', default 'numeric' — added Productivity redesign; kept `target_count`, did NOT rename to `target`)** |
+| `weekly_goal_logs` | goal_id (FK→weekly_goals), week_start date, count int, updated_at — unique on (goal_id, week_start). **Legacy aggregate-count table; superseded by `weekly_goal_completions` for the redesign (kept for existing history)** |
 | `apple_health_logs` | date (unique, NOT NULL), steps (integer), sleep_minutes (integer), sleep_deep_minutes (integer), sleep_rem_minutes (integer), sleep_core_minutes (integer), sleep_awake_minutes (integer), hrv_ms (numeric), resting_hr (integer), active_calories (integer, stored in kcal — Health Auto Export sends kJ, divided by 4.184 on ingest), mood_score (numeric) — one row per date, upserted by `api/health-sync.js` |
 | `apple_health_step_samples` | id (uuid PK), date (date NOT NULL), timestamp (text NOT NULL), qty (integer NOT NULL), source (text), created_at — unique on (date, timestamp); stores raw per-minute step samples for cross-source deduplication |
 | `weight_logs` | date (NOT NULL), weight_kg (NOT NULL), notes (nullable), created_at |
@@ -451,6 +451,21 @@ File: `src/components/FinancePage.jsx`
 | `books` | id (uuid PK), title (NOT NULL), author, format ('book'/'audio'), genre, status ('queued'/'current'/'finished'), progress (int 0–100), unit_total (int), unit_label ('ch'/'hr'), queue_order (int, null once current/finished), started_at (timestamptz), finished_at (date), created_at — every book is a real row; doneCount and genreCounts are derived (count/group of status='finished' rows), never stored — RLS disabled |
 | `reading_settings` | single row (id=1, check constraint): goal (int, default 24) — just the one editable number — RLS disabled |
 | `reading_activity` | activity_date (date PK), intensity (int 0–4), updated_at — real per-day reading-activity log driving the heatmap/streak; bumped +1 (cap 4) on each progress update or finish — RLS disabled |
+
+### Productivity redesign tables (added 10 July 2026 — `sql/productivity_redesign.sql`)
+
+New tables for the Productivity section redesign (Overview / Habits & Goals / Tasks / Reading + Weekly Review). Schema-only; no UI wired yet. All have RLS disabled.
+
+| Table | Purpose |
+|---|---|
+| `habits` | id (uuid), name, streak (int, default 0 — denormalised cache, not yet maintained; recompute from completions), created_at — per-habit list, ordered by created_at. **Now the single source of truth for habits: used by the Home page Habits card AND the Productivity redesign** (replaced the retired positional `habit_definitions`/`habit_logs`). Home seeds 6 defaults into an empty table on first load |
+| `habit_completions` | id (uuid), habit_id (FK→habits ON DELETE CASCADE), completed_date (date), created_at — one row per habit per day done; unique on (habit_id, completed_date); real dates so history is permanent + backfillable. Home page toggles insert/delete a row for today; week-summary streak/score derive from these |
+| `weekly_goal_completions` | id (uuid), weekly_goal_id (FK→weekly_goals ON DELETE CASCADE — note: `weekly_goal_id`, not `goal_id`), week_start_date (date, ISO Monday), completed_date (date), created_at — one row per weekly-goal per day per week; unique on (weekly_goal_id, week_start_date, completed_date); drives the 7-day tap grid + backfill (supersedes the aggregate `weekly_goal_logs`) |
+| `yearly_goals` | id (uuid), name, goal_type ('numeric'/'boolean'), target_value (numeric), current_value (numeric, default 0), unit, done (bool), target_date (date, for boolean), linked_source (nullable, reserved), year (int, default current year), created_at |
+| `long_term_goals` | id (uuid), name, goal_type ('boolean'/'numeric', default 'boolean'), status ('not_started'/'in_progress'/'done'), timeframe (text), target_value, current_value, unit (numeric goals only), linked_source (nullable, reserved), created_at — aspirational, no deadline-pressure/behind-pace language |
+| `long_term_goal_journal` | id (uuid), long_term_goal_id (FK→long_term_goals ON DELETE CASCADE), entry_date (date, default current_date), entry_text (not null), created_at — dated free-text diary entries per long-term goal |
+
+`linked_source` on `yearly_goals` and `long_term_goals` is reserved for future cross-metric auto-linking (e.g. `training.gym_checkin`, `finance.net_worth`) — **no linking behaviour is implemented; field is nullable and inert.**
 
 ### Health table notes
 

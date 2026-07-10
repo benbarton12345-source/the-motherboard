@@ -51,15 +51,15 @@ export default function HomePage() {
   const [snapshots, setSnapshots] = useState([])
   const [budgetEntries, setBudgetEntries] = useState([])
 
-  // Habit definitions
-  const [habitDefs, setHabitDefs] = useState([])
+  // Habits (per-habit model: habits + habit_completions)
+  const [habitList, setHabitList] = useState([])
   const [showHabitModal, setShowHabitModal] = useState(false)
   const [editingDefs, setEditingDefs] = useState([])
   const [newHabitLabel, setNewHabitLabel] = useState('')
   const [habitSaving, setHabitSaving] = useState(false)
 
-  // Habit log (today's checkboxes)
-  const [habits, setHabits] = useState([])
+  // Today's completions (set of habit ids done today)
+  const [doneToday, setDoneToday] = useState(() => new Set())
   const [habitsLoaded, setHabitsLoaded] = useState(false)
 
   const [review, setReview] = useState({
@@ -93,25 +93,25 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    async function loadHabitDefs() {
-      const { data } = await supabase.from('habit_definitions').select('*').order('position', { ascending: true })
-      if (data && data.length > 0) {
-        setHabitDefs(data)
-      } else {
-        await supabase.from('habit_definitions').insert(
-          DEFAULT_HABITS.map((label, i) => ({ position: i, label }))
+    async function loadHabits() {
+      let { data } = await supabase.from('habits').select('*').order('created_at', { ascending: true })
+      if (!data || data.length === 0) {
+        const nowMs = Date.now()
+        await supabase.from('habits').insert(
+          DEFAULT_HABITS.map((name, i) => ({ name, created_at: new Date(nowMs + i * 1000).toISOString() }))
         )
-        const { data: seeded } = await supabase.from('habit_definitions').select('*').order('position', { ascending: true })
-        if (seeded) setHabitDefs(seeded)
+        const seeded = await supabase.from('habits').select('*').order('created_at', { ascending: true })
+        data = seeded.data
       }
+      if (data) setHabitList(data)
     }
-    loadHabitDefs()
+    loadHabits()
   }, [])
 
   useEffect(() => {
-    supabase.from('habit_logs').select('habits').eq('date', getLocalDateString()).maybeSingle()
+    supabase.from('habit_completions').select('habit_id').eq('completed_date', getLocalDateString())
       .then(({ data }) => {
-        if (data?.habits) setHabits(data.habits)
+        if (data) setDoneToday(new Set(data.map(c => c.habit_id)))
         setHabitsLoaded(true)
       })
   }, [])
@@ -153,44 +153,65 @@ export default function HomePage() {
 
   // ── Habit functions
 
-  function toggleHabit(i) {
+  async function toggleHabit(habitId) {
     if (!habitsLoaded) return
-    setHabits(prev => {
-      const len = habitDefs.length
-      const current = Array.from({ length: len }, (_, idx) => prev[idx] ?? false)
-      const updated = current.map((v, j) => j === i ? !v : v)
-      supabase.from('habit_logs').upsert({ date: getLocalDateString(), habits: updated }, { onConflict: 'date' }).then()
-      return updated
+    const today = getLocalDateString()
+    const isDone = doneToday.has(habitId)
+    setDoneToday(prev => {
+      const next = new Set(prev)
+      if (isDone) next.delete(habitId)
+      else next.add(habitId)
+      return next
     })
+    if (isDone) {
+      await supabase.from('habit_completions').delete().eq('habit_id', habitId).eq('completed_date', today)
+    } else {
+      await supabase.from('habit_completions')
+        .upsert({ habit_id: habitId, completed_date: today }, { onConflict: 'habit_id,completed_date', ignoreDuplicates: true })
+    }
   }
 
   function enterHabitEdit() {
-    setEditingDefs(habitDefs.map(d => ({ ...d })))
+    setEditingDefs(habitList.map(h => ({ id: h.id, name: h.name })))
     setNewHabitLabel('')
     setShowHabitModal(true)
   }
 
   async function saveHabitEdit() {
     setHabitSaving(true)
-    const toSave = editingDefs.filter(d => d.label.trim()).map((d, i) => ({ label: d.label.trim(), position: i }))
-    await supabase.from('habit_definitions').delete().gte('position', 0)
-    if (toSave.length > 0) {
-      await supabase.from('habit_definitions').insert(toSave)
+    const edited = editingDefs.filter(d => d.name.trim())
+    const keptIds = new Set(edited.filter(d => d.id).map(d => d.id))
+
+    const toDelete = habitList.filter(h => !keptIds.has(h.id))
+    const toRename = edited.filter(d => d.id && habitList.find(h => h.id === d.id)?.name !== d.name.trim())
+    const toInsert = edited.filter(d => !d.id)
+
+    for (const h of toDelete) {
+      await supabase.from('habits').delete().eq('id', h.id)
     }
-    const { data } = await supabase.from('habit_definitions').select('*').order('position', { ascending: true })
-    if (data) {
-      setHabitDefs(data)
-      const updated = Array.from({ length: data.length }, (_, i) => habits[i] ?? false)
-      setHabits(updated)
-      await supabase.from('habit_logs').upsert({ date: getLocalDateString(), habits: updated }, { onConflict: 'date' })
+    for (const d of toRename) {
+      await supabase.from('habits').update({ name: d.name.trim() }).eq('id', d.id)
     }
+    if (toInsert.length > 0) {
+      const nowMs = Date.now()
+      await supabase.from('habits').insert(
+        toInsert.map((d, i) => ({ name: d.name.trim(), created_at: new Date(nowMs + i * 1000).toISOString() }))
+      )
+    }
+
+    const { data } = await supabase.from('habits').select('*').order('created_at', { ascending: true })
+    if (data) setHabitList(data)
+    // Deleting a habit cascades its completions — refresh today's done set.
+    const { data: comps } = await supabase.from('habit_completions').select('habit_id').eq('completed_date', getLocalDateString())
+    if (comps) setDoneToday(new Set(comps.map(c => c.habit_id)))
+
     setShowHabitModal(false)
     setHabitSaving(false)
   }
 
   function addHabitToEdit() {
     if (!newHabitLabel.trim()) return
-    setEditingDefs(d => [...d, { label: newHabitLabel.trim() }])
+    setEditingDefs(d => [...d, { name: newHabitLabel.trim() }])
     setNewHabitLabel('')
   }
 
@@ -255,7 +276,7 @@ export default function HomePage() {
 
   const perthHour = parseInt(perthTime.split(':')[0])
   const greeting = perthHour < 12 ? 'Good morning' : perthHour < 17 ? 'Good afternoon' : 'Good evening'
-  const habitsScore = habits.filter(Boolean).length
+  const habitsScore = doneToday.size
   const monthShort = new Date().toLocaleDateString('en-GB', { month: 'short' }).toUpperCase()
   const nwDisplay = latest ? format(convert(latest.total, 'GBP')) : '—'
   const targetDisplay = format(convert(TARGET, 'GBP'))
@@ -281,7 +302,7 @@ export default function HomePage() {
             </div>
             <div className="flex-1 bg-gray-800 rounded p-3 text-center">
               <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Score</div>
-              <div className="text-base font-bold text-emerald-400">{habitsScore}/{habitDefs.length || 6}</div>
+              <div className="text-base font-bold text-emerald-400">{habitsScore}/{habitList.length || 6}</div>
             </div>
           </div>
         </div>
@@ -349,31 +370,34 @@ export default function HomePage() {
             <button onClick={enterHabitEdit} className="text-xs text-gray-600 hover:text-white transition-colors uppercase tracking-widest">Edit</button>
           </div>
           <div className="space-y-3 mb-4">
-            {habitDefs.map((def, i) => (
-              <button
-                key={def.id}
-                onClick={() => toggleHabit(i)}
-                className="w-full flex items-center gap-3 text-left group"
-              >
-                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                  (habits[i] ?? false) ? 'bg-emerald-400 border-emerald-400' : 'border-gray-700 group-hover:border-gray-500'
-                }`}>
-                  {(habits[i] ?? false) && (
-                    <svg className="w-2.5 h-2.5 text-gray-950" viewBox="0 0 10 10" fill="none">
-                      <polyline points="1.5,5 4,7.5 8.5,2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </div>
-                <span className={`text-sm transition-colors truncate min-w-0 ${
-                  (habits[i] ?? false) ? 'text-emerald-400 line-through decoration-emerald-400/40' : 'text-gray-400 group-hover:text-white'
-                }`}>
-                  {def.label}
-                </span>
-              </button>
-            ))}
+            {habitList.map(h => {
+              const done = doneToday.has(h.id)
+              return (
+                <button
+                  key={h.id}
+                  onClick={() => toggleHabit(h.id)}
+                  className="w-full flex items-center gap-3 text-left group"
+                >
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                    done ? 'bg-emerald-400 border-emerald-400' : 'border-gray-700 group-hover:border-gray-500'
+                  }`}>
+                    {done && (
+                      <svg className="w-2.5 h-2.5 text-gray-950" viewBox="0 0 10 10" fill="none">
+                        <polyline points="1.5,5 4,7.5 8.5,2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className={`text-sm transition-colors truncate min-w-0 ${
+                    done ? 'text-emerald-400 line-through decoration-emerald-400/40' : 'text-gray-400 group-hover:text-white'
+                  }`}>
+                    {h.name}
+                  </span>
+                </button>
+              )
+            })}
           </div>
           <div className="text-xs text-gray-500">
-            <span className="text-emerald-400 font-medium">{habitsScore}</span> / {habitDefs.length} today
+            <span className="text-emerald-400 font-medium">{habitsScore}</span> / {habitList.length} today
           </div>
         </div>
 
@@ -505,8 +529,8 @@ export default function HomePage() {
             {editingDefs.map((d, i) => (
               <div key={i} className="flex items-center gap-2">
                 <input
-                  value={d.label}
-                  onChange={e => setEditingDefs(defs => defs.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                  value={d.name}
+                  onChange={e => setEditingDefs(defs => defs.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
                   className={`flex-1 ${inputCls}`}
                 />
                 <button
