@@ -2,8 +2,13 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import TodaysTasks from './TodaysTasks'
 import AddTaskModal from './AddTaskModal'
-import ReadingPanel from './ReadingPanel'
 import { localDate, shiftDate, isRecurringDueOnDate } from '../utils/taskHelpers'
+
+// Productivity → Tasks sub-page. Pure task + calendar management: full-width
+// calendar on top, then the task list (Overdue / Today / Upcoming / Completed),
+// then recurring-task definitions. Weekly goals and the weekly review moved to
+// Habits & Goals / Overview in the redesign; the Reading tracker is its own
+// sub-page now. All existing recurring/calendar behaviour is preserved.
 
 // ── Helpers (calendar/week-specific) ─────────────────────────────────────────
 
@@ -27,6 +32,12 @@ function fmtDay(dateStr) {
   return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
+function daysBetween(aStr, bStr) {
+  const [ay, am, ad] = aStr.split('-').map(Number)
+  const [by, bm, bd] = bStr.split('-').map(Number)
+  return Math.round((new Date(ay, am - 1, ad) - new Date(by, bm - 1, bd)) / 86400000)
+}
+
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 const PRIORITY_BADGE = {
@@ -45,19 +56,11 @@ export default function ProductivityPage() {
   // Recurring defs (shared between calendar and section 3)
   const [recurringDefs, setRecurringDefs] = useState([])
 
-  // Weekly goals
-  const [weeklyGoals, setWeeklyGoals] = useState([])
-  const [goalLogs, setGoalLogs] = useState([])
-  const [showGoalForm, setShowGoalForm] = useState(false)
-  const [goalForm, setGoalForm] = useState({ name: '', target_count: 1 })
-
-  // Week summary
-  const [weekTasks, setWeekTasks] = useState([])
-  const [habitCompletions, setHabitCompletions] = useState([])
-  const [habitsCount, setHabitsCount] = useState(0)
-
-  // Upcoming tasks
+  // Task list
   const [upcomingTasks, setUpcomingTasks] = useState([])
+  const [overdueTasks, setOverdueTasks] = useState([])
+  const [completedTasks, setCompletedTasks] = useState([])
+  const [showCompleted, setShowCompleted] = useState(false)
 
   // Add/edit modal
   const [showModal, setShowModal] = useState(false)
@@ -74,9 +77,6 @@ export default function ProductivityPage() {
   const todayStr = localDate()
   const tomorrowStr = shiftDate(todayStr, 1)
   const in7DaysStr = shiftDate(todayStr, 7)
-  const realWeekMon = getWeekMonday(0)
-  const currentWeekMonStr = localDate(realWeekMon)
-  const currentWeekSunStr = localDate(addDays(realWeekMon, 6))
   const weekMon = getWeekMonday(weekOffset)
   const weekSun = addDays(weekMon, 6)
   const weekMonStr = localDate(weekMon)
@@ -88,21 +88,18 @@ export default function ProductivityPage() {
   useEffect(() => {
     supabase.from('tasks').select('*').eq('is_recurring', true).order('created_at')
       .then(({ data }) => { if (data) setRecurringDefs(data) })
-    supabase.from('weekly_goals').select('*').eq('active', true).order('created_at')
-      .then(({ data }) => { if (data) setWeeklyGoals(data) })
-    supabase.from('weekly_goal_logs').select('*').eq('week_start', currentWeekMonStr)
-      .then(({ data }) => { if (data) setGoalLogs(data) })
-    supabase.from('tasks').select('*').eq('is_recurring', false)
-      .gte('task_date', currentWeekMonStr).lte('task_date', currentWeekSunStr)
-      .then(({ data }) => { if (data) setWeekTasks(data) })
-    supabase.from('habits').select('id')
-      .then(({ data }) => { if (data) setHabitsCount(data.length) })
-    const thirtyDaysAgo = shiftDate(todayStr, -30)
-    supabase.from('habit_completions').select('habit_id, completed_date').gte('completed_date', thirtyDaysAgo)
-      .then(({ data }) => { if (data) setHabitCompletions(data) })
     supabase.from('tasks').select('*').eq('is_recurring', false)
       .gte('task_date', tomorrowStr).lte('task_date', in7DaysStr)
       .then(({ data }) => { if (data) setUpcomingTasks(data) })
+    // Overdue: regular (non-recurring, non-instance) tasks due before today, not done.
+    supabase.from('tasks').select('*').eq('is_recurring', false).eq('done', false)
+      .is('recurrence_parent_id', null).lt('task_date', todayStr).order('task_date')
+      .then(({ data }) => { if (data) setOverdueTasks(data) })
+    // Completed: done regular tasks, most recent first.
+    supabase.from('tasks').select('*').eq('is_recurring', false).eq('done', true)
+      .order('task_date', { ascending: false }).limit(50)
+      .then(({ data }) => { if (data) setCompletedTasks(data) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -136,46 +133,7 @@ export default function ProductivityPage() {
       .sort((a, b) => (a.task_time || '').localeCompare(b.task_time || ''))
   }
 
-  // ── Weekly goals ────────────────────────────────────────────────────────────
-
-  function getGoalCount(goalId) {
-    return goalLogs.find(l => l.goal_id === goalId)?.count || 0
-  }
-
-  async function addGoal() {
-    if (!goalForm.name.trim()) return
-    const { data } = await supabase.from('weekly_goals').insert([{
-      name: goalForm.name.trim(),
-      target_count: parseInt(goalForm.target_count) || 1,
-      active: true,
-    }]).select().single()
-    if (data) setWeeklyGoals(prev => [...prev, data])
-    setGoalForm({ name: '', target_count: 1 })
-    setShowGoalForm(false)
-  }
-
-  async function adjustGoalCount(goalId, delta) {
-    const newCount = Math.max(0, (getGoalCount(goalId)) + delta)
-    const { data } = await supabase.from('weekly_goal_logs').upsert({
-      goal_id: goalId,
-      week_start: currentWeekMonStr,
-      count: newCount,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'goal_id,week_start' }).select().single()
-    if (data) {
-      setGoalLogs(prev => {
-        const exists = prev.some(l => l.goal_id === goalId)
-        return exists ? prev.map(l => l.goal_id === goalId ? data : l) : [...prev, data]
-      })
-    }
-  }
-
-  async function deleteGoal(id) {
-    await supabase.from('weekly_goals').update({ active: false }).eq('id', id)
-    setWeeklyGoals(prev => prev.filter(g => g.id !== id))
-  }
-
-  // ── Recurring def CRUD ──────────────────────────────────────────────────────
+  // ── Task CRUD ───────────────────────────────────────────────────────────────
 
   async function handleModalSave(form) {
     if (!form.text.trim()) return
@@ -198,6 +156,13 @@ export default function ProductivityPage() {
             }
             return prev.filter(t => t.id !== data.id)
           })
+          // Editing a date into the past (still open) makes it overdue, and back out again.
+          const nowOverdue = data.task_date < todayStr && !data.done
+          setOverdueTasks(prev => {
+            const exists = prev.some(t => t.id === data.id)
+            if (nowOverdue) return exists ? prev.map(t => t.id === data.id ? data : t) : [...prev, data]
+            return prev.filter(t => t.id !== data.id)
+          })
           if (data.task_time) {
             setCalendarTasks(prev => {
               const exists = prev.some(t => t.id === data.id)
@@ -210,7 +175,6 @@ export default function ProductivityPage() {
         return
       }
       if (editingDefId) {
-        // Update existing recurring def
         const payload = {
           text: form.text.trim(),
           priority: form.priority,
@@ -225,7 +189,6 @@ export default function ProductivityPage() {
           setTodaysKey(k => k + 1)
         }
       } else if (form.is_recurring) {
-        // New recurring def
         const payload = {
           text: form.text.trim(),
           priority: form.priority,
@@ -243,7 +206,6 @@ export default function ProductivityPage() {
           setTodaysKey(k => k + 1)
         }
       } else {
-        // Regular task (timed, for calendar)
         const payload = {
           text: form.text.trim(),
           priority: form.priority,
@@ -257,11 +219,11 @@ export default function ProductivityPage() {
         if (error) { console.error('handleModalSave new task:', error); return }
         if (data) {
           if (data.task_time) setCalendarTasks(prev => [...prev, data])
-          if (data.task_date >= currentWeekMonStr && data.task_date <= currentWeekSunStr) {
-            setWeekTasks(prev => [...prev, data])
-          }
           if (data.task_date > todayStr && data.task_date <= in7DaysStr) {
             setUpcomingTasks(prev => [...prev, data])
+          }
+          if (data.task_date < todayStr && !data.done) {
+            setOverdueTasks(prev => [...prev, data])
           }
           if (data.task_date === todayStr) setTodaysKey(k => k + 1)
         }
@@ -288,6 +250,26 @@ export default function ProductivityPage() {
       }
       return prev.filter(t => t.id !== task.id)
     })
+  }
+
+  // Overdue / completed actions
+  async function completeTask(task) {
+    await supabase.from('tasks').update({ done: true }).eq('id', task.id)
+    setOverdueTasks(prev => prev.filter(t => t.id !== task.id))
+    setCompletedTasks(prev => [{ ...task, done: true }, ...prev])
+  }
+
+  async function uncompleteTask(task) {
+    await supabase.from('tasks').update({ done: false }).eq('id', task.id)
+    setCompletedTasks(prev => prev.filter(t => t.id !== task.id))
+    if (task.task_date < todayStr) setOverdueTasks(prev => [...prev, { ...task, done: false }])
+    else if (task.task_date === todayStr) setTodaysKey(k => k + 1)
+  }
+
+  async function deleteTaskRow(task, from) {
+    await supabase.from('tasks').delete().eq('id', task.id)
+    if (from === 'overdue') setOverdueTasks(prev => prev.filter(t => t.id !== task.id))
+    if (from === 'completed') setCompletedTasks(prev => prev.filter(t => t.id !== task.id))
   }
 
   async function deleteDef(def) {
@@ -346,28 +328,6 @@ export default function ProductivityPage() {
     setModalInitial({})
   }
 
-  // ── Week summary ────────────────────────────────────────────────────────────
-
-  const weekTasksDone = weekTasks.filter(t => t.done).length
-  const weekTasksTotal = weekTasks.length
-
-  const habitScore = habitCompletions.filter(c => c.completed_date >= currentWeekMonStr && c.completed_date <= currentWeekSunStr).length
-  const habitMax = habitsCount * 7
-
-  const weekGoalsHit = weeklyGoals.filter(g => getGoalCount(g.id) >= g.target_count).length
-
-  function computeStreak() {
-    const daysWithCompletion = new Set(habitCompletions.map(c => c.completed_date))
-    let streak = 0
-    let dateStr = todayStr
-    while (daysWithCompletion.has(dateStr)) {
-      streak++
-      dateStr = shiftDate(dateStr, -1)
-    }
-    return streak
-  }
-  const streak = computeStreak()
-
   // ── Recurring def display helpers ───────────────────────────────────────────
 
   function defScheduleLabel(def) {
@@ -415,145 +375,106 @@ export default function ProductivityPage() {
 
   const cardCls = 'bg-gray-900 border border-gray-800 rounded-lg p-6'
   const labelCls = 'text-sm tracking-widest uppercase text-gray-400'
-  const inputCls = 'bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400'
   const btnOutlineCls = 'text-xs tracking-widest uppercase px-3 py-1.5 border border-emerald-400 text-emerald-400 rounded hover:bg-emerald-400 hover:text-gray-950 transition-colors'
-  const btnSaveCls = 'px-4 py-2 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-emerald-300 transition-colors disabled:opacity-50'
 
   // ── JSX ────────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
 
-      {/* ── Section 1: Weekly Calendar + Weekly Goals ─────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* Calendar */}
-        <div className={`${cardCls} lg:col-span-2`}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className={labelCls}>Weekly Calendar</h2>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setWeekOffset(o => o - 1)} className="text-gray-500 hover:text-white transition-colors text-xl leading-none">‹</button>
-              <span className="text-xs text-gray-500">{fmtDay(weekMonStr)} – {fmtDay(weekSunStr)}</span>
-              <button onClick={() => setWeekOffset(o => o + 1)} className="text-gray-500 hover:text-white transition-colors text-xl leading-none">›</button>
-              {weekOffset !== 0 && (
-                <button onClick={() => setWeekOffset(0)} className="text-xs text-gray-600 hover:text-white transition-colors uppercase tracking-widest">Today</button>
-              )}
-            </div>
+      {/* ── Weekly Calendar (full width) ──────────────────────────────────── */}
+      <div className={cardCls}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className={labelCls}>Weekly Calendar</h2>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setWeekOffset(o => o - 1)} className="text-gray-500 hover:text-white transition-colors text-xl leading-none">‹</button>
+            <span className="text-xs text-gray-500">{fmtDay(weekMonStr)} – {fmtDay(weekSunStr)}</span>
+            <button onClick={() => setWeekOffset(o => o + 1)} className="text-gray-500 hover:text-white transition-colors text-xl leading-none">›</button>
+            {weekOffset !== 0 && (
+              <button onClick={() => setWeekOffset(0)} className="text-xs text-gray-600 hover:text-white transition-colors uppercase tracking-widest">Today</button>
+            )}
           </div>
+        </div>
 
-          <div className="grid grid-cols-7 gap-1 mb-4">
-            {weekDays.map((day, i) => {
-              const dayStr = localDate(day)
-              const isToday = dayStr === todayStr
-              const timedTasks = timedTasksForDay(dayStr)
-              const timedRec = timedRecurringForDay(dayStr)
-              const allBlocks = [
-                ...timedTasks.map(t => ({ ...t, _type: 'task' })),
-                ...timedRec.map(t => ({ ...t, _type: 'recurring' })),
-              ].sort((a, b) => (a.task_time || '').localeCompare(b.task_time || ''))
+        <div className="grid grid-cols-7 gap-1 mb-4">
+          {weekDays.map((day, i) => {
+            const dayStr = localDate(day)
+            const isToday = dayStr === todayStr
+            const timedTasks = timedTasksForDay(dayStr)
+            const timedRec = timedRecurringForDay(dayStr)
+            const allBlocks = [
+              ...timedTasks.map(t => ({ ...t, _type: 'task' })),
+              ...timedRec.map(t => ({ ...t, _type: 'recurring' })),
+            ].sort((a, b) => (a.task_time || '').localeCompare(b.task_time || ''))
 
-              return (
-                <div key={i} className={`rounded border border-gray-800 p-1.5 min-h-[100px] ${isToday ? 'bg-gray-800/60' : ''}`}>
-                  <div className="text-xs text-gray-600 mb-0.5">{DAY_LABELS[i]}</div>
-                  <div className={`text-sm font-bold mb-1.5 ${isToday ? 'text-emerald-400' : 'text-gray-300'}`}>
-                    {day.getDate()}
-                  </div>
-                  {allBlocks.map((block, bi) => (
-                    <div
-                      key={`${block._type}-${block.id}-${bi}`}
-                      className={`text-xs px-1.5 py-1 mb-1 rounded border-l-2 bg-gray-800 leading-tight overflow-hidden ${
-                        block._type === 'recurring' ? 'border-purple-400' : 'border-emerald-400'
-                      }`}
-                    >
-                      <div className="flex items-center gap-0.5 min-w-0">
-                        <span className={`text-[10px] shrink-0 ${block._type === 'recurring' ? 'text-purple-400' : 'text-gray-500'}`}>
-                          {block.task_time.slice(0, 5)}
-                        </span>
-                        <span className={`truncate ${block._type === 'recurring' ? 'text-gray-400' : 'text-gray-300'}`}>
-                          {block.text}
-                        </span>
-                      </div>
+            return (
+              <div key={i} className={`rounded border border-gray-800 p-1.5 min-h-[100px] ${isToday ? 'bg-gray-800/60' : ''}`}>
+                <div className="text-xs text-gray-600 mb-0.5">{DAY_LABELS[i]}</div>
+                <div className={`text-sm font-bold mb-1.5 ${isToday ? 'text-emerald-400' : 'text-gray-300'}`}>
+                  {day.getDate()}
+                </div>
+                {allBlocks.map((block, bi) => (
+                  <div
+                    key={`${block._type}-${block.id}-${bi}`}
+                    className={`text-xs px-1.5 py-1 mb-1 rounded border-l-2 bg-gray-800 leading-tight overflow-hidden ${
+                      block._type === 'recurring' ? 'border-teal-400' : 'border-emerald-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-0.5 min-w-0">
+                      <span className={`text-[10px] shrink-0 ${block._type === 'recurring' ? 'text-teal-400' : 'text-gray-500'}`}>
+                        {block.task_time.slice(0, 5)}
+                      </span>
+                      <span className={`truncate ${block._type === 'recurring' ? 'text-gray-400' : 'text-gray-300'}`}>
+                        {block.text}
+                      </span>
                     </div>
-                  ))}
+                  </div>
+                ))}
+              </div>
+            )
+          })}
+        </div>
+
+        <button onClick={openAddTask} className={btnOutlineCls}>+ Add Task</button>
+      </div>
+
+      {/* ── Overdue ───────────────────────────────────────────────────────── */}
+      {overdueTasks.length > 0 && (
+        <div className="bg-gray-900 border border-red-500/40 rounded-lg p-6">
+          <h2 className={`${labelCls} text-red-400 mb-4`}>Overdue</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {overdueTasks.map(task => {
+              const days = daysBetween(todayStr, task.task_date)
+              return (
+                <div key={task.id} className="group flex items-start gap-3 p-3 rounded-lg border border-red-500/20 bg-red-500/5">
+                  <button
+                    onClick={() => completeTask(task)}
+                    className="mt-0.5 w-5 h-5 rounded border border-gray-600 hover:border-emerald-400 shrink-0 transition-colors"
+                    title="Mark done"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-white truncate">{task.text}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-red-400">{days} day{days !== 1 ? 's' : ''} overdue</span>
+                      {task.task_time && <span className="text-xs text-gray-500">{task.task_time.slice(0, 5)}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={`text-xs border px-1.5 py-0.5 rounded tracking-widest ${PRIORITY_BADGE[task.priority] || PRIORITY_BADGE.MEDIUM}`}>{task.priority}</span>
+                    <button onClick={() => openEditTask(task)} className="text-gray-600 hover:text-white transition-colors opacity-0 group-hover:opacity-100 text-xs uppercase tracking-widest">Edit</button>
+                    <button onClick={() => deleteTaskRow(task, 'overdue')} className="text-gray-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 text-lg leading-none">×</button>
+                  </div>
                 </div>
               )
             })}
           </div>
-
-          <button onClick={openAddTask} className={btnOutlineCls}>+ Add Task</button>
         </div>
+      )}
 
-        {/* Weekly Goals */}
-        <div className={cardCls}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className={labelCls}>Weekly Goals</h2>
-            <button onClick={() => setShowGoalForm(f => !f)} className="text-xs text-gray-600 hover:text-white transition-colors uppercase tracking-widest">
-              {showGoalForm ? 'Cancel' : '+ Add'}
-            </button>
-          </div>
-
-          {showGoalForm && (
-            <div className="mb-4 p-4 bg-gray-800 rounded-lg space-y-2">
-              <input
-                value={goalForm.name}
-                onChange={e => setGoalForm(f => ({ ...f, name: e.target.value }))}
-                onKeyDown={e => e.key === 'Enter' && addGoal()}
-                placeholder="Goal name"
-                className={`w-full ${inputCls}`}
-                autoFocus
-              />
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 shrink-0">Target / week</span>
-                <input
-                  type="number"
-                  min="1"
-                  value={goalForm.target_count}
-                  onChange={e => setGoalForm(f => ({ ...f, target_count: e.target.value }))}
-                  className={`w-16 ${inputCls}`}
-                />
-              </div>
-              <button onClick={addGoal} disabled={!goalForm.name.trim()} className={`w-full ${btnSaveCls}`}>Save</button>
-            </div>
-          )}
-
-          {weeklyGoals.length === 0 ? (
-            <div className="text-sm text-gray-600">No goals set</div>
-          ) : (
-            <div className="space-y-4">
-              {weeklyGoals.map(goal => {
-                const count = getGoalCount(goal.id)
-                const met = count >= goal.target_count
-                const started = count > 0
-                const countCls = met ? 'text-emerald-400' : started ? 'text-amber-400' : 'text-red-400'
-                const barCls = met ? 'bg-emerald-400' : started ? 'bg-amber-400' : 'bg-gray-700'
-                const pct = goal.target_count > 0 ? Math.min((count / goal.target_count) * 100, 100) : 0
-                return (
-                  <div key={goal.id} className="group">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm text-white flex-1 mr-2 truncate">{goal.name}</span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className={`text-sm font-bold ${countCls} w-8 text-right`}>{count}/{goal.target_count}</span>
-                        <button onClick={() => adjustGoalCount(goal.id, -1)} className="w-5 h-5 flex items-center justify-center text-gray-600 hover:text-white transition-colors text-base leading-none">−</button>
-                        <button onClick={() => adjustGoalCount(goal.id, 1)} className="w-5 h-5 flex items-center justify-center text-gray-600 hover:text-emerald-400 transition-colors text-base leading-none">+</button>
-                        <button onClick={() => deleteGoal(goal.id)} className="text-gray-700 hover:text-red-400 transition-colors text-xs opacity-0 group-hover:opacity-100 uppercase tracking-widest">Del</button>
-                      </div>
-                    </div>
-                    <div className="w-full bg-gray-800 rounded-full h-1">
-                      <div className={`h-1 rounded-full transition-all ${barCls}`} style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Section 2: Today's Tasks + Upcoming + Week Summary ───────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* ── Today + Upcoming ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <TodaysTasks key={todaysKey} recurringDefs={recurringDefs} setRecurringDefs={setRecurringDefs} onTaskChanged={handleTodaysTaskChanged} />
 
-        {/* Upcoming */}
         <div className={cardCls}>
           <h2 className={`${labelCls} mb-4`}>Upcoming</h2>
           {upcomingItems.length === 0 ? (
@@ -573,7 +494,7 @@ export default function ProductivityPage() {
                         <span className="text-xs text-gray-500 shrink-0">{item.task_time.slice(0, 5)}</span>
                       )}
                       {item._type === 'recurring' && (
-                        <span className="text-[10px] border px-1 py-px rounded tracking-widest text-purple-400 border-purple-400 shrink-0">↻ REC</span>
+                        <span className="text-[10px] border px-1 py-px rounded tracking-widest text-teal-400 border-teal-400 shrink-0">↻ REC</span>
                       )}
                     </div>
                   </div>
@@ -597,58 +518,44 @@ export default function ProductivityPage() {
             </div>
           )}
         </div>
-
-        {/* Week Summary */}
-        <div className={cardCls}>
-          <h2 className={`${labelCls} mb-4`}>Week Summary</h2>
-          <div className="space-y-5">
-            {[
-              {
-                label: 'Tasks done',
-                value: `${weekTasksDone}/${weekTasksTotal || 0}`,
-                pct: weekTasksTotal > 0 ? (weekTasksDone / weekTasksTotal) * 100 : 0,
-                barCls: weekTasksDone === weekTasksTotal && weekTasksTotal > 0 ? 'bg-emerald-400' : 'bg-amber-400',
-              },
-              {
-                label: 'Habit score',
-                value: habitMax > 0 ? `${habitScore}/${habitMax}` : '—',
-                pct: habitMax > 0 ? (habitScore / habitMax) * 100 : 0,
-                barCls: 'bg-emerald-400',
-              },
-              {
-                label: 'Goals hit',
-                value: weeklyGoals.length > 0 ? `${weekGoalsHit}/${weeklyGoals.length}` : '—',
-                pct: weeklyGoals.length > 0 ? (weekGoalsHit / weeklyGoals.length) * 100 : 0,
-                barCls: weekGoalsHit === weeklyGoals.length && weeklyGoals.length > 0 ? 'bg-emerald-400' : 'bg-amber-400',
-              },
-            ].map(({ label, value, pct, barCls }) => (
-              <div key={label}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-gray-500 uppercase tracking-widest">{label}</span>
-                  <span className="text-sm font-medium text-white">{value}</span>
-                </div>
-                <div className="w-full bg-gray-800 rounded-full h-1">
-                  <div className={`h-1 rounded-full ${barCls}`} style={{ width: `${Math.min(pct, 100)}%` }} />
-                </div>
-              </div>
-            ))}
-
-            <div className="pt-2 border-t border-gray-800">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500 uppercase tracking-widest">Streak</span>
-                <span className="text-sm font-medium text-white">
-                  {streak > 0 ? `${streak} day${streak !== 1 ? 's' : ''}` : '—'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* ── Reading Tracker ───────────────────────────────────────────────── */}
-      <ReadingPanel />
+      {/* ── Completed (collapsed) ─────────────────────────────────────────── */}
+      <div className={cardCls}>
+        <button
+          onClick={() => setShowCompleted(s => !s)}
+          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+        >
+          <span className={labelCls}>Completed ({completedTasks.length})</span>
+          <span className="text-xs">{showCompleted ? '▲' : '▼'}</span>
+        </button>
+        {showCompleted && (
+          completedTasks.length === 0 ? (
+            <div className="text-sm text-gray-600 mt-4">No completed tasks</div>
+          ) : (
+            <div className="mt-4 space-y-1">
+              {completedTasks.map(task => (
+                <div key={task.id} className="group flex items-center gap-3 py-2 border-b border-gray-800 last:border-0">
+                  <button
+                    onClick={() => uncompleteTask(task)}
+                    className="w-5 h-5 rounded bg-emerald-400 border border-emerald-400 flex items-center justify-center shrink-0 text-gray-950"
+                    title="Mark not done"
+                  >
+                    <span className="text-xs font-bold">✓</span>
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm line-through text-gray-600 truncate">{task.text}</span>
+                  </div>
+                  {task.task_date && <span className="text-xs text-gray-600 shrink-0">{fmtDay(task.task_date)}</span>}
+                  <button onClick={() => deleteTaskRow(task, 'completed')} className="text-gray-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 text-lg leading-none shrink-0">×</button>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+      </div>
 
-      {/* ── Section 3: Recurring Tasks ────────────────────────────────────── */}
+      {/* ── Recurring Tasks ───────────────────────────────────────────────── */}
       <div className={cardCls}>
         <div className="flex items-center justify-between mb-6">
           <h2 className={labelCls}>Recurring Tasks</h2>
