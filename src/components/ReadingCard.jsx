@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useReading } from '../useReading'
-import { GENRE_PRESETS, HEAT_RAMP, READING_PURPLE, unitInfo } from '../utils/readingHelpers'
+import { GENRE_PRESETS, HEAT_RAMP, READING_ACCENT, unitInfo } from '../utils/readingHelpers'
 
 // Home-tab compact "Reading" glance card. Shares state with the Productivity
 // panel via useReading() (persisted to Supabase).
@@ -11,7 +11,7 @@ export default function ReadingCard() {
   const [goalDraft, setGoalDraft] = useState('')
   const [customGenre, setCustomGenre] = useState('')
 
-  const cardStyle = { borderColor: 'rgba(167,139,250,0.18)' }
+  const cardStyle = { borderColor: 'rgba(52,211,153,0.18)' }
   const recent = r.heat.weeks.slice(-13)
 
   function onBarClick(e) {
@@ -26,11 +26,11 @@ export default function ReadingCard() {
 
   return (
     <div className="relative bg-gray-900 border rounded-lg p-5 overflow-visible" style={cardStyle}>
-      {/* purple top accent bar */}
+      {/* emerald accent bar */}
       <div className="absolute left-0 top-0 h-0.5 w-full rounded-t-lg"
-        style={{ background: 'linear-gradient(90deg,#a78bfa,transparent)', boxShadow: '0 0 8px #a78bfa' }} />
+        style={{ background: 'linear-gradient(90deg,#34d399,transparent)', boxShadow: '0 0 8px #34d399' }} />
 
-      <h2 className="text-[11px] tracking-widest uppercase font-semibold mb-3" style={{ color: READING_PURPLE }}>Reading</h2>
+      <h2 className="text-[11px] tracking-widest uppercase font-semibold mb-3" style={{ color: READING_ACCENT }}>Reading</h2>
 
       {c ? (
         <>
@@ -40,7 +40,7 @@ export default function ReadingCard() {
             <span className="text-xs text-gray-500 truncate max-w-[150px]">{c.author}</span>
             <button onClick={r.toggleFormat}
               className="text-[9px] tracking-widest uppercase rounded px-1.5 py-0.5 border"
-              style={{ color: READING_PURPLE, borderColor: 'rgba(167,139,250,0.4)' }}>
+              style={{ color: READING_ACCENT, borderColor: 'rgba(52,211,153,0.4)' }}>
               {c.format === 'audio' ? 'Audio' : 'Book'}
             </button>
             <div className="relative">
@@ -63,11 +63,11 @@ export default function ReadingCard() {
           {/* Progress */}
           <div className="mt-3">
             <div className="h-1.5 bg-gray-800 rounded cursor-pointer" onClick={onBarClick}>
-              <div className="h-full rounded" style={{ width: `${c.progress}%`, background: READING_PURPLE, boxShadow: '0 0 6px #a78bfa' }} />
+              <div className="h-full rounded" style={{ width: `${c.progress}%`, background: READING_ACCENT, boxShadow: '0 0 6px #34d399' }} />
             </div>
             <div className="flex justify-between mt-1.5 text-[11px]">
               <span className="text-gray-500">{u.unitText}</span>
-              <span style={{ color: READING_PURPLE }}>{c.progress}%</span>
+              <span style={{ color: READING_ACCENT }}>{c.progress}%</span>
             </div>
           </div>
         </>
@@ -77,7 +77,7 @@ export default function ReadingCard() {
           {r.queue.length > 0 && (
             <button onClick={() => r.startNow(0)}
               className="mt-2 text-[11px] tracking-widest uppercase rounded px-2 py-1 border"
-              style={{ color: READING_PURPLE, borderColor: 'rgba(167,139,250,0.35)' }}>
+              style={{ color: READING_ACCENT, borderColor: 'rgba(52,211,153,0.35)' }}>
               Start “{r.queue[0].title}”
             </button>
           )}
@@ -128,7 +128,7 @@ export default function ReadingCard() {
       <div className="mt-4">
         <div className="flex justify-between items-center mb-2">
           <span className="text-[10px] tracking-widest uppercase text-gray-600">Reading activity</span>
-          <span className="text-[10px] font-semibold" style={{ color: READING_PURPLE }}>{r.heat.streak}-day streak</span>
+          <span className="text-[10px] font-semibold" style={{ color: READING_ACCENT }}>{r.heat.streak}-day streak</span>
         </div>
         <div className="flex gap-[2.5px]">
           {recent.map(w => (
@@ -149,8 +149,8 @@ export default function ReadingCard() {
       {/* Mark finished */}
       {c && (
         <button onClick={r.finishCurrent}
-          className="w-full text-center text-[11px] tracking-widest uppercase font-semibold rounded py-2.5 mt-4 border transition-colors hover:bg-violet-400/10"
-          style={{ color: READING_PURPLE, borderColor: 'rgba(167,139,250,0.35)' }}>
+          className="w-full text-center text-[11px] tracking-widest uppercase font-semibold rounded py-2.5 mt-4 border transition-colors hover:bg-emerald-400/10"
+          style={{ color: READING_ACCENT, borderColor: 'rgba(52,211,153,0.35)' }}>
           ✓ Mark finished · start next
         </button>
       )}
@@ -168,7 +168,7 @@ export default function ReadingCard() {
             {r.queue.length ? `${r.queue[0].title} — ${r.queue[0].author}` : 'pick a new book'}
           </div>
         </div>
-        <div className="text-[10px] font-semibold whitespace-nowrap pl-2" style={{ color: READING_PURPLE }}>
+        <div className="text-[10px] font-semibold whitespace-nowrap pl-2" style={{ color: READING_ACCENT }}>
           {r.queue.length} to read
         </div>
       </div>
@@ -184,7 +184,7 @@ export function GenrePopover({ current, customGenre, setCustomGenre, onPick, onC
       <div className="absolute z-50 mt-1 left-0 w-44 bg-gray-900 border border-gray-700 rounded-lg p-1.5 shadow-xl">
         {GENRE_PRESETS.map(g => (
           <button key={g} onClick={() => onPick(g)}
-            className={`block w-full text-left text-xs px-2 py-1.5 rounded hover:bg-gray-800 ${g === current ? 'text-violet-400' : 'text-gray-300'}`}>
+            className={`block w-full text-left text-xs px-2 py-1.5 rounded hover:bg-gray-800 ${g === current ? 'text-emerald-400' : 'text-gray-300'}`}>
             {g}
           </button>
         ))}
@@ -193,7 +193,7 @@ export function GenrePopover({ current, customGenre, setCustomGenre, onPick, onC
           onChange={e => setCustomGenre(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && customGenre.trim()) onPick(customGenre.trim()) }}
           placeholder="Custom…"
-          className="w-full mt-1 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-violet-400"
+          className="w-full mt-1 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-400"
         />
       </div>
     </>

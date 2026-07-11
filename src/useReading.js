@@ -28,6 +28,7 @@ export function useReading() {
   const [books, setBooks] = useState([])         // all book rows (DB shape)
   const [activity, setActivity] = useState({})   // 'YYYY-MM-DD' -> intensity
   const [history, setHistory] = useState([])     // in-memory undo stack of prior row snapshots
+  const [readingLog, setReadingLog] = useState(null) // last "Log 10 min" action, for undo
 
   useEffect(() => { load() }, [])
 
@@ -178,6 +179,9 @@ export function useReading() {
     deleteRow(row.id)
   }
 
+  // Edit a queued book's metadata (title/author/genre/format) in place.
+  const updateBook = (id, patch) => { patchLocal(id, patch); updateRow(id, patch) }
+
   // Promote a queued book to current; demote the previous current book back to the
   // front of the queue with its progress preserved.
   function startNow(i) {
@@ -194,6 +198,59 @@ export function useReading() {
       patchLocal(currentRaw.id, demotePatch)
       updateRow(currentRaw.id, demotePatch)
     }
+  }
+
+  // ── Log 10 min reading (cross-metric link: Reading → Habit) ───────
+  // Bumps today's reading activity + the current book's progress, and marks the
+  // "Read 10 mins" habit done for today if such a habit exists. This is the one
+  // hard-wired cross-metric link (the general linked_source engine is a future
+  // build). Undo (shown ~5s in the UI) reverts all three effects.
+  async function logReading() {
+    const iso = todayISO()
+    const { data: habitRows } = await supabase.from('habits').select('id, name')
+    const habit = (habitRows || []).find(h => /read/i.test(h.name) && /min/i.test(h.name)) || null
+
+    let addedHabit = false
+    if (habit) {
+      const { data: existing } = await supabase.from('habit_completions')
+        .select('id').eq('habit_id', habit.id).eq('completed_date', iso).maybeSingle()
+      if (!existing) {
+        await supabase.from('habit_completions')
+          .upsert({ habit_id: habit.id, completed_date: iso }, { onConflict: 'habit_id,completed_date', ignoreDuplicates: true })
+        addedHabit = true
+      }
+    }
+
+    const snap = {
+      iso,
+      bookId: currentRaw?.id || null,
+      prevProgress: currentRaw?.progress ?? null,
+      prevIntensity: activity[iso] || 0,
+      habitId: habit?.id || null,
+      addedHabit,
+    }
+
+    if (currentRaw) setProgress((currentRaw.progress || 0) + 5) // setProgress also bumps activity
+    else bumpActivityToday()
+
+    setReadingLog(snap)
+  }
+
+  async function undoReadingLog() {
+    const s = readingLog
+    if (!s) return
+    if (s.bookId != null && s.prevProgress != null) {
+      patchLocal(s.bookId, { progress: s.prevProgress })
+      updateRow(s.bookId, { progress: s.prevProgress })
+    }
+    setActivity(prev => ({ ...prev, [s.iso]: s.prevIntensity }))
+    supabase.from('reading_activity')
+      .upsert({ activity_date: s.iso, intensity: s.prevIntensity, updated_at: new Date().toISOString() }, { onConflict: 'activity_date' })
+      .then(() => {})
+    if (s.addedHabit && s.habitId) {
+      await supabase.from('habit_completions').delete().eq('habit_id', s.habitId).eq('completed_date', s.iso)
+    }
+    setReadingLog(null)
   }
 
   // ── Derived (UI shape) ────────────────────────────────────────────
@@ -219,6 +276,7 @@ export function useReading() {
     lastFinishedTitle: finished[0]?.title || '',
     setProgress, bumpUp, bumpDown, toggleFormat, pickGenre, commitGoal,
     finishCurrent, undoLast, removeFinished,
-    addToList, removeFromList, startNow,
+    addToList, removeFromList, startNow, updateBook,
+    logReading, undoReadingLog, canUndoReadingLog: !!readingLog,
   }
 }

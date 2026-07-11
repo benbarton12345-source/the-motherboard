@@ -5,8 +5,10 @@ export const GENRE_PRESETS = ['Fiction', 'Non-fiction', 'Business', 'Psychology'
 
 // Deterministic genre colours — presets fixed, custom genres draw the next
 // unused palette colour, falling back to muted grey when exhausted.
+// Purple removed from the Reading tracker (user request) — Self-development and
+// the spare palette slots use non-purple hues; the primary accent is emerald.
 const FIXED_GENRE_COLORS = {
-  'Self-development': '#a78bfa',
+  'Self-development': '#2dd4bf',
   'Business': '#60a5fa',
   'Psychology': '#34d399',
   'Biography': '#fbbf24',
@@ -14,7 +16,7 @@ const FIXED_GENRE_COLORS = {
   'History': '#38bdf8',
   'Fiction': '#f87171',
 }
-const PALETTE = ['#a78bfa', '#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#38bdf8', '#f87171', '#c084fc']
+const PALETTE = ['#2dd4bf', '#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#38bdf8', '#f87171', '#fb923c']
 
 // Stable colour map across a set of genres (e.g. all genres in genreCounts).
 export function buildGenreColors(genres) {
@@ -30,8 +32,10 @@ export function buildGenreColors(genres) {
   return map
 }
 
-export const READING_PURPLE = '#a78bfa'
-export const HEAT_RAMP = ['#161b1f', 'rgba(167,139,250,0.28)', 'rgba(167,139,250,0.5)', 'rgba(167,139,250,0.75)', '#a78bfa']
+// Kept the name for import stability, but this is now the app's emerald accent
+// (purple was removed from Reading per user request).
+export const READING_ACCENT = '#34d399'
+export const HEAT_RAMP = ['#161b1f', 'rgba(52,211,153,0.28)', 'rgba(52,211,153,0.5)', 'rgba(52,211,153,0.75)', '#34d399']
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export const todayISO = () => localDate()

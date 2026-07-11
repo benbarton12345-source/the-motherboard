@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useReading } from '../useReading'
-import { GENRE_PRESETS, HEAT_RAMP, READING_PURPLE, unitInfo, fmtFinishedDate } from '../utils/readingHelpers'
+import { GENRE_PRESETS, HEAT_RAMP, READING_ACCENT, unitInfo, fmtFinishedDate } from '../utils/readingHelpers'
 import { GenrePopover } from './ReadingCard'
 
 // Productivity-tab full-width "Reading · <year> Goal" panel. Shares state with
@@ -14,6 +14,31 @@ export default function ReadingPanel() {
   const [goalDraft, setGoalDraft] = useState('')
   const [customGenre, setCustomGenre] = useState('')
   const [newBook, setNewBook] = useState({ title: '', author: '', format: 'book', genre: 'Non-fiction' })
+  const [showLogUndo, setShowLogUndo] = useState(false)
+  const [editingQueueId, setEditingQueueId] = useState(null)
+  const [queueDraft, setQueueDraft] = useState({ title: '', author: '' })
+  const logTimer = useRef(null)
+  useEffect(() => () => clearTimeout(logTimer.current), [])
+
+  function startQueueEdit(b) { setEditingQueueId(b.id); setQueueDraft({ title: b.title, author: b.author }) }
+  function saveQueueEdit(b) {
+    const title = queueDraft.title.trim()
+    if (!title) { setEditingQueueId(null); return }
+    r.updateBook(b.id, { title, author: queueDraft.author.trim() || 'Unknown' })
+    setEditingQueueId(null)
+  }
+
+  function logSession() {
+    r.logReading()
+    setShowLogUndo(true)
+    clearTimeout(logTimer.current)
+    logTimer.current = setTimeout(() => setShowLogUndo(false), 5000)
+  }
+  function undoLog() {
+    r.undoReadingLog()
+    setShowLogUndo(false)
+    clearTimeout(logTimer.current)
+  }
 
   const c = r.current
   const u = unitInfo(c)
@@ -37,12 +62,12 @@ export default function ReadingPanel() {
   }
 
   return (
-    <div className="relative bg-gray-900 border rounded-lg p-6 overflow-visible" style={{ borderColor: 'rgba(167,139,250,0.22)' }}>
-      {/* purple vertical accent bar */}
+    <div className="relative bg-gray-900 border rounded-lg p-6 overflow-visible" style={{ borderColor: 'rgba(52,211,153,0.22)' }}>
+      {/* emerald accent bar */}
       <div className="absolute left-0 top-0 h-full w-0.5 rounded-l-lg"
-        style={{ background: 'linear-gradient(180deg,#a78bfa,transparent)', boxShadow: '0 0 8px #a78bfa' }} />
+        style={{ background: 'linear-gradient(180deg,#34d399,transparent)', boxShadow: '0 0 8px #34d399' }} />
 
-      <h2 className="text-[11px] tracking-widest uppercase font-semibold mb-5" style={{ color: READING_PURPLE }}>
+      <h2 className="text-[11px] tracking-widest uppercase font-semibold mb-5" style={{ color: READING_ACCENT }}>
         Reading · {year} Goal
       </h2>
 
@@ -59,7 +84,7 @@ export default function ReadingPanel() {
                 <span className="text-xs text-gray-500 truncate max-w-[180px]">{c.author}</span>
                 <button onClick={r.toggleFormat}
                   className="text-[9px] tracking-widest uppercase rounded px-1.5 py-0.5 border"
-                  style={{ color: READING_PURPLE, borderColor: 'rgba(167,139,250,0.4)' }}>
+                  style={{ color: READING_ACCENT, borderColor: 'rgba(52,211,153,0.4)' }}>
                   {c.format === 'audio' ? 'Audio' : 'Book'}
                 </button>
                 <div className="relative">
@@ -77,20 +102,30 @@ export default function ReadingPanel() {
 
               <div className="mt-3">
                 <div className="h-2 bg-gray-800 rounded cursor-pointer" onClick={onBarClick}>
-                  <div className="h-full rounded" style={{ width: `${c.progress}%`, background: READING_PURPLE, boxShadow: '0 0 6px #a78bfa' }} />
+                  <div className="h-full rounded" style={{ width: `${c.progress}%`, background: READING_ACCENT, boxShadow: '0 0 6px #34d399' }} />
                 </div>
                 <div className="flex justify-between mt-2 text-xs">
                   <span className="text-gray-500">{u.unitText} · {u.remainingText}</span>
-                  <span style={{ color: READING_PURPLE }}>{c.progress}%</span>
+                  <span style={{ color: READING_ACCENT }}>{c.progress}%</span>
                 </div>
               </div>
+
+              <button onClick={logSession}
+                className="w-full mt-3 text-center text-[11px] tracking-widest uppercase font-semibold rounded py-2.5 bg-emerald-400 text-gray-950 hover:bg-emerald-300 transition-colors">
+                📖 Log 10 min reading
+              </button>
+              {showLogUndo && (
+                <button onClick={undoLog} className="block w-full text-center text-[11px] text-gray-500 hover:text-gray-300 mt-2">
+                  ↶ Undo last log
+                </button>
+              )}
 
               <div className="flex items-center gap-2 mt-3">
                 <button onClick={r.bumpDown} className="px-3 py-2 text-sm text-gray-300 border border-gray-700 rounded hover:border-gray-600">−</button>
                 <button onClick={r.bumpUp} className="px-3 py-2 text-xs tracking-wider text-gray-300 border border-gray-700 rounded hover:border-gray-600">+5%</button>
                 <button onClick={r.finishCurrent}
-                  className="flex-1 text-center text-[11px] tracking-widest uppercase font-semibold rounded py-2 border transition-colors hover:bg-violet-400/10"
-                  style={{ color: READING_PURPLE, borderColor: 'rgba(167,139,250,0.4)' }}>
+                  className="flex-1 text-center text-[11px] tracking-widest uppercase font-semibold rounded py-2 border transition-colors hover:bg-emerald-400/10"
+                  style={{ color: READING_ACCENT, borderColor: 'rgba(52,211,153,0.4)' }}>
                   ✓ Mark finished
                 </button>
               </div>
@@ -109,7 +144,7 @@ export default function ReadingPanel() {
               {r.queue.length > 0 && (
                 <button onClick={() => r.startNow(0)}
                   className="mt-3 text-[11px] tracking-widest uppercase rounded px-3 py-2 border"
-                  style={{ color: READING_PURPLE, borderColor: 'rgba(167,139,250,0.4)' }}>
+                  style={{ color: READING_ACCENT, borderColor: 'rgba(52,211,153,0.4)' }}>
                   Start “{r.queue[0].title}”
                 </button>
               )}
@@ -140,7 +175,7 @@ export default function ReadingPanel() {
           <div className="flex flex-wrap gap-[3px] mt-4">
             {Array.from({ length: r.goal }, (_, i) => (
               <div key={i} className="h-3 flex-1 min-w-[6px] rounded-sm"
-                style={{ background: i < r.doneCount ? READING_PURPLE : '#1a2127' }} />
+                style={{ background: i < r.doneCount ? READING_ACCENT : '#1a2127' }} />
             ))}
           </div>
 
@@ -176,7 +211,7 @@ export default function ReadingPanel() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-[9px] tracking-widest uppercase rounded px-1.5 py-0.5 border"
-                      style={{ color: READING_PURPLE, borderColor: 'rgba(167,139,250,0.4)' }}>
+                      style={{ color: READING_ACCENT, borderColor: 'rgba(52,211,153,0.4)' }}>
                       {b.format === 'audio' ? 'Audio' : 'Book'}
                     </span>
                     <span className="text-[10px] text-gray-600 w-12 text-right">{fmtFinishedDate(b.date)}</span>
@@ -194,7 +229,7 @@ export default function ReadingPanel() {
       <div className="mt-6 pt-5 border-t border-white/5">
         <div className="flex items-center gap-3 mb-3">
           <span className={label}>Reading List · Books I Intend To Read</span>
-          <span className="text-[11px] font-semibold" style={{ color: READING_PURPLE }}>{r.queue.length} queued</span>
+          <span className="text-[11px] font-semibold" style={{ color: READING_ACCENT }}>{r.queue.length} queued</span>
         </div>
 
         {/* Add form */}
@@ -203,17 +238,17 @@ export default function ReadingPanel() {
             onChange={e => setNewBook(nb => ({ ...nb, title: e.target.value }))}
             onKeyDown={e => { if (e.key === 'Enter') submitAdd() }}
             placeholder="Title"
-            className="flex-[2] min-w-[160px] bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-400" />
+            className="flex-[2] min-w-[160px] bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-400" />
           <input value={newBook.author}
             onChange={e => setNewBook(nb => ({ ...nb, author: e.target.value }))}
             placeholder="Author"
-            className="flex-1 min-w-[120px] bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-400" />
+            className="flex-1 min-w-[120px] bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-emerald-400" />
           <div className="flex border border-gray-700 rounded overflow-hidden">
             {['book', 'audio'].map(f => (
               <button key={f} onClick={() => setNewBook(nb => ({ ...nb, format: f }))}
                 className="px-3 py-2 text-[10px] tracking-widest uppercase"
                 style={newBook.format === f
-                  ? { color: READING_PURPLE, background: 'rgba(167,139,250,0.12)' }
+                  ? { color: READING_ACCENT, background: 'rgba(52,211,153,0.12)' }
                   : { color: '#5f6e73' }}>
                 {f}
               </button>
@@ -221,12 +256,12 @@ export default function ReadingPanel() {
           </div>
           <select value={newBook.genre}
             onChange={e => setNewBook(nb => ({ ...nb, genre: e.target.value }))}
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-violet-400">
+            className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-emerald-400">
             {GENRE_PRESETS.map(g => <option key={g} value={g}>{g}</option>)}
           </select>
           <button onClick={submitAdd}
-            className="px-4 py-2 text-[11px] tracking-widest uppercase font-semibold rounded border transition-colors hover:bg-violet-400/10"
-            style={{ color: READING_PURPLE, borderColor: 'rgba(167,139,250,0.4)' }}>
+            className="px-4 py-2 text-[11px] tracking-widest uppercase font-semibold rounded border transition-colors hover:bg-emerald-400/10"
+            style={{ color: READING_ACCENT, borderColor: 'rgba(52,211,153,0.4)' }}>
             + Add
           </button>
         </div>
@@ -237,24 +272,44 @@ export default function ReadingPanel() {
         ) : (
           <div className="space-y-1">
             {r.queue.map((b, i) => (
-              <div key={i} className="flex items-center gap-3 py-2 px-2 rounded hover:bg-gray-800/50 group">
-                <span className="text-xs text-gray-600 w-4 text-right">{i + 1}</span>
-                <div className="flex-1 min-w-0 truncate">
-                  <span className="text-[13px] font-semibold text-gray-200">{b.title}</span>
-                  <span className="text-xs text-gray-600"> — {b.author}</span>
+              editingQueueId === b.id ? (
+                <div key={i} className="flex items-center gap-2 py-2 px-2">
+                  <span className="text-xs text-gray-600 w-4 text-right shrink-0">{i + 1}</span>
+                  <input value={queueDraft.title}
+                    onChange={e => setQueueDraft(d => ({ ...d, title: e.target.value }))}
+                    onKeyDown={e => { if (e.key === 'Enter') saveQueueEdit(b); if (e.key === 'Escape') setEditingQueueId(null) }}
+                    placeholder="Title"
+                    className="flex-[2] min-w-0 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-400" autoFocus />
+                  <input value={queueDraft.author}
+                    onChange={e => setQueueDraft(d => ({ ...d, author: e.target.value }))}
+                    onKeyDown={e => { if (e.key === 'Enter') saveQueueEdit(b); if (e.key === 'Escape') setEditingQueueId(null) }}
+                    placeholder="Author"
+                    className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-400" />
+                  <button onClick={() => saveQueueEdit(b)} className="text-[10px] tracking-widest uppercase text-emerald-400 hover:text-emerald-300 shrink-0">Save</button>
+                  <button onClick={() => setEditingQueueId(null)} className="text-[10px] tracking-widest uppercase text-gray-500 hover:text-white shrink-0">Cancel</button>
                 </div>
-                <span className="text-[9px] tracking-widest uppercase rounded px-1.5 py-0.5 border shrink-0"
-                  style={{ color: READING_PURPLE, borderColor: 'rgba(167,139,250,0.4)' }}>
-                  {b.format === 'audio' ? 'Audio' : 'Book'}
-                </span>
-                <span className="text-[11px] text-gray-600 w-28 truncate shrink-0">{b.genre}</span>
-                <button onClick={() => r.startNow(i)}
-                  className="text-[10px] tracking-widest uppercase rounded px-2 py-1 border shrink-0 text-emerald-400 border-emerald-400/40 hover:bg-emerald-400/10">
-                  Start
-                </button>
-                <button onClick={() => r.removeFromList(i)}
-                  className="text-gray-700 hover:text-red-400 text-base leading-none shrink-0 opacity-0 group-hover:opacity-100">×</button>
-              </div>
+              ) : (
+                <div key={i} className="flex items-center gap-3 py-2 px-2 rounded hover:bg-gray-800/50 group">
+                  <span className="text-xs text-gray-600 w-4 text-right">{i + 1}</span>
+                  <div className="flex-1 min-w-0 truncate">
+                    <span className="text-[13px] font-semibold text-gray-200">{b.title}</span>
+                    <span className="text-xs text-gray-600"> — {b.author}</span>
+                  </div>
+                  <span className="text-[9px] tracking-widest uppercase rounded px-1.5 py-0.5 border shrink-0"
+                    style={{ color: READING_ACCENT, borderColor: 'rgba(52,211,153,0.4)' }}>
+                    {b.format === 'audio' ? 'Audio' : 'Book'}
+                  </span>
+                  <span className="text-[11px] text-gray-600 w-28 truncate shrink-0">{b.genre}</span>
+                  <button onClick={() => r.startNow(i)}
+                    className="text-[10px] tracking-widest uppercase rounded px-2 py-1 border shrink-0 text-emerald-400 border-emerald-400/40 hover:bg-emerald-400/10">
+                    Start
+                  </button>
+                  <button onClick={() => startQueueEdit(b)}
+                    className="text-gray-600 hover:text-white text-xs shrink-0 opacity-0 group-hover:opacity-100" title="Edit book">✎</button>
+                  <button onClick={() => r.removeFromList(i)}
+                    className="text-gray-700 hover:text-red-400 text-base leading-none shrink-0 opacity-0 group-hover:opacity-100">×</button>
+                </div>
+              )
             ))}
           </div>
         )}
@@ -291,7 +346,7 @@ export default function ReadingPanel() {
         <div className="min-w-0">
           <div className="flex items-center gap-3 mb-3">
             <span className={subLabel}>Daily Reading Activity · {year}</span>
-            <span className="text-[11px] font-semibold" style={{ color: READING_PURPLE }}>{r.heat.streak}-day streak</span>
+            <span className="text-[11px] font-semibold" style={{ color: READING_ACCENT }}>{r.heat.streak}-day streak</span>
             <span className="text-[11px] text-gray-600">{r.heat.activeDays} active days</span>
           </div>
           <div className="overflow-x-auto">

@@ -4,6 +4,7 @@ import FinancePage from './components/FinancePage'
 import ProductivityPage from './components/ProductivityPage'
 import ProductivityOverview from './components/ProductivityOverview'
 import HabitsGoalsPage from './components/HabitsGoalsPage'
+import ReadingPage from './components/ReadingPage'
 import HealthPage from './components/HealthPage'
 import TrainingPage from './components/TrainingPage'
 import TrainingOverview from './components/TrainingOverview'
@@ -114,9 +115,11 @@ function App() {
             {activeTab === 'productivity' && (
               activeSubItem === 'habits-goals'
                 ? <HabitsGoalsPage />
-                : (activeSubItem === 'overview' || activeSubItem == null)
-                  ? <ProductivityOverview onOpenSub={(sub) => navigate('productivity', sub)} />
-                  : <ProductivityPage />
+                : activeSubItem === 'reading'
+                  ? <ReadingPage />
+                  : (activeSubItem === 'overview' || activeSubItem == null)
+                    ? <ProductivityOverview onOpenSub={(sub) => navigate('productivity', sub)} />
+                    : <ProductivityPage />
             )}
             {activeTab === 'health' && <HealthPage />}
             {activeTab === 'training' && (
