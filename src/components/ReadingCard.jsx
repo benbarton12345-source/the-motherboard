@@ -11,7 +11,6 @@ export default function ReadingCard() {
   const [goalDraft, setGoalDraft] = useState('')
   const [customGenre, setCustomGenre] = useState('')
 
-  const cardStyle = { borderColor: 'rgba(52,211,153,0.18)' }
   const recent = r.heat.weeks.slice(-13)
 
   function onBarClick(e) {
@@ -25,11 +24,7 @@ export default function ReadingCard() {
   const u = unitInfo(c)
 
   return (
-    <div className="relative bg-gray-900 border rounded-lg p-5 overflow-visible" style={cardStyle}>
-      {/* emerald accent bar */}
-      <div className="absolute left-0 top-0 h-0.5 w-full rounded-t-lg"
-        style={{ background: 'linear-gradient(90deg,#34d399,transparent)', boxShadow: '0 0 8px #34d399' }} />
-
+    <div className="relative bg-gray-900 border border-gray-800 rounded-lg p-5 overflow-visible">
       <h2 className="text-[11px] tracking-widest uppercase font-semibold mb-3" style={{ color: READING_ACCENT }}>Reading</h2>
 
       {c ? (
@@ -63,7 +58,7 @@ export default function ReadingCard() {
           {/* Progress */}
           <div className="mt-3">
             <div className="h-1.5 bg-gray-800 rounded cursor-pointer" onClick={onBarClick}>
-              <div className="h-full rounded" style={{ width: `${c.progress}%`, background: READING_ACCENT, boxShadow: '0 0 6px #34d399' }} />
+              <div className="h-full rounded" style={{ width: `${c.progress}%`, background: READING_ACCENT }} />
             </div>
             <div className="flex justify-between mt-1.5 text-[11px]">
               <span className="text-gray-500">{u.unitText}</span>

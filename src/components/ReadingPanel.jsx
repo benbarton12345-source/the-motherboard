@@ -62,11 +62,7 @@ export default function ReadingPanel() {
   }
 
   return (
-    <div className="relative bg-gray-900 border rounded-lg p-6 overflow-visible" style={{ borderColor: 'rgba(52,211,153,0.22)' }}>
-      {/* emerald accent bar */}
-      <div className="absolute left-0 top-0 h-full w-0.5 rounded-l-lg"
-        style={{ background: 'linear-gradient(180deg,#34d399,transparent)', boxShadow: '0 0 8px #34d399' }} />
-
+    <div className="relative bg-gray-900 border border-gray-800 rounded-lg p-6 overflow-visible">
       <h2 className="text-[11px] tracking-widest uppercase font-semibold mb-5" style={{ color: READING_ACCENT }}>
         Reading · {year} Goal
       </h2>
@@ -102,7 +98,7 @@ export default function ReadingPanel() {
 
               <div className="mt-3">
                 <div className="h-2 bg-gray-800 rounded cursor-pointer" onClick={onBarClick}>
-                  <div className="h-full rounded" style={{ width: `${c.progress}%`, background: READING_ACCENT, boxShadow: '0 0 6px #34d399' }} />
+                  <div className="h-full rounded" style={{ width: `${c.progress}%`, background: READING_ACCENT }} />
                 </div>
                 <div className="flex justify-between mt-2 text-xs">
                   <span className="text-gray-500">{u.unitText} · {u.remainingText}</span>
