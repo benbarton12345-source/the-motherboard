@@ -95,6 +95,7 @@ export default function HabitsGoalsPage() {
       <LongTermGoalsSection
         goals={longTermGoals} setGoals={setLongTermGoals}
         journal={journal} setJournal={setJournal}
+        onPromoteToYearly={g => setYearlyGoals(prev => [...prev, g])}
       />
     </div>
   )
