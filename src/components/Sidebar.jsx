@@ -58,6 +58,7 @@ const NAV = [
   {
     id: 'health', label: 'Health', icon: HealthIcon,
     subs: [
+      { id: 'overview', label: 'Overview' },
       { id: 'daily-metrics', label: 'Daily Metrics' },
       { id: 'nutrition', label: 'Nutrition' },
       { id: 'mood', label: 'Mood' },

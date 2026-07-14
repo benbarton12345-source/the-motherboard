@@ -121,7 +121,12 @@ function App() {
                     ? <ProductivityOverview onOpenSub={(sub) => navigate('productivity', sub)} />
                     : <ProductivityPage />
             )}
-            {activeTab === 'health' && <HealthPage />}
+            {activeTab === 'health' && (
+              <HealthPage
+                subItem={activeSubItem}
+                onOpenSub={(sub) => navigate('health', sub)}
+              />
+            )}
             {activeTab === 'training' && (
               activeSubItem === 'overview' || activeSubItem == null
                 ? <TrainingOverview
