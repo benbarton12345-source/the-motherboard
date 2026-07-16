@@ -16,7 +16,18 @@ const FIELDS = [
   { key: 'proud_of', label: 'One thing I am proud of' },
 ]
 
-const EMPTY = { went_well: '', challenge_overcome: '', improve_next_week: '', proud_of: '', consistency_score: '', anything_else: '' }
+// Identity Check section — 4 free-text fields appended below the core 6.
+const IDENTITY_FIELDS = [
+  { key: 'fewest_votes_domain', label: 'Which domain got the fewest votes this week, and why?' },
+  { key: 'against_trigger', label: 'Where did I vote against the person I’m becoming — what triggered it?' },
+  { key: 'trading_lesson', label: 'One trading observation or lesson this week' },
+  { key: 'identity_match_vs_last_week', label: 'Did this week’s version of me match the future version I described, more or less than last week?' },
+]
+
+const EMPTY = {
+  went_well: '', challenge_overcome: '', improve_next_week: '', proud_of: '', consistency_score: '', anything_else: '',
+  fewest_votes_domain: '', against_trigger: '', trading_lesson: '', identity_match_vs_last_week: '',
+}
 
 function weekOfLabel(monday) {
   const [y, m, d] = monday.split('-').map(Number)
@@ -57,6 +68,10 @@ export default function WeeklyReviewModal({ initialOffset = 0, startInHistory = 
             proud_of: data.proud_of || '',
             consistency_score: data.consistency_score ?? '',
             anything_else: data.anything_else || '',
+            fewest_votes_domain: data.fewest_votes_domain || '',
+            against_trigger: data.against_trigger || '',
+            trading_lesson: data.trading_lesson || '',
+            identity_match_vs_last_week: data.identity_match_vs_last_week || '',
           })
           setSealedAt(data.sealed_at || null)
         } else {
@@ -91,6 +106,10 @@ export default function WeeklyReviewModal({ initialOffset = 0, startInHistory = 
       proud_of: next.proud_of,
       anything_else: next.anything_else,
       consistency_score: next.consistency_score !== '' ? parseInt(next.consistency_score, 10) : null,
+      fewest_votes_domain: next.fewest_votes_domain,
+      against_trigger: next.against_trigger,
+      trading_lesson: next.trading_lesson,
+      identity_match_vs_last_week: next.identity_match_vs_last_week,
     }, { onConflict: 'week_start' })
     setSaveStatus('saved')
     clearTimeout(saveTimer.current)
@@ -118,6 +137,10 @@ export default function WeeklyReviewModal({ initialOffset = 0, startInHistory = 
       proud_of: form.proud_of,
       anything_else: form.anything_else,
       consistency_score: score,
+      fewest_votes_domain: form.fewest_votes_domain,
+      against_trigger: form.against_trigger,
+      trading_lesson: form.trading_lesson,
+      identity_match_vs_last_week: form.identity_match_vs_last_week,
       sealed: true,
       sealed_at: now,
     }, { onConflict: 'week_start' })
@@ -241,6 +264,27 @@ export default function WeeklyReviewModal({ initialOffset = 0, startInHistory = 
                   className={`${inputCls} resize-none`}
                 />
               </div>
+
+              {/* Identity Check section */}
+              <div className="flex items-center gap-3 pt-2">
+                <div className="h-px flex-1 bg-gray-800" />
+                <span className="text-[11px] font-bold tracking-[0.08em] uppercase text-blue-400">Identity Check</span>
+                <div className="h-px flex-1 bg-gray-800" />
+              </div>
+
+              {IDENTITY_FIELDS.map(f => (
+                <div key={f.key}>
+                  <label className="block text-[11px] text-gray-500 uppercase tracking-widest mb-1.5">{f.label}</label>
+                  <textarea
+                    value={form[f.key]}
+                    disabled={sealed}
+                    onChange={e => setField(f.key, e.target.value)}
+                    onBlur={() => persist()}
+                    rows={2}
+                    className={`${inputCls} resize-none`}
+                  />
+                </div>
+              ))}
 
               {warn && <div className="text-xs text-amber-400">{warn}</div>}
 

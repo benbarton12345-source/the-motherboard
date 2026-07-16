@@ -8,6 +8,10 @@ import {
 import HabitTracker from './HabitTracker'
 import TodaysTasks from './TodaysTasks'
 import WeeklyReviewModal from './WeeklyReviewModal'
+import DailyIdentityModal from './DailyIdentityModal'
+import {
+  IDENTITY_DOMAINS, IDENTITY_WINDOW_DAYS, identityBadge, tallyLabel,
+} from '../utils/identityDomains'
 
 // Productivity Overview — a 10-second pulse across all four sub-pages. Reads
 // live data where the source is already built (habits, weekly/yearly goals,
@@ -29,12 +33,23 @@ export default function ProductivityOverview({ onOpenSub }) {
   const [review, setReview] = useState(null)
   const [sealedWeeks, setSealedWeeks] = useState(new Set())
   const [reviewModal, setReviewModal] = useState(null) // null | { history: bool }
+  const [identityToday, setIdentityToday] = useState([])   // today's rows
+  const [identityWindow, setIdentityWindow] = useState([]) // trailing-window rows
+  const [identityOpen, setIdentityOpen] = useState(false)
 
   function refreshReview() {
     supabase.from('weekly_reviews').select('*').eq('week_start', monday).maybeSingle()
       .then(({ data }) => { setReview(data || null) })
     supabase.from('weekly_reviews').select('week_start, sealed_at').not('sealed_at', 'is', null)
       .then(({ data }) => { if (data) setSealedWeeks(new Set(data.map(r => r.week_start))) })
+  }
+
+  function refreshIdentity() {
+    const windowStart = shiftDate(today, -(IDENTITY_WINDOW_DAYS - 1))
+    supabase.from('identity_votes').select('domain, vote, note').eq('vote_date', today)
+      .then(({ data }) => { if (data) setIdentityToday(data) })
+    supabase.from('identity_votes').select('domain, vote').gte('vote_date', windowStart)
+      .then(({ data }) => { if (data) setIdentityWindow(data) })
   }
 
   useEffect(() => {
@@ -67,6 +82,12 @@ export default function ProductivityOverview({ onOpenSub }) {
       .then(({ data }) => { setReview(data || null) })
     supabase.from('weekly_reviews').select('week_start, sealed_at').not('sealed_at', 'is', null)
       .then(({ data }) => { if (data) setSealedWeeks(new Set(data.map(r => r.week_start))) })
+    // Identity votes — today (stat card + banner) and the trailing window (widget).
+    const identityStart = shiftDate(today, -(IDENTITY_WINDOW_DAYS - 1))
+    supabase.from('identity_votes').select('domain, vote, note').eq('vote_date', today)
+      .then(({ data }) => { if (data) setIdentityToday(data) })
+    supabase.from('identity_votes').select('domain, vote').gte('vote_date', identityStart)
+      .then(({ data }) => { if (data) setIdentityWindow(data) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -110,6 +131,28 @@ export default function ProductivityOverview({ onOpenSub }) {
     .filter(g => !/freedom figure/i.test(g.name) && g.goal_type === 'numeric')
     .slice(0, 4)
 
+  // ── Identity ───────────────────────────────────────────────────────────────
+  // Today's tally (stat card + banner subtitle).
+  const identityCounts = identityToday.reduce((acc, r) => {
+    if (r.vote === 'for') acc.forCount++
+    else if (r.vote === 'neutral') acc.neutral++
+    else if (r.vote === 'against') acc.against++
+    return acc
+  }, { forCount: 0, neutral: 0, against: 0 })
+  const identityCast = identityCounts.forCount + identityCounts.neutral + identityCounts.against
+
+  // Trailing-window aggregate, one entry per domain (in fixed domain order).
+  const identityAgg = IDENTITY_DOMAINS.map(d => {
+    const rows = identityWindow.filter(r => r.domain === d.name)
+    const t = {
+      forCount: rows.filter(r => r.vote === 'for').length,
+      neutral: rows.filter(r => r.vote === 'neutral').length,
+      against: rows.filter(r => r.vote === 'against').length,
+    }
+    const total = t.forCount + t.neutral + t.against
+    return { name: d.name, ...t, total, badge: identityBadge(t) }
+  })
+
   const cardCls = 'bg-gray-900 border border-gray-800 rounded-lg p-5'
   const labelCls = 'text-[10px] text-gray-500 uppercase tracking-widest mb-2'
   const viewAll = sub => (
@@ -138,12 +181,17 @@ export default function ProductivityOverview({ onOpenSub }) {
       main: <span className="text-lg font-bold text-white truncate block">{currentBook ? currentBook.title : 'No current book'}</span>,
       sub: <span className="text-gray-500">{currentBook && currentBook.progress != null ? `${currentBook.progress}% · ` : ''}{booksDone}/{readingGoal} books</span>,
     },
+    {
+      label: 'Identity Today',
+      main: <><span className="text-3xl font-bold text-emerald-400">{identityCast}</span><span className="text-sm text-gray-500">/ {IDENTITY_DOMAINS.length}</span></>,
+      sub: <span className="text-gray-500">{tallyLabel(identityCounts)}</span>,
+    },
   ]
 
   return (
     <div className="space-y-4">
       {/* Week snapshot strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {snapshot.map(s => (
           <div key={s.label} className={cardCls}>
             <div className={labelCls}>{s.label}</div>
@@ -200,6 +248,34 @@ export default function ProductivityOverview({ onOpenSub }) {
         </div>
       </div>
 
+      {/* Identity — votes toward who I'm becoming (trailing window, all domains) */}
+      <div className={cardCls}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm tracking-widest uppercase text-gray-400">Identity — votes toward who I'm becoming</h2>
+          <button onClick={() => setIdentityOpen(true)} className="text-xs text-emerald-400 hover:text-emerald-300 uppercase tracking-widest transition-colors">View all →</button>
+        </div>
+        <div className="text-[11px] text-gray-600 mb-4">Last {IDENTITY_WINDOW_DAYS} days, all domains</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-7 gap-y-4">
+          {identityAgg.map(d => {
+            const total = d.total || 1
+            return (
+              <div key={d.name}>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="text-[13px] font-semibold text-gray-100 truncate">{d.name}</span>
+                  <span className={`shrink-0 text-[10px] font-bold tracking-widest px-1.5 py-0.5 rounded border whitespace-nowrap ${d.badge.text} ${d.badge.border}`}>{d.badge.label}</span>
+                </div>
+                <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-gray-800">
+                  <div className="bg-emerald-400" style={{ width: `${(d.forCount / total) * 100}%` }} />
+                  <div className="bg-amber-400" style={{ width: `${(d.neutral / total) * 100}%` }} />
+                  <div className="bg-red-400" style={{ width: `${(d.against / total) * 100}%` }} />
+                </div>
+                <div className="mt-1 text-[10.5px] text-gray-500">{tallyLabel(d)}</div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Weekly Review card */}
       <div className={`bg-gray-900 border rounded-lg p-6 ${reviewSealed ? 'border-emerald-400/50' : 'border-amber-400/50'}`}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -232,6 +308,27 @@ export default function ProductivityOverview({ onOpenSub }) {
                 className="px-4 py-2 bg-amber-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-amber-300 transition-colors"
               >{reviewInProgress ? 'Continue Review' : 'Start Weekly Review'}</button>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Identity Check-In banner (same shape as the Weekly Review card) */}
+      <div className={`bg-gray-900 border rounded-lg p-6 ${identityCast > 0 ? 'border-emerald-400/50' : 'border-gray-800'}`}>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <span className="w-8 h-8 rounded-full bg-emerald-400/15 text-emerald-400 flex items-center justify-center text-sm font-bold">✓</span>
+            <div>
+              <div className="text-sm text-white font-medium">Identity Check-In · Today</div>
+              <div className="text-xs text-gray-500">
+                {identityCast === 0 ? 'No votes cast yet' : tallyLabel(identityCounts)}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIdentityOpen(true)}
+              className="px-4 py-2 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded hover:bg-emerald-300 transition-colors"
+            >{identityCast > 0 ? "Update today's votes" : "Cast today's votes"}</button>
           </div>
         </div>
       </div>
@@ -273,6 +370,13 @@ export default function ProductivityOverview({ onOpenSub }) {
           startInHistory={reviewModal.history}
           onClose={() => setReviewModal(null)}
           onSealed={refreshReview}
+        />
+      )}
+
+      {identityOpen && (
+        <DailyIdentityModal
+          onClose={() => { setIdentityOpen(false); refreshIdentity() }}
+          onChange={refreshIdentity}
         />
       )}
     </div>
