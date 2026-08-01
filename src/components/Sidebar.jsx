@@ -40,6 +40,7 @@ const NAV = [
   {
     id: 'finance', label: 'Finance', icon: FinanceIcon,
     subs: [
+      { id: 'overview', label: 'Overview' },
       { id: 'net-worth', label: 'Net Worth' },
       { id: 'budgeting', label: 'Budgeting' },
       { id: 'projections', label: 'Projections' },

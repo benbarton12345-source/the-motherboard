@@ -8,15 +8,13 @@ import { latestBalance, groupSnapshots } from '../utils/netWorthHelpers'
 import { FI_PROJECTION_YEARS } from '../utils/financeTaxonomy'
 import {
   projectSeries, yearlySlice, findCrossingMonth, monthsToLabel, reverseCalc, sensitivity,
-  MILESTONES, NET_WORTH_TARGET_GBP,
+  MILESTONES, NET_WORTH_TARGET_GBP, DEFAULT_ASSUMPTIONS,
 } from '../utils/projectionEngine'
 
 // Projections — forward net-worth projection to the £1.5m target. Monthly-resolution
 // engine (shared with Overview's FI-pace) run in GBP off the REAL current net worth,
 // displayed in the active currency. A single in-memory assumption set for now
 // (persistence is a follow-on migration); sliders recompute the chart/numbers live.
-const DEFAULT_ASSUMPTIONS = { contribution: 1800, growth: 7, salary: 3, inflation: 2.5, advicePct: 70 }
-
 const LINE = { total: '#34d399', advice: '#5b93c4', trading: '#f59e0b' }
 
 function soonerLabel(m) {

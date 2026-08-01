@@ -8,6 +8,10 @@ import { FI_PROJECTION_YEARS, NET_WORTH_TARGET_GBP } from './financeTaxonomy'
 export { NET_WORTH_TARGET_GBP }
 export const MILESTONES = [250000, 500000, 1000000, 1500000]
 
+// Default assumption set — the primary scenario. Shared by the Projections page
+// and Overview's FI-pace so the two can never disagree on a crossing date.
+export const DEFAULT_ASSUMPTIONS = { contribution: 1800, growth: 7, salary: 3, inflation: 2.5, advicePct: 70 }
+
 // A scenario's assumptions:
 //   contribution — £/month, stepped up each year by `salary`%
 //   growth       — % annual return (compounded monthly)

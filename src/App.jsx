@@ -3,6 +3,7 @@ import HomePage from './components/HomePage'
 import FinancePage from './components/FinancePage'
 import NetWorthPage from './components/NetWorthPage'
 import ProjectionsPage from './components/ProjectionsPage'
+import FinanceOverviewPage from './components/FinanceOverviewPage'
 import ProductivityPage from './components/ProductivityPage'
 import ProductivityOverview from './components/ProductivityOverview'
 import HabitsGoalsPage from './components/HabitsGoalsPage'
@@ -113,11 +114,13 @@ function App() {
           <div className="max-w-7xl mx-auto px-6 py-6">
             {activeTab === 'home' && <HomePage />}
             {activeTab === 'finance' && (
-              activeSubItem === 'budgeting'
-                ? <FinancePage />
-                : activeSubItem === 'projections'
-                  ? <ProjectionsPage />
-                  : <NetWorthPage />
+              activeSubItem === 'net-worth'
+                ? <NetWorthPage />
+                : activeSubItem === 'budgeting'
+                  ? <FinancePage />
+                  : activeSubItem === 'projections'
+                    ? <ProjectionsPage />
+                    : <FinanceOverviewPage />
             )}
             {activeTab === 'trading' && <TradingPlaceholder />}
             {activeTab === 'productivity' && (
