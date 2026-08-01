@@ -12,6 +12,13 @@ const EXPENSE_CATEGORIES = ['Rent', 'Food', 'Transport', 'Subscriptions', 'Enter
 const FREQ_LABELS = { monthly: 'Monthly', fortnightly: 'Fortnightly', weekly: 'Weekly', quarterly: 'Quarterly', annual: 'Annual' }
 const EMPTY_SNAP_ENTRY = { name: '', type: 'Cash', value: '', currency: 'GBP' }
 
+// Legacy net-worth snapshot entry is DISABLED. Snapshot entry now lives on the new
+// Net Worth page (writes to accounts/account_snapshots). This old form wrote to the
+// dead-end net_worth_snapshots table — leaving it reachable created a data-loss trap
+// (two places to enter a snapshot, only one of them read). Gated off here as an
+// immediate standalone fix; full removal of the section comes with the Budgeting fit-up.
+const LEGACY_SNAPSHOT_FORM_ENABLED = false
+
 function toMonthly(amount, frequency) {
   switch (frequency) {
     case 'monthly':     return amount
@@ -795,7 +802,8 @@ export default function FinancePage() {
         onOpenImport={() => setShowImport(true)}
       />
 
-      {/* ── Section 5: Snapshot History ───────────────────────────────────────── */}
+      {/* ── Section 5: Snapshot History — legacy entry form DISABLED ───────────── */}
+      {LEGACY_SNAPSHOT_FORM_ENABLED && (
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm tracking-widest uppercase text-gray-400">Snapshot History</h2>
@@ -909,6 +917,7 @@ export default function FinancePage() {
           <div className="text-sm text-gray-600">No snapshots yet. Add your first snapshot above.</div>
         )}
       </div>
+      )}
 
       {/* ── Budget modals ─────────────────────────────────────────────────────── */}
 
@@ -980,9 +989,9 @@ export default function FinancePage() {
         </Modal>
       )}
 
-      {/* ── New Snapshot modal ────────────────────────────────────────────────── */}
+      {/* ── New Snapshot modal (legacy — disabled) ────────────────────────────── */}
 
-      {showSnapModal && (
+      {LEGACY_SNAPSHOT_FORM_ENABLED && showSnapModal && (
         <Modal
           title="New Snapshot"
           onClose={() => setShowSnapModal(false)}

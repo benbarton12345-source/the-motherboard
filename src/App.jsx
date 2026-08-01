@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import HomePage from './components/HomePage'
 import FinancePage from './components/FinancePage'
 import NetWorthPage from './components/NetWorthPage'
+import ProjectionsPage from './components/ProjectionsPage'
 import ProductivityPage from './components/ProductivityPage'
 import ProductivityOverview from './components/ProductivityOverview'
 import HabitsGoalsPage from './components/HabitsGoalsPage'
@@ -115,7 +116,7 @@ function App() {
               activeSubItem === 'budgeting'
                 ? <FinancePage />
                 : activeSubItem === 'projections'
-                  ? <SectionPlaceholder label="Projections" />
+                  ? <ProjectionsPage />
                   : <NetWorthPage />
             )}
             {activeTab === 'trading' && <TradingPlaceholder />}
@@ -147,27 +148,6 @@ function App() {
             )}
           </div>
         </main>
-      </div>
-    </div>
-  )
-}
-
-function SectionPlaceholder({ label }) {
-  return (
-    <div className="flex flex-col items-center justify-center text-center gap-4 py-20 min-h-[320px]">
-      <div className="w-16 h-16 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-600">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" />
-        </svg>
-      </div>
-      <div>
-        <div className="text-[17px] font-bold tracking-tight text-white mb-2">{label}</div>
-        <div className="text-sm text-gray-500 leading-relaxed max-w-[280px] mx-auto">
-          This section is not yet built. It will appear here once ready.
-        </div>
-      </div>
-      <div className="bg-white/5 border border-gray-800 text-gray-500 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
-        Coming soon
       </div>
     </div>
   )

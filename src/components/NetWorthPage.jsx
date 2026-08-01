@@ -69,6 +69,20 @@ export default function NetWorthPage() {
   const latestByAccount = Object.fromEntries(accounts.map(a => [a.id, nativeOf(a)]))
   const openAccount = accounts.find(a => a.id === openAccountId) || null
 
+  // Snapshot history — total net worth (display ccy) at each recorded date, using
+  // each account's latest balance on-or-before that date (carry-forward, so a date
+  // where one account has no entry still counts its last known balance).
+  const allDates = [...new Set(Object.values(snaps).flat().map(r => r.snapshot_date))].sort()
+  const snapshotHistory = allDates.map(date => {
+    const total = accounts.reduce((sum, a) => {
+      const hist = snaps[a.id] || []
+      let bal = null
+      for (const r of hist) { if (r.snapshot_date <= date) bal = Number(r.balance); else break }
+      return sum + (bal != null ? convert(bal, a.currency) : 0)
+    }, 0)
+    return { date, total }
+  }).reverse()
+
   // ── Account row (reused under Cash and each Invested sub-class) ──────────────
   function AccountRow({ a }) {
     const history = (snaps[a.id] || []).map(r => Number(r.balance))
@@ -186,10 +200,30 @@ export default function NetWorthPage() {
             </div>
 
             <div className={`${cardCls} p-5`}>
-              <div className="text-[12px] font-bold uppercase tracking-widest text-gray-500 mb-2.5">Snapshot history</div>
-              <p className="text-[12.5px] text-gray-400 leading-relaxed">
-                Manual entry, on whatever date suits — every account keeps a full snapshot history, not just a running balance, so the trend lines stay accurate however often you update.
-              </p>
+              <div className="text-[12px] font-bold uppercase tracking-widest text-gray-500 mb-3">Snapshot history</div>
+              {snapshotHistory.length === 0 ? (
+                <div className="text-sm text-gray-600">No snapshots yet.</div>
+              ) : (
+                <div>
+                  {snapshotHistory.map((h, i) => {
+                    const older = snapshotHistory[i + 1]
+                    const pct = older && older.total ? ((h.total - older.total) / older.total) * 100 : null
+                    return (
+                      <div key={h.date} className="flex items-center justify-between py-2 border-b border-gray-800/70 last:border-0">
+                        <span className="text-[13px] text-gray-400 tabular-nums">{h.date}</span>
+                        <div className="flex items-center gap-3">
+                          {pct !== null && (
+                            <span className={`text-[11px] font-semibold tabular-nums ${pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
+                            </span>
+                          )}
+                          <span className="text-[13px] font-semibold text-white tabular-nums">{format(h.total)}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
