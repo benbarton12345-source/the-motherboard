@@ -67,9 +67,10 @@ function ChartTooltip({ active, payload, label, fmt }) {
 }
 
 // ── Main ─────────────────────────────────────────────────────────────
-export default function BudgetingInsights({ selectedMonth, snapshots = [], onOpenImport, reloadKey = 0 }) {
+export default function BudgetingInsights({ selectedMonth, snapshots = [], onOpenImport, reloadKey = 0, includeShared = true }) {
   const { convert, format, currency, rate } = useCurrency()
-  const [entries, setEntries] = useState([])
+  const [rawEntries, setRawEntries] = useState([])
+  const [transactions, setTransactions] = useState([])
   const [imports, setImports] = useState([])
   const [loading, setLoading] = useState(true)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -100,10 +101,12 @@ export default function BudgetingInsights({ selectedMonth, snapshots = [], onOpe
     Promise.all([
       supabase.from('budget_entries').select('*').gte('month', start).lt('month', end),
       supabase.from('statement_imports').select('statement_month'),
-    ]).then(([be, si]) => {
+      supabase.from('transactions').select('month,category,amount,tag,merchant,one_off').gte('month', start).lt('month', end),
+    ]).then(([be, si, tx]) => {
       if (cancelled) return
-      setEntries(be.data || [])
+      setRawEntries(be.data || [])
       setImports(si.data || [])
+      setTransactions(tx.data || [])
       setLoading(false)
     })
     return () => { cancelled = true }
@@ -113,6 +116,38 @@ export default function BudgetingInsights({ selectedMonth, snapshots = [], onOpe
     () => imports.some(i => i.statement_month === selectedMonth),
     [imports, selectedMonth],
   )
+
+  // Transactions are the source of truth where they exist: for months with
+  // transactions, swap the variable-expense aggregates for transaction-derived
+  // category rows (applying the shared/individual include filter); older months
+  // keep their budget_entries aggregates. Recurring/income rows are untouched, and
+  // one-off transactions stay as individual rows (merchant preserved in notes).
+  const entries = useMemo(() => {
+    if (!transactions.length) return rawEntries
+    const txMonths = new Set(transactions.map(t => t.month))
+    const kept = rawEntries.filter(e => {
+      const isVarExpense = e.type === 'expense' && !e.recurring_item_id
+        && typeof e.notes === 'string' && e.notes.startsWith('statement-import')
+      return !(isVarExpense && txMonths.has(e.month))
+    })
+    const synth = []
+    for (const m of txMonths) {
+      const catTotals = {}
+      for (const t of transactions) {
+        if (t.month !== m) continue
+        if (!includeShared && t.tag === 'shared') continue
+        if (t.one_off) {
+          synth.push({ month: m, category: t.category, type: 'expense', amount: Number(t.amount) || 0, currency: 'AUD', recurring_item_id: null, one_off: true, notes: `statement-import: ${t.merchant}` })
+        } else {
+          catTotals[t.category] = (catTotals[t.category] || 0) + (Number(t.amount) || 0)
+        }
+      }
+      for (const [cat, amt] of Object.entries(catTotals)) {
+        synth.push({ month: m, category: cat, type: 'expense', amount: amt, currency: 'AUD', recurring_item_id: null, one_off: false, notes: 'transactions' })
+      }
+    }
+    return [...kept, ...synth]
+  }, [rawEntries, transactions, includeShared])
 
   // ── Everything derived (recomputed on data / currency / settings) ──
   const d = useMemo(() => {

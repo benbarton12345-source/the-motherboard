@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo } from 'react'
 
 const CurrencyContext = createContext()
 
@@ -35,4 +35,27 @@ export function CurrencyProvider({ children }) {
 
 export function useCurrency() {
   return useContext(CurrencyContext)
+}
+
+// Locks a subtree to a fixed display currency regardless of the app-wide toggle,
+// and makes setCurrency inert inside it. Used for the AUD-only Budgeting page so
+// it always renders in AUD and nothing it does can change global currency state.
+export function ForceCurrency({ currency: forced, children }) {
+  const base = useCurrency()
+  const value = useMemo(() => ({
+    ...base,
+    currency: forced,
+    setCurrency: () => {}, // inert — Budgeting must not mutate app-wide currency
+    convert(amount, fromCurrency) {
+      if (!base.rate || fromCurrency === forced) return amount
+      if (fromCurrency === 'GBP' && forced === 'AUD') return amount * base.rate
+      if (fromCurrency === 'AUD' && forced === 'GBP') return amount / base.rate
+      return amount
+    },
+    format(amount) {
+      const symbol = forced === 'GBP' ? '£' : 'A$'
+      return `${symbol}${amount.toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+    },
+  }), [base, forced])
+  return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>
 }

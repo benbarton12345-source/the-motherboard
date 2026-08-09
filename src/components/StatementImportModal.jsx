@@ -204,6 +204,31 @@ export default function StatementImportModal({ onClose, onImported }) {
     }
     if (inserts.length) await supabase.from('budget_entries').insert(inserts)
 
+    // 3b. Per-transaction rows (going-forward). Every variable-spend transaction is
+    //     written to `transactions` (merchant-level) so Insights, the bulk-edit table,
+    //     and shared/individual tagging have real rows. Older months keep only their
+    //     budget_entries aggregates. Replaces this month's transactions on re-import.
+    const txRows = []
+    for (const cat of included) {
+      for (const t of cat.transactions) {
+        txRows.push({
+          tx_date: t.date || monthDate, merchant: t.merchant, category: cat.name,
+          amount: round2(t.amount), currency: 'AUD', month: monthDate,
+          source: t.source || 'statement-import', one_off: !!t.oneOff,
+        })
+      }
+    }
+    for (const it of confirmedC) {
+      if (it.selectedCategory === 'Reimbursements') continue
+      txRows.push({
+        tx_date: it.date || monthDate, merchant: it.merchant, category: it.selectedCategory,
+        amount: round2(it.amount), currency: 'AUD', month: monthDate,
+        source: it.source || 'statement-import', one_off: !!it.oneOff,
+      })
+    }
+    await supabase.from('transactions').delete().eq('month', monthDate)
+    if (txRows.length) await supabase.from('transactions').insert(txRows)
+
     // 4. Audit trail
     await supabase.from('statement_imports').insert({
       statement_month: monthDate,

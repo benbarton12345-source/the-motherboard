@@ -5,6 +5,8 @@ import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import Modal from './Modal'
 import StatementImportModal from './StatementImportModal'
 import BudgetingInsights from './BudgetingInsights'
+import SoftTargets from './SoftTargets'
+import BulkEditTransactions from './BulkEditTransactions'
 
 const CATEGORIES = ['Cash', 'Investments', 'Property', 'Crypto', 'Other']
 const INCOME_CATEGORIES = ['Salary', 'Trading', 'Dividends', 'Bonus', 'Other']
@@ -18,6 +20,12 @@ const EMPTY_SNAP_ENTRY = { name: '', type: 'Cash', value: '', currency: 'GBP' }
 // (two places to enter a snapshot, only one of them read). Gated off here as an
 // immediate standalone fix; full removal of the section comes with the Budgeting fit-up.
 const LEGACY_SNAPSHOT_FORM_ENABLED = false
+
+// Legacy net-worth DISPLAY on the budgeting page is disabled — net worth now has
+// its own Finance sub-page (accounts/account_snapshots). The detailed asset
+// breakdown here duplicated it and read the legacy snapshot table. Gated off as
+// part of the Budgeting fit-up; the compact summary cards (Section 1) stay.
+const LEGACY_NETWORTH_DISPLAY_ENABLED = false
 
 function toMonthly(amount, frequency) {
   switch (frequency) {
@@ -267,6 +275,8 @@ export default function FinancePage() {
   const [recurringItems, setRecurringItems] = useState([])
   const [budgetEntries, setBudgetEntries] = useState([])
   const [selectedMonth, setSelectedMonth] = useState(months[0].value)
+  // Page-level filter: include or exclude Laura-shared spend from the insight views.
+  const [includeShared, setIncludeShared] = useState(true)
 
   // ── Snapshot modal
   const [showSnapModal, setShowSnapModal] = useState(false)
@@ -314,7 +324,9 @@ export default function FinancePage() {
     const existingIds = new Set(entries.filter(e => e.recurring_item_id).map(e => e.recurring_item_id))
     const missing = recurringItems.filter(r => r.active && !existingIds.has(r.id))
     if (missing.length === 0) return
-    await supabase.from('budget_entries').insert(
+    // Upsert (ignore duplicates) against the budget_entries_recurring_unique index
+    // so a seed race can never double-insert the same recurring item for a month.
+    await supabase.from('budget_entries').upsert(
       missing.map(r => ({
         month: selectedMonth,
         category: 'Recurring',
@@ -323,7 +335,8 @@ export default function FinancePage() {
         currency: r.currency || 'GBP',
         notes: r.name,
         recurring_item_id: r.id,
-      }))
+      })),
+      { onConflict: 'month,recurring_item_id', ignoreDuplicates: true }
     )
     await fetchBudgetEntries()
   }
@@ -545,7 +558,8 @@ export default function FinancePage() {
         </div>
       </div>
 
-      {/* ── Section 2: Asset cards ────────────────────────────────────────────── */}
+      {/* ── Section 2: Asset cards — net-worth breakdown, now on the Net Worth page ─ */}
+      {LEGACY_NETWORTH_DISPLAY_ENABLED && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         {/* Liquid Cash */}
@@ -607,6 +621,7 @@ export default function FinancePage() {
           )}
         </div>
       </div>
+      )}
 
       {/* ── Section 3: Recurring items ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -794,11 +809,28 @@ export default function FinancePage() {
         </div>
       </div>
 
+      {/* ── Section 4c: Soft targets + bulk-edit transactions ─────────────────── */}
+      <div className="flex items-center justify-end gap-2">
+        <span className="text-[11px] text-gray-500 uppercase tracking-widest">Shared spend</span>
+        <button
+          onClick={() => setIncludeShared(s => !s)}
+          className={`px-3 py-1 rounded-md text-[11px] font-bold tracking-widest uppercase border transition-colors ${
+            includeShared
+              ? 'bg-blue-400/10 text-blue-400 border-blue-400/40'
+              : 'bg-transparent text-gray-500 border-white/10 hover:border-white/25'
+          }`}
+          title="Include or exclude Laura-shared spend from the insight views"
+        >{includeShared ? 'Included' : 'Excluded'}</button>
+      </div>
+      <SoftTargets entries={budgetEntries} selectedMonth={selectedMonth} includeShared={includeShared} />
+      <BulkEditTransactions selectedMonth={selectedMonth} onChanged={() => setInsightsReloadKey(k => k + 1)} />
+
       {/* ── Section 4b: Budgeting Insights ────────────────────────────────────── */}
       <BudgetingInsights
         selectedMonth={selectedMonth}
         snapshots={snapshots}
         reloadKey={insightsReloadKey}
+        includeShared={includeShared}
         onOpenImport={() => setShowImport(true)}
       />
 

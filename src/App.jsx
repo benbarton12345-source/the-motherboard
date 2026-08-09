@@ -12,7 +12,7 @@ import HealthPage from './components/HealthPage'
 import TrainingPage from './components/TrainingPage'
 import TrainingOverview from './components/TrainingOverview'
 import Sidebar, { MobileDrawer } from './components/Sidebar'
-import { useCurrency } from './CurrencyContext'
+import { useCurrency, ForceCurrency } from './CurrencyContext'
 
 const LABELS = {
   home: 'Home', finance: 'Finance', trading: 'Trading',
@@ -93,19 +93,32 @@ function App() {
             ) : (
               <span className="hidden sm:inline font-mono text-[11px] text-[#2a2a2a]">fetching rate...</span>
             )}
-            <div className="flex items-center bg-[#111] border border-[#1c1c1c] rounded-lg p-1">
-              {['GBP', 'AUD'].map(c => (
-                <button
-                  key={c}
-                  onClick={() => setCurrency(c)}
-                  className={`px-3 py-1 font-mono text-xs font-bold tracking-widest rounded-md transition-colors ${
-                    currency === c ? 'bg-[#00ff88] text-black' : 'text-[#555] hover:text-white'
-                  }`}
+            {/* Budgeting is AUD-only: the toggle is truly inert there (no handler
+                fires, global currency state unchanged) and shows AUD locked. */}
+            {(() => {
+              const budgetingLocked = activeTab === 'finance' && activeSubItem === 'budgeting'
+              const shown = budgetingLocked ? 'AUD' : currency
+              return (
+                <div
+                  className="flex items-center bg-[#111] border border-[#1c1c1c] rounded-lg p-1"
+                  title={budgetingLocked ? 'Budgeting is AUD-only' : undefined}
                 >
-                  {c}
-                </button>
-              ))}
-            </div>
+                  {['GBP', 'AUD'].map(c => (
+                    <button
+                      key={c}
+                      onClick={() => { if (!budgetingLocked) setCurrency(c) }}
+                      aria-disabled={budgetingLocked}
+                      style={budgetingLocked ? { pointerEvents: 'none' } : undefined}
+                      className={`px-3 py-1 font-mono text-xs font-bold tracking-widest rounded-md transition-colors ${
+                        shown === c ? 'bg-[#00ff88] text-black' : 'text-[#555] hover:text-white'
+                      } ${budgetingLocked ? 'cursor-not-allowed' : ''}`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
         </header>
 
@@ -117,7 +130,7 @@ function App() {
               activeSubItem === 'net-worth'
                 ? <NetWorthPage />
                 : activeSubItem === 'budgeting'
-                  ? <FinancePage />
+                  ? <ForceCurrency currency="AUD"><FinancePage /></ForceCurrency>
                   : activeSubItem === 'projections'
                     ? <ProjectionsPage />
                     : <FinanceOverviewPage />
