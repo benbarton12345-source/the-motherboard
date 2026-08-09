@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
-import { CATEGORIES } from '../utils/categoryRules'
+import { CATEGORIES, EXCLUDED_CATEGORY, MANUAL_CATEGORIES } from '../utils/categoryRules'
 import { parseCommbankCSV, parseAmexCSV, buildReview } from '../utils/statementParser'
 
 // Statement Import & Reconciliation — 5-step modal (Upload → Processing → Review
@@ -187,6 +187,7 @@ export default function StatementImportModal({ onClose, onImported }) {
     let extraReimb = 0
     for (const it of confirmedC) {
       if (it.selectedCategory === 'Reimbursements') { extraReimb = round2(extraReimb + it.amount); continue }
+      if (it.selectedCategory === EXCLUDED_CATEGORY) continue // not real spend — written as a tagged transaction only, below
       if (it.oneOff) { oneOffRows.push({ category: it.selectedCategory, amount: round2(it.amount), merchant: it.merchant }); continue }
       catTotals[it.selectedCategory] = round2((catTotals[it.selectedCategory] || 0) + it.amount)
     }
@@ -224,6 +225,16 @@ export default function StatementImportModal({ onClose, onImported }) {
         tx_date: it.date || monthDate, merchant: it.merchant, category: it.selectedCategory,
         amount: round2(it.amount), currency: 'AUD', month: monthDate,
         source: it.source || 'statement-import', one_off: !!it.oneOff,
+      })
+    }
+    // Excluded / Transfer rows (Amex bill payment both sides, own-account transfers):
+    // kept as real, tagged transactions for audit, but never counted (skipped by the
+    // insight/soft-target aggregation, greyed in the bulk-edit table).
+    for (const ex of review.excluded) {
+      txRows.push({
+        tx_date: ex.date || monthDate, merchant: ex.merchant, category: EXCLUDED_CATEGORY,
+        amount: round2(Math.abs(ex.amount)), currency: 'AUD', month: monthDate,
+        source: ex.source || 'statement-import', one_off: false,
       })
     }
     await supabase.from('transactions').delete().eq('month', monthDate)
@@ -675,7 +686,7 @@ function NeedsReviewRow({ it, h }) {
               <select value={it.selectedCategory} onChange={e => h.setNRCategory(it.id, e.target.value)}
                 className="bg-gray-800 border border-amber-400/30 rounded px-2 py-1 text-xs text-white focus:outline-none">
                 <option value="">Choose…</option>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                {MANUAL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 <option value="Reimbursements">Reimbursements</option>
               </select>
               <button onClick={() => h.setNRStatus(it.id, 'confirmed')} disabled={!it.selectedCategory}

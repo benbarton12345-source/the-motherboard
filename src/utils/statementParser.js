@@ -88,7 +88,10 @@ export function parseCommbankCSV(text) {
 }
 
 // Amex: has a header row (skipped). Columns: Date, Date Processed, Description,
-// Amount (all positive debits).
+// Amount. Debits are positive; credits (payments, refunds, offer credits) are
+// NEGATIVE. Normalised the same way as Commbank — `amount` is a positive magnitude
+// and `kind` carries the sign — so credits flow through the credit path correctly
+// instead of being mis-counted as spend.
 export function parseAmexCSV(text) {
   const rows = parseCSV(text)
   const out = []
@@ -97,12 +100,13 @@ export function parseAmexCSV(text) {
     const date = parseDMY(cols[0])
     if (!date) continue // header row (non-date first cell) is skipped here
     const raw = cols[2] || ''
+    const signed = parseAmount(cols[3])
     out.push({
       date,
       rawDescription: raw,
       description: cleanAmexDescription(raw),
-      amount: parseAmount(cols[3]),
-      kind: 'debit',
+      amount: Math.abs(signed),
+      kind: signed < 0 ? 'credit' : 'debit',
       source: 'amex',
     })
   }
@@ -125,6 +129,23 @@ export function classifyLayer1(txn) {
   // AMEX avoids matching merchant names like "AMEXICO").
   if (txn.source === 'commbank' && (raw.includes('AMERICAN EXPRESS') || /\bAMEX\b/.test(raw))) {
     return { route: 'excluded', reason: 'Amex bill payment — captured via Amex import' }
+  }
+
+  // The other side of that same bill payment, on the Amex statement — the card
+  // being paid off. Now that Amex credits are detected (kind fix), this is caught
+  // here instead of falling into Needs Review.
+  if (txn.source === 'amex' && raw.includes('ONLINE PAYMENT RECEIVED')) {
+    return { route: 'excluded', reason: 'Amex bill payment received — internal transfer' }
+  }
+
+  // Transfers between Ben's own accounts (referenced by account number, e.g.
+  // "Transfer from xx7878"). Matched by the xx<digits> pattern in a transfer
+  // context — not a hardcoded suffix — so it survives a different own-account
+  // number, and won't catch person transfers ("Transfer from LAURA HOLDSWORTH")
+  // or card purchase refs ("... Card xx9852"). Must fire BEFORE the credit branch,
+  // which would otherwise bank these as reimbursement income.
+  if (/\bTRANSFER\s+(TO|FROM)\s+XX\d+/.test(raw)) {
+    return { route: 'excluded', reason: 'Transfer between own accounts' }
   }
 
   if (isCredit) {
@@ -185,7 +206,7 @@ export function buildReview(txns) {
         if (l1.laura) recurring.rent.lauraIncoming += txn.amount
         continue
       }
-      if (l1.route === 'excluded') { excluded.push({ date: txn.date, merchant: txn.description, amount: txn.amount, reason: l1.reason }); continue }
+      if (l1.route === 'excluded') { excluded.push({ date: txn.date, merchant: txn.description, amount: txn.amount, reason: l1.reason, source: txn.source }); continue }
       if (l1.route === 'confident') { addConfident(l1.category, txn); continue }
       if (l1.route === 'needs_review') { needsReview.push(nrItem(txn, false, l1.reason)); continue }
     }

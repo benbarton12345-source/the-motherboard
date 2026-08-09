@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
-import { CATEGORIES } from '../utils/categoryRules'
+import { CATEGORIES, EXCLUDED_CATEGORY } from '../utils/categoryRules'
 
 // Soft budget targets — advisory per-category monthly targets (AUD). Progress bar
 // per category vs this month's actual spend; turns amber when over. Purely
@@ -33,6 +33,7 @@ export default function SoftTargets({ entries = [], selectedMonth, includeShared
   const actualByCat = {}
   if (txns && txns.length > 0) {
     for (const t of txns) {
+      if (t.category === EXCLUDED_CATEGORY) continue
       if (!includeShared && t.tag === 'shared') continue
       actualByCat[t.category] = (actualByCat[t.category] || 0) + (Number(t.amount) || 0)
     }

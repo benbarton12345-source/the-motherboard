@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
-import { CATEGORIES } from '../utils/categoryRules'
+import { MANUAL_CATEGORIES, EXCLUDED_CATEGORY } from '../utils/categoryRules'
 
 // Bulk-edit transactions — a plain table of the month's imported transactions for
 // quick recategorisation and shared/individual tagging after the fact. Separate
@@ -36,8 +36,10 @@ export default function BulkEditTransactions({ selectedMonth, onChanged }) {
     onChanged?.()
   }
 
-  const total = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0)
+  // Excluded/Transfer rows stay visible for audit but never count toward the total.
+  const total = rows.reduce((s, r) => s + (r.category === EXCLUDED_CATEGORY ? 0 : Number(r.amount) || 0), 0)
   const sharedCount = rows.filter(r => r.tag === 'shared').length
+  const excludedCount = rows.filter(r => r.category === EXCLUDED_CATEGORY).length
 
   const cardCls = 'bg-gray-900 border border-gray-800 rounded-lg p-6'
   const cellInput = 'bg-gray-950 border border-gray-800 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-emerald-400/60'
@@ -47,7 +49,7 @@ export default function BulkEditTransactions({ selectedMonth, onChanged }) {
       <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-sm tracking-widest uppercase text-gray-400">Transactions</h2>
-          <span className="text-[11px] text-gray-600">{rows.length} this month · {sharedCount} shared</span>
+          <span className="text-[11px] text-gray-600">{rows.length} this month · {sharedCount} shared{excludedCount > 0 ? ` · ${excludedCount} excluded` : ''}</span>
         </div>
         <span className="text-xs text-gray-500">{open ? '▲' : '▼'}</span>
       </button>
@@ -63,15 +65,17 @@ export default function BulkEditTransactions({ selectedMonth, onChanged }) {
               <div className="grid grid-cols-[70px_1fr_150px_100px_110px] gap-3 pb-2 border-b border-gray-800 text-[10px] text-gray-500 uppercase tracking-widest">
                 <div>Date</div><div>Merchant</div><div>Category</div><div className="text-right">Amount</div><div className="text-center">Tag</div>
               </div>
-              {rows.map(r => (
-                <div key={r.id} className="grid grid-cols-[70px_1fr_150px_100px_110px] gap-3 py-2 border-b border-gray-800/70 last:border-0 items-center">
+              {rows.map(r => {
+                const isExcluded = r.category === EXCLUDED_CATEGORY
+                return (
+                <div key={r.id} className={`grid grid-cols-[70px_1fr_150px_100px_110px] gap-3 py-2 border-b border-gray-800/70 last:border-0 items-center ${isExcluded ? 'opacity-45' : ''}`}>
                   <div className="text-xs text-gray-500 tabular-nums">{r.tx_date.slice(5)}</div>
                   <div className="text-sm text-white truncate" title={r.merchant}>{r.merchant}</div>
                   <select value={r.category} onChange={e => setCategory(r.id, e.target.value)} className={`${cellInput} w-full`}>
-                    {!CATEGORIES.includes(r.category) && <option value={r.category}>{r.category}</option>}
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    {!MANUAL_CATEGORIES.includes(r.category) && <option value={r.category}>{r.category}</option>}
+                    {MANUAL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
-                  <div className="text-sm text-white text-right tabular-nums">{fmtAud(r.amount)}</div>
+                  <div className={`text-sm text-right tabular-nums ${isExcluded ? 'text-gray-500 line-through' : 'text-white'}`}>{fmtAud(r.amount)}</div>
                   <div className="flex justify-center">
                     <button
                       onClick={() => toggleTag(r.id)}
@@ -84,7 +88,8 @@ export default function BulkEditTransactions({ selectedMonth, onChanged }) {
                     >{r.tag === 'shared' ? 'SHARED' : 'INDIVIDUAL'}</button>
                   </div>
                 </div>
-              ))}
+                )
+              })}
               <div className="grid grid-cols-[70px_1fr_150px_100px_110px] gap-3 pt-3 text-sm font-semibold">
                 <div /><div /><div className="text-gray-500 text-right uppercase tracking-widest text-[10px] self-center">Total</div>
                 <div className="text-white text-right tabular-nums">{fmtAud(total)}</div><div />

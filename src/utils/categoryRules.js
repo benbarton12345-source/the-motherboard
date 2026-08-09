@@ -15,8 +15,18 @@ export const CATEGORIES = [
   'Clothing & Retail',
   'Entertainment',
   'Vehicle',
+  'Holidays / Travel',
   'Miscellaneous',
 ]
+
+// Money that isn't real spend or income — inter-account transfers, credit-card
+// bill payments, own-account movements. Routed automatically by Layer 1 (see
+// statementParser.js) but also hand-pickable in review. Kept OUT of CATEGORIES so
+// the AI/keyword layers never auto-assign it.
+export const EXCLUDED_CATEGORY = 'Excluded / Transfer'
+
+// Full list offered in the manual review dropdowns + the bulk-edit table.
+export const MANUAL_CATEGORIES = [...CATEGORIES, EXCLUDED_CATEGORY]
 
 export const CATEGORY_RULES = [
   { category: 'Groceries', keywords: ['WOOLWORTHS', 'COLES', 'JACKYVILLE', 'JS4-M789', 'IGA', 'STIRLING IGA', 'THE MEAT WORKS', 'ALDI', 'FOODWORKS'] },

@@ -14,6 +14,7 @@ import {
   spendingVelocity, fiTrajectory, clamp,
 } from '../utils/insightsData'
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, monthsToTarget } from '../utils/insightsSettings'
+import { EXCLUDED_CATEGORY } from '../utils/categoryRules'
 
 // Design tokens (README) → hex, for SVG/Recharts. Tailwind classes are used for
 // text/borders; these raw values are for chart strokes/fills only.
@@ -135,6 +136,7 @@ export default function BudgetingInsights({ selectedMonth, snapshots = [], onOpe
       const catTotals = {}
       for (const t of transactions) {
         if (t.month !== m) continue
+        if (t.category === EXCLUDED_CATEGORY) continue // transfers/bill payments never count
         if (!includeShared && t.tag === 'shared') continue
         if (t.one_off) {
           synth.push({ month: m, category: t.category, type: 'expense', amount: Number(t.amount) || 0, currency: 'AUD', recurring_item_id: null, one_off: true, notes: `statement-import: ${t.merchant}` })
