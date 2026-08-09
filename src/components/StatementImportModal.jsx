@@ -338,7 +338,7 @@ function buildReviewState(built, recItems, txCount) {
   })).sort((a, b) => b.amount - a.amount)
 
   const needsReviewItems = built.needsReview.map(n => ({
-    id: n.id, date: n.date, merchant: n.merchant, amount: n.amount,
+    id: n.id, date: n.date, merchant: n.merchant, amount: n.amount, source: n.source,
     aiSuggestedCategory: n.aiSuggested || null,
     selectedCategory: n.aiSuggested && n.aiSuggested !== 'Uncategorised' ? n.aiSuggested : '',
     status: 'pending', oneOff: false,
@@ -349,6 +349,7 @@ function buildReviewState(built, recItems, txCount) {
     reimbursements: { total: built.reimbursements.total, count: built.reimbursements.items.length },
     categories,
     needsReviewItems,
+    excluded: built.excluded,          // full array — commitImport writes these as Excluded/Transfer rows
     excludedCount: built.excluded.length,
     txCount,
   }
