@@ -148,6 +148,15 @@ export function classifyLayer1(txn) {
     return { route: 'excluded', reason: 'Transfer between own accounts' }
   }
 
+  // Own money moving in from Ben's own external account (his full name as payer),
+  // e.g. "Fast Transfer From Ben George Barton CREDIT TO ACCOUNT". Keyed on the exact
+  // payer phrase, NOT the "CREDIT TO ACCOUNT" suffix — that suffix also appears on
+  // genuine PayID reimbursements (e.g. "...From SAMUEL RAY BROWN to PayID..."), which
+  // must stay counted as income.
+  if (raw.includes('FAST TRANSFER FROM BEN GEORGE BARTON')) {
+    return { route: 'excluded', reason: 'Transfer between own accounts' }
+  }
+
   if (isCredit) {
     if (raw.includes('LAURA HOLDSWORTH')) return { route: 'reimbursement', laura: true }
     if (/\bTRANSFER FROM\b/.test(raw)) return { route: 'reimbursement', laura: false }
