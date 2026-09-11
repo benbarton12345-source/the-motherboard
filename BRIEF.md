@@ -854,12 +854,13 @@ Supplied 11 September 2026. Two lockups drive the UI, both with transparent back
 
 ### Current position (as of 11 September 2026)
 
-Last commit is **9 August 2026** (`ad1a98f`); the 11 September fixes-and-tweaks batch above is **in the working tree, uncommitted**. The app had been in live use since August — statements imported 2 September, net worth snapshot 1 September.
+Last commit is **11 September 2026** (`32798b4`) — the fixes-and-tweaks batch and its follow-ups, pushed to `main` and auto-deployed by Vercel. Working tree clean, nothing unpushed. The app has been in continuous live use since August — statements imported 2 September, net worth snapshot 1 September.
 
-**Three SQL scripts are pending a manual run in Supabase** (the app works without them, with the noted limitations):
-1. `sql/crypto_asset_class.sql` — **required** for Crypto to appear as its own class and for the Add Account "Crypto" option to save.
-2. `sql/remove_identity_checkin.sql` — part 1 drops `identity_votes`; part 2 is optional and destroys written prose.
-3. Optional: replace the partial `budget_entries_recurring_unique` index with a plain one if the upsert form is ever wanted back. Not needed — `seedMissingRecurring` no longer relies on `ON CONFLICT`.
+**SQL state:**
+- ✅ `sql/crypto_asset_class.sql` — **run** 11 September. Crypto is its own leaf class (`accounts`: cash 4, crypto 1, investments 3, pension 3).
+- ⏳ `sql/remove_identity_checkin.sql` part 1 — **not run.** `identity_votes` and its 32 rows are still in Supabase, orphaned. All identity code is gone from the app, so this is cleanup whenever convenient, not a blocker.
+- 🚫 `sql/remove_identity_checkin.sql` part 2 — **deliberately not to be run.** Ben's decision, 11 September: the sealed-week reflections on 13 and 20 July stay. Leave the four `weekly_reviews` columns in place.
+- Optional, not needed: the partial `budget_entries_recurring_unique` index could be replaced with a plain one if the upsert form is ever wanted back. `seedMissingRecurring` no longer relies on `ON CONFLICT`.
 
 **Finance is now the most-built section of the app** and has overtaken the original build order: Overview, Net Worth, Budgeting (with import, insights, transactions, soft targets) and Projections are all live.
 
@@ -868,6 +869,8 @@ Last commit is **9 August 2026** (`ad1a98f`); the 11 September fixes-and-tweaks 
 2. **Soft targets are built but unused** — `budget_targets` has 0 rows. Either a small onboarding pass to set them, or a decision that the feature isn't wanted.
 3. **Auto-linking engine for goals** — item 4 below; still unbuilt, and `linked_source` is already reserved on `long_term_goals`.
 4. **Training sub-item routing** — split Log Session / Programmes / Exercise Bank / Analysis out of `TrainingPage` into routed views, matching Productivity and Finance.
+
+**Small open item:** the `pension` donut colour is violet-600. BRIEF records purple being removed from the *Productivity* section; that rule is section-scoped and Finance uses no purple elsewhere, so violet stands for now. Pink-600 `#db2777` is a validated drop-in if purple is unwanted app-wide — one line in `ASSET_CLASS_COLOURS`.
 
 ### Note on approach
 
