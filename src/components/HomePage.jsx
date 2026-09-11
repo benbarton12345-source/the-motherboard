@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import { useCurrency } from '../CurrencyContext'
+import { useNetWorth } from '../useNetWorth'
+import { useMonthlyBudget } from '../useMonthlyBudget'
+import { ASSET_CLASS_ORDER, ASSET_CLASS_COLOURS, classLabel } from '../utils/financeTaxonomy'
+import AssetClassDonut from './AssetClassDonut'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import TodaysTasks from './TodaysTasks'
 import Modal from './Modal'
@@ -15,7 +19,6 @@ const DEFAULT_HABITS = [
   'No phone before 8am',
 ]
 
-const CATEGORIES = ['Cash', 'Investments', 'Property', 'Crypto', 'Other']
 const TARGET = 1_500_000
 
 function getLocalDateString() {
@@ -48,8 +51,8 @@ export default function HomePage() {
   const { convert, format } = useCurrency()
 
   const [clock, setClock] = useState(new Date())
-  const [snapshots, setSnapshots] = useState([])
-  const [budgetEntries, setBudgetEntries] = useState([])
+  const nw = useNetWorth()
+  const budget = useMonthlyBudget()
 
   // Habits (per-habit model: habits + habit_completions)
   const [habitList, setHabitList] = useState([])
@@ -75,21 +78,6 @@ export default function HomePage() {
   useEffect(() => {
     const t = setInterval(() => setClock(new Date()), 1000)
     return () => clearInterval(t)
-  }, [])
-
-  useEffect(() => {
-    supabase.from('net_worth_snapshots').select('*').order('date', { ascending: false })
-      .then(({ data }) => { if (data) setSnapshots(data) })
-  }, [])
-
-  useEffect(() => {
-    const now = new Date()
-    const y = now.getFullYear()
-    const m = now.getMonth() + 1
-    const start = `${y}-${String(m).padStart(2, '0')}-01`
-    const end = `${m === 12 ? y + 1 : y}-${String(m % 12 + 1).padStart(2, '0')}-01`
-    supabase.from('budget_entries').select('*').gte('month', start).lt('month', end)
-      .then(({ data }) => { if (data) setBudgetEntries(data) })
   }, [])
 
   useEffect(() => {
@@ -234,33 +222,37 @@ export default function HomePage() {
 
   // ── Derived values
 
-  const latest = snapshots[0]
-  const prev = snapshots[1]
-  const monthDelta = latest && prev ? latest.total - prev.total : null
-  const monthDeltaPct = monthDelta !== null && prev ? (monthDelta / prev.total) * 100 : null
-  const sparkData = [...snapshots].sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-8).map(s => ({ v: s.total }))
+  // Net worth — all figures come from useNetWorth (accounts + account_snapshots),
+  // the same source the Net Worth and Finance Overview pages read.
+  const hasNetWorth = nw.accounts.length > 0
+  const monthDelta = nw.deltaGbp
+  const monthDeltaPct = nw.deltaPct
+  const sparkData = nw.historyGbp.slice(-8).map(h => ({ v: h.gbp }))
 
-  const catTotals = latest
-    ? CATEGORIES.reduce((acc, cat) => {
-        acc[cat] = latest.entries
-          .filter(e => e.type === cat)
-          .reduce((sum, e) => sum + convert(parseFloat(e.value || 0), e.currency || 'GBP'), 0)
-        return acc
-      }, {})
-    : {}
+  // Allocation by leaf asset class — same shape, colours and ordering the Net
+  // Worth page feeds to AssetClassDonut, so the two cards always agree.
+  const displayTotal = convert(nw.totalGbp, 'GBP')
+  const classRows = ASSET_CLASS_ORDER
+    .map(cls => ({
+      key: cls,
+      label: classLabel(cls),
+      color: ASSET_CLASS_COLOURS[cls],
+      value: convert(nw.classTotalsGbp[cls] || 0, 'GBP'),
+    }))
+    .filter(row => row.value > 0)
+    .map(row => ({ ...row, pct: displayTotal > 0 ? (row.value / displayTotal) * 100 : 0 }))
 
-  const progress = latest ? Math.min((latest.total / TARGET) * 100, 100) : 0
+  const progress = hasNetWorth ? Math.min((nw.totalGbp / TARGET) * 100, 100) : 0
   let projectedYears = null
-  if (latest && monthDelta && monthDelta > 0) {
-    projectedYears = ((TARGET - latest.total) / (monthDelta * 12)).toFixed(1)
+  if (hasNetWorth && monthDelta && monthDelta > 0) {
+    projectedYears = ((TARGET - nw.totalGbp) / (monthDelta * 12)).toFixed(1)
   }
 
-  const inc = budgetEntries.filter(e => e.type === 'income')
-  const exp = budgetEntries.filter(e => e.type === 'expense')
-  const totalInc = inc.reduce((sum, e) => sum + convert(parseFloat(e.amount), e.currency || 'GBP'), 0)
-  const totalExp = exp.reduce((sum, e) => sum + convert(parseFloat(e.amount), e.currency || 'GBP'), 0)
+  // Budget — useMonthlyBudget runs the same fetch-and-seed as the Budgeting page.
+  const totalInc = convert(budget.totalIncomeGbp, 'GBP')
+  const totalExp = convert(budget.totalExpenseGbp, 'GBP')
   const saved = totalInc - totalExp
-  const saveRate = totalInc > 0 ? (saved / totalInc) * 100 : 0
+  const saveRate = budget.saveRate
 
   const perthTime = clock.toLocaleTimeString('en-GB', { timeZone: 'Australia/Perth', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
   const ukTime = clock.toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false })
@@ -278,7 +270,7 @@ export default function HomePage() {
   const greeting = perthHour < 12 ? 'Good morning' : perthHour < 17 ? 'Good afternoon' : 'Good evening'
   const habitsScore = doneToday.size
   const monthShort = new Date().toLocaleDateString('en-GB', { month: 'short' }).toUpperCase()
-  const nwDisplay = latest ? format(convert(latest.total, 'GBP')) : '—'
+  const nwDisplay = hasNetWorth ? format(convert(nw.totalGbp, 'GBP')) : '—'
   const targetDisplay = format(convert(TARGET, 'GBP'))
 
   const inputCls = 'bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-400'
@@ -319,8 +311,8 @@ export default function HomePage() {
               </span>
             </div>
           )}
-          {prev && (
-            <div className="text-xs text-gray-500 mb-3">Last month: {format(convert(prev.total, 'GBP'))}</div>
+          {nw.prevTotalGbp != null && (
+            <div className="text-xs text-gray-500 mb-3">Previous: {format(convert(nw.prevTotalGbp, 'GBP'))}</div>
           )}
           {sparkData.length > 1 && (
             <ResponsiveContainer width="100%" height={44}>
@@ -442,31 +434,33 @@ export default function HomePage() {
         {/* ASSETS */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Assets</h2>
-          {latest ? (
-            <div className="space-y-3">
-              {CATEGORIES.filter(cat => (catTotals[cat] || 0) > 0).map(cat => {
-                const val = catTotals[cat]
-                const displayTotal = convert(latest.total, 'GBP')
-                const pct = displayTotal > 0 ? (val / displayTotal) * 100 : 0
-                return (
-                  <div key={cat}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-gray-400">{cat}</span>
-                      <span className="text-xs text-gray-500">{pct.toFixed(0)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-800 rounded-full h-1 mb-1">
-                      <div className="bg-emerald-400 h-1 rounded-full" style={{ width: `${pct}%` }} />
-                    </div>
-                    <div className="text-xs text-white">{format(val)}</div>
-                  </div>
-                )
-              })}
-              {CATEGORIES.every(cat => !(catTotals[cat] > 0)) && (
-                <div className="text-sm text-gray-600">No data</div>
-              )}
-            </div>
+          {!hasNetWorth ? (
+            <div className="text-sm text-gray-600">No accounts yet</div>
+          ) : classRows.length === 0 ? (
+            <div className="text-sm text-gray-600">No data</div>
           ) : (
-            <div className="text-sm text-gray-600">No snapshot yet</div>
+            /* Narrow column — ring on top, legend stacked beneath rather than
+               beside it as on the wider Net Worth page. */
+            <div className="flex flex-col items-center gap-4">
+              <AssetClassDonut
+                segments={classRows}
+                size={116}
+                centreLabel="TOTAL"
+                centreValue={format(displayTotal)}
+              />
+              <div className="w-full space-y-2">
+                {classRows.map(row => (
+                  <div key={row.key}>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: row.color }} />
+                      <span className="text-xs text-gray-400 flex-1 truncate">{row.label}</span>
+                      <span className="text-xs text-white font-semibold tabular-nums">{row.pct.toFixed(0)}%</span>
+                    </div>
+                    <div className="text-[11px] text-gray-500 tabular-nums text-right">{format(row.value)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 

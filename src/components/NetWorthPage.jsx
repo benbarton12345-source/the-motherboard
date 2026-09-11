@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../supabase'
+import { useState } from 'react'
 import { useCurrency } from '../CurrencyContext'
-import { ASSET_GROUPS, classLabel } from '../utils/financeTaxonomy'
-import { latestBalance, sparkPath, groupSnapshots } from '../utils/netWorthHelpers'
+import { ASSET_GROUPS, ASSET_CLASS_ORDER, ASSET_CLASS_COLOURS, classLabel } from '../utils/financeTaxonomy'
+import { sparkPath } from '../utils/netWorthHelpers'
+import { useNetWorth } from '../useNetWorth'
 import AccountModal from './AccountModal'
 import NewSnapshotModal from './NewSnapshotModal'
+import AddAccountModal from './AddAccountModal'
+import AssetClassDonut from './AssetClassDonut'
 
 // UK/AU split as a ring donut with the dominant share in the centre. Amber full
 // ring underneath, emerald arc on top for the UK portion.
@@ -34,28 +36,14 @@ function SplitDonut({ ukPct }) {
 // stored native and converted on read.
 export default function NetWorthPage() {
   const { convert, format } = useCurrency()
-  const [accounts, setAccounts] = useState([])
-  const [snaps, setSnaps] = useState({}) // account_id -> asc history
+  const { accounts, snaps, loading, refresh, nativeOf, latestByAccount } = useNetWorth()
   const [expanded, setExpanded] = useState(
     Object.fromEntries(ASSET_GROUPS.map(g => [g.key, g.defaultExpanded])))
   const [openAccountId, setOpenAccountId] = useState(null)
   const [showSnapshot, setShowSnapshot] = useState(false)
-  const [loading, setLoading] = useState(true)
-
-  function refresh() {
-    Promise.all([
-      supabase.from('accounts').select('*').eq('active', true).order('created_at'),
-      supabase.from('account_snapshots').select('*'),
-    ]).then(([a, s]) => {
-      if (a.data) setAccounts(a.data)
-      if (s.data) setSnaps(groupSnapshots(s.data))
-      setLoading(false)
-    })
-  }
-  useEffect(() => { refresh() }, [])
+  const [showAddAccount, setShowAddAccount] = useState(false)
 
   // ── Derived ─────────────────────────────────────────────────────────────────
-  const nativeOf = a => latestBalance(snaps[a.id])
   const dispOf = a => convert(nativeOf(a), a.currency)
   const accountsOfClass = cls => accounts.filter(a => a.asset_class === cls)
   const total = accounts.reduce((sum, a) => sum + dispOf(a), 0)
@@ -66,7 +54,18 @@ export default function NetWorthPage() {
   const ukPct = splitBase > 0 ? (ukTotal / splitBase) * 100 : 0
   const auPct = 100 - ukPct
 
-  const latestByAccount = Object.fromEntries(accounts.map(a => [a.id, nativeOf(a)]))
+  // Asset-class breakdown — display-currency totals per leaf class, in taxonomy
+  // order, excluding classes with no balance so empty ones never take a colour.
+  const classRows = ASSET_CLASS_ORDER
+    .map(cls => ({
+      key: cls,
+      label: classLabel(cls),
+      color: ASSET_CLASS_COLOURS[cls],
+      value: accountsOfClass(cls).reduce((sum, a) => sum + dispOf(a), 0),
+    }))
+    .filter(row => row.value > 0)
+    .map(row => ({ ...row, pct: total > 0 ? (row.value / total) * 100 : 0 }))
+
   const openAccount = accounts.find(a => a.id === openAccountId) || null
 
   // Snapshot history — total net worth (display ccy) at each recorded date, using
@@ -118,17 +117,23 @@ export default function NetWorthPage() {
           <div className="text-[11px] font-bold tracking-widest uppercase text-gray-500">Total Net Worth</div>
           <div className="text-3xl font-extrabold text-white mt-1">{format(total)}</div>
         </div>
-        <button
-          onClick={() => setShowSnapshot(true)}
-          disabled={accounts.length === 0}
-          className="px-4 py-2.5 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded-lg hover:bg-emerald-300 transition-colors disabled:opacity-50"
-        >+ New Snapshot</button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAddAccount(true)}
+            className="px-4 py-2.5 border border-emerald-400 text-emerald-400 text-xs font-bold tracking-widest uppercase rounded-lg hover:bg-emerald-400 hover:text-gray-950 transition-colors"
+          >+ Add Account</button>
+          <button
+            onClick={() => setShowSnapshot(true)}
+            disabled={accounts.length === 0}
+            className="px-4 py-2.5 bg-emerald-400 text-gray-950 text-xs font-bold tracking-widest uppercase rounded-lg hover:bg-emerald-300 transition-colors disabled:opacity-50"
+          >+ New Snapshot</button>
+        </div>
       </div>
 
       {loading ? (
         <div className="text-sm text-gray-600">Loading…</div>
       ) : accounts.length === 0 ? (
-        <div className={`${cardCls} p-6 text-sm text-gray-600`}>No accounts yet.</div>
+        <div className={`${cardCls} p-6 text-sm text-gray-600`}>No accounts yet — add one to get started.</div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
           {/* Grouped list */}
@@ -177,8 +182,29 @@ export default function NetWorthPage() {
             })}
           </div>
 
-          {/* Right column: UK/AU split + info */}
+          {/* Right column: asset-class breakdown + UK/AU split + info */}
           <div className="min-w-0 lg:col-span-2 space-y-4">
+            <div className={`${cardCls} p-5`}>
+              <div className="text-[12px] font-bold uppercase tracking-widest text-gray-500 mb-4">Asset class breakdown</div>
+              {classRows.length === 0 ? (
+                <div className="text-sm text-gray-600">No balances yet.</div>
+              ) : (
+                <div className="flex items-center gap-6">
+                  <AssetClassDonut segments={classRows} centreLabel="TOTAL" centreValue={format(total)} />
+                  <div className="flex-1 min-w-0 space-y-3">
+                    {classRows.map(row => (
+                      <div key={row.key} className="flex items-center gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: row.color }} />
+                        <span className="text-[13px] font-medium text-gray-200 flex-1 truncate">{row.label}</span>
+                        <span className="text-[13px] font-semibold text-white tabular-nums">{row.pct.toFixed(1)}%</span>
+                        <span className="text-[11.5px] text-gray-500 tabular-nums w-16 text-right">{format(row.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className={`${cardCls} p-5`}>
               <div className="text-[12px] font-bold uppercase tracking-widest text-gray-500 mb-4">UK / Australia split</div>
               <div className="flex items-center gap-6">
@@ -234,6 +260,12 @@ export default function NetWorthPage() {
           account={openAccount}
           history={snaps[openAccount.id] || []}
           onClose={() => setOpenAccountId(null)}
+          onSaved={refresh}
+        />
+      )}
+      {showAddAccount && (
+        <AddAccountModal
+          onClose={() => setShowAddAccount(false)}
           onSaved={refresh}
         />
       )}

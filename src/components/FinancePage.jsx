@@ -7,6 +7,8 @@ import StatementImportModal from './StatementImportModal'
 import BudgetingInsights from './BudgetingInsights'
 import SoftTargets from './SoftTargets'
 import BulkEditTransactions from './BulkEditTransactions'
+import { toMonthly, seedMissingRecurring } from '../utils/budgetHelpers'
+import { useNetWorth } from '../useNetWorth'
 
 const CATEGORIES = ['Cash', 'Investments', 'Property', 'Crypto', 'Other']
 const INCOME_CATEGORIES = ['Salary', 'Trading', 'Dividends', 'Bonus', 'Other']
@@ -26,17 +28,6 @@ const LEGACY_SNAPSHOT_FORM_ENABLED = false
 // breakdown here duplicated it and read the legacy snapshot table. Gated off as
 // part of the Budgeting fit-up; the compact summary cards (Section 1) stay.
 const LEGACY_NETWORTH_DISPLAY_ENABLED = false
-
-function toMonthly(amount, frequency) {
-  switch (frequency) {
-    case 'monthly':     return amount
-    case 'fortnightly': return amount * 26 / 12
-    case 'weekly':      return amount * 52 / 12
-    case 'quarterly':   return amount / 3
-    case 'annual':      return amount / 12
-    default:            return amount
-  }
-}
 
 function entryToGBP(entry, rate) {
   const val = parseFloat(entry.value || 0)
@@ -271,6 +262,7 @@ export default function FinancePage() {
   const [showImport, setShowImport] = useState(false)
   const [importBanner, setImportBanner] = useState(null)
   const [insightsReloadKey, setInsightsReloadKey] = useState(0)
+  const nw = useNetWorth()
   const [snapshots, setSnapshots] = useState([])
   const [recurringItems, setRecurringItems] = useState([])
   const [budgetEntries, setBudgetEntries] = useState([])
@@ -321,24 +313,12 @@ export default function FinancePage() {
 
   async function fetchAndSeedBudget() {
     const entries = await fetchBudgetEntries()
-    const existingIds = new Set(entries.filter(e => e.recurring_item_id).map(e => e.recurring_item_id))
-    const missing = recurringItems.filter(r => r.active && !existingIds.has(r.id))
-    if (missing.length === 0) return
-    // Upsert (ignore duplicates) against the budget_entries_recurring_unique index
-    // so a seed race can never double-insert the same recurring item for a month.
-    await supabase.from('budget_entries').upsert(
-      missing.map(r => ({
-        month: selectedMonth,
-        category: 'Recurring',
-        type: r.type === 'income' ? 'income' : 'expense',
-        amount: toMonthly(r.amount, r.frequency),
-        currency: r.currency || 'GBP',
-        notes: r.name,
-        recurring_item_id: r.id,
-      })),
-      { onConflict: 'month,recurring_item_id', ignoreDuplicates: true }
-    )
-    await fetchBudgetEntries()
+    // Shared with the Home budget card via useMonthlyBudget — one implementation
+    // so the two surfaces can never seed a month differently.
+    const didInsert = await seedMissingRecurring(supabase, {
+      month: selectedMonth, recurringItems, entries,
+    })
+    if (didInsert) await fetchBudgetEntries()
   }
 
   useEffect(() => { fetchSnapshots() }, [])
@@ -433,13 +413,22 @@ export default function FinancePage() {
   }
 
   // ── Derived: net worth
-  const latest = snapshots[0]
-  const prevSnap = snapshots[1]
-  const monthDelta = latest && prevSnap ? latest.total - prevSnap.total : null
-  const monthDeltaPct = monthDelta !== null && prevSnap ? (monthDelta / prevSnap.total) * 100 : null
-  const sparkData = [...snapshots].sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-8).map(s => ({ v: s.total }))
+  // Live figures come from useNetWorth (accounts/account_snapshots) — the same
+  // source as Home and the Net Worth page. The legacy `snapshots` state below is
+  // retained ONLY for the gated-off legacy Section 2/5 blocks.
+  const hasNetWorth = nw.accounts.length > 0
+  const monthDelta = nw.deltaGbp
+  const monthDeltaPct = nw.deltaPct
+  const sparkData = nw.historyGbp.slice(-8).map(h => ({ v: h.gbp }))
 
-  // ── Derived: assets
+  // Legacy-shaped [{ date, total }] for BudgetingInsights (FI trajectory), built
+  // from the per-account history rather than the dead net_worth_snapshots table.
+  const insightsSnapshots = nw.historyGbp.map(h => ({ date: h.date, total: h.gbp }))
+
+  // ── Derived: assets (LEGACY — feeds only the gated-off Section 2/5 blocks,
+  // which read the dead net_worth_snapshots table. Kept so that dead code still
+  // compiles; nothing here reaches a live surface.)
+  const latest = snapshots[0]
   const cashEntries = latest ? latest.entries.filter(e => e.type === 'Cash') : []
   const investedEntries = latest ? latest.entries.filter(e => e.type === 'Investments' || e.type === 'Crypto') : []
   const totalCashGBP = cashEntries.reduce((sum, e) => sum + entryToGBP(e, rate), 0)
@@ -459,7 +448,9 @@ export default function FinancePage() {
   const activeCosts = recurringItems.filter(r => (r.type === 'subscription' || r.type === 'fixed_cost') && r.active)
   const monthlyIncome = activeIncome.reduce((sum, r) => sum + recurringToMonthlyGBP(r, rate), 0)
   const monthlyBurn = activeCosts.reduce((sum, r) => sum + recurringToMonthlyGBP(r, rate), 0)
-  const runway = monthlyBurn > 0 ? totalCashGBP / monthlyBurn : null
+  // Liquid cash from the live per-account model, not the legacy snapshot entries.
+  const liquidCashGbp = nw.classTotalsGbp.cash || 0
+  const runway = monthlyBurn > 0 ? liquidCashGbp / monthlyBurn : null
   const recurringSaveRate = monthlyIncome > 0 ? ((monthlyIncome - monthlyBurn) / monthlyIncome) * 100 : null
 
   // ── Derived: budget
@@ -505,7 +496,7 @@ export default function FinancePage() {
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">Net Worth</h2>
           <div className="text-3xl font-bold text-white mb-1">
-            {latest ? format(convert(latest.total, 'GBP')) : '—'}
+            {hasNetWorth ? format(convert(nw.totalGbp, 'GBP')) : '—'}
           </div>
           {monthDelta !== null && (
             <div className={`text-sm font-medium mb-0.5 ${monthDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -513,8 +504,8 @@ export default function FinancePage() {
               {monthDeltaPct !== null && ` (${monthDeltaPct >= 0 ? '+' : ''}${monthDeltaPct.toFixed(1)}%)`}
             </div>
           )}
-          {prevSnap && (
-            <div className="text-xs text-gray-500 mb-3">Last: {format(convert(prevSnap.total, 'GBP'))}</div>
+          {nw.prevTotalGbp != null && (
+            <div className="text-xs text-gray-500 mb-3">Last: {format(convert(nw.prevTotalGbp, 'GBP'))}</div>
           )}
           {sparkData.length > 1 && (
             <ResponsiveContainer width="100%" height={40}>
@@ -531,7 +522,7 @@ export default function FinancePage() {
           <div className="text-3xl font-bold text-white mb-2">
             {runway !== null ? `${Math.floor(runway)} mo` : '—'}
           </div>
-          <div className="text-xs text-gray-500 mb-0.5">Liquid: {format(convert(totalCashGBP, 'GBP'))}</div>
+          <div className="text-xs text-gray-500 mb-0.5">Liquid: {format(convert(liquidCashGbp, 'GBP'))}</div>
           <div className="text-xs text-gray-500">Burn: {format(convert(monthlyBurn, 'GBP'))}/mo</div>
         </div>
 
@@ -828,7 +819,7 @@ export default function FinancePage() {
       {/* ── Section 4b: Budgeting Insights ────────────────────────────────────── */}
       <BudgetingInsights
         selectedMonth={selectedMonth}
-        snapshots={snapshots}
+        snapshots={insightsSnapshots}
         reloadKey={insightsReloadKey}
         includeShared={includeShared}
         onOpenImport={() => setShowImport(true)}

@@ -13,6 +13,8 @@
 // Interim routing: clicking a group with sub-items lands on subs[0] until group
 // overview pages exist — a routing concern, tracked as activeSubItem in App.
 import { useState } from 'react'
+import logoHorizontal from '../assets/logo_horizontal.png'
+import logoIcon from '../assets/logo_icon_512.png'
 
 // ── Icons (Lucide-compatible inline SVG) ────────────────────────────
 const Svg = ({ size = 16, children }) => (
@@ -81,19 +83,36 @@ const NAV = [
 // Where a group with sub-items navigates on click, until overview pages exist.
 const firstSub = (item) => (item.subs ? item.subs[0].id : null)
 
-// ── Logo mark (circuit-board pattern in emerald) ────────────────────
+// ── Logo ────────────────────────────────────────────────────────────
+// Two lockups from `src/assets/` (see BRIEF.md > Logo):
+//   LogoLockup — the horizontal icon+wordmark, used where there is width for it
+//                (expanded rail, mobile drawer). It already contains the name, so
+//                those placements no longer render a separate text label.
+//   LogoMark   — the square icon, for the 64px collapsed rail where a ~9:1
+//                horizontal lockup cannot fit.
+// Both assets have transparent backgrounds and sit directly on the gray-900
+// surface — no tile or border behind them.
+function LogoLockup({ height = 22 }) {
+  return (
+    <img
+      src={logoHorizontal}
+      alt="The Motherboard"
+      className="shrink-0 w-auto max-w-full object-contain"
+      style={{ height }}
+    />
+  )
+}
+
 function LogoMark({ size = 28 }) {
   return (
-    <div className="rounded-[7px] bg-gradient-to-br from-emerald-950 to-emerald-900 border border-emerald-400/20 flex items-center justify-center shrink-0"
-      style={{ width: size, height: size }}>
-      <svg width={Math.round(size * 0.46)} height={Math.round(size * 0.46)} viewBox="0 0 24 24"
-        fill="none" stroke="currentColor" className="text-emerald-400/80" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="3" width="20" height="4" rx="1" />
-        <rect x="2" y="10" width="20" height="4" rx="1" />
-        <rect x="2" y="17" width="11" height="4" rx="1" />
-        <rect x="16" y="17" width="6" height="4" rx="1" />
-      </svg>
-    </div>
+    <img
+      src={logoIcon}
+      alt="The Motherboard"
+      width={size}
+      height={size}
+      className="shrink-0 object-contain"
+      style={{ width: size, height: size }}
+    />
   )
 }
 
@@ -262,8 +281,9 @@ export default function Sidebar({ activeGroup, activeSubItem, onNavigate, collap
         </>
       ) : (
         <div className="h-[60px] flex items-center gap-2.5 pl-3.5 pr-2.5 border-b border-gray-800 shrink-0">
-          <LogoMark />
-          <span className="flex-1 min-w-0 font-syne text-[13.5px] font-bold text-white truncate">The Motherboard</span>
+          <div className="flex-1 min-w-0 flex items-center">
+            <LogoLockup height={22} />
+          </div>
           <ToggleButton collapsed={false} onClick={handleToggle} />
         </div>
       )}
@@ -321,9 +341,8 @@ export function MobileDrawer({ open, activeGroup, activeSubItem, onNavigate, onC
         style={{ boxShadow: '8px 0 40px rgba(0,0,0,0.55)' }}
       >
         <div className="h-[60px] flex items-center justify-between px-3.5 border-b border-gray-800 shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <LogoMark size={26} />
-            <span className="font-syne text-[13.5px] font-bold text-white truncate">The Motherboard</span>
+          <div className="flex items-center min-w-0">
+            <LogoLockup height={24} />
           </div>
           <button onClick={onClose} aria-label="Close navigation"
             className="w-7 h-7 rounded-[7px] bg-white/5 hover:bg-white/10 text-gray-400 flex items-center justify-center transition-colors shrink-0">

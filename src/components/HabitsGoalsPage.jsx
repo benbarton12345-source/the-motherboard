@@ -27,9 +27,12 @@ export default function HabitsGoalsPage() {
       .then(({ data }) => { if (data) setHabits(data) })
     supabase.from('habit_completions').select('habit_id, completed_date').gte('completed_date', windowStart)
       .then(({ data }) => { if (data) setCompletions(data) })
-    supabase.from('weekly_goals').select('*').eq('active', true).order('created_at')
+    // All goals (not just active) plus a multi-week completion window, so the
+    // Weekly Goals section can page back through past weeks without refetching
+    // and can still show goals that were soft-deleted after being logged.
+    supabase.from('weekly_goals').select('*').order('created_at')
       .then(({ data }) => { if (data) setWeeklyGoals(data) })
-    supabase.from('weekly_goal_completions').select('*').eq('week_start_date', monday)
+    supabase.from('weekly_goal_completions').select('*').gte('week_start_date', isoMonday(-52))
       .then(({ data }) => { if (data) setWeeklyCompletions(data) })
     supabase.from('yearly_goals').select('*').order('created_at')
       .then(({ data }) => { if (data) setYearlyGoals(data) })
@@ -37,7 +40,6 @@ export default function HabitsGoalsPage() {
       .then(({ data }) => { if (data) setLongTermGoals(data) })
     supabase.from('long_term_goal_journal').select('*').order('entry_date', { ascending: false }).order('created_at', { ascending: false })
       .then(({ data }) => { if (data) setJournal(data) })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Summary strip ──────────────────────────────────────────────────────────
@@ -52,9 +54,13 @@ export default function HabitsGoalsPage() {
 
   const ltAchieved = longTermGoals.filter(g => g.status === 'done').length
 
-  const weeklyHit = weeklyGoals.filter(g => {
+  // Summary strip is always "this week", regardless of where the Weekly Goals
+  // section has been navigated to.
+  const activeWeeklyGoals = weeklyGoals.filter(g => g.active)
+  const thisWeekCompletions = weeklyCompletions.filter(c => c.week_start_date === monday)
+  const weeklyHit = activeWeeklyGoals.filter(g => {
     const target = g.goal_type === 'boolean' ? 1 : g.target_count || 1
-    const count = weeklyCompletions.filter(c => c.weekly_goal_id === g.id).length
+    const count = thisWeekCompletions.filter(c => c.weekly_goal_id === g.id).length
     return count >= target
   }).length
 
@@ -62,7 +68,7 @@ export default function HabitsGoalsPage() {
     { label: 'Yearly Goals', value: `${yearlyOnTrack}`, sub: `/ ${visibleYearly.length} on track`, tone: 'text-emerald-400' },
     { label: 'Top Habit Streak', value: topStreak, sub: topStreak === 1 ? 'day' : 'days', tone: 'text-emerald-400' },
     { label: 'Long-term Goals', value: `${ltAchieved}`, sub: `/ ${longTermGoals.length} achieved`, tone: 'text-white' },
-    { label: 'Weekly Goals', value: `${weeklyHit}`, sub: `/ ${weeklyGoals.length} hit this week`, tone: weeklyGoals.length > 0 && weeklyHit === weeklyGoals.length ? 'text-emerald-400' : 'text-white' },
+    { label: 'Weekly Goals', value: `${weeklyHit}`, sub: `/ ${activeWeeklyGoals.length} hit this week`, tone: activeWeeklyGoals.length > 0 && weeklyHit === activeWeeklyGoals.length ? 'text-emerald-400' : 'text-white' },
   ]
 
   return (

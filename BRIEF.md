@@ -386,42 +386,49 @@ Overload nudge is derived in the frontend by comparing `actual_reps >= target_re
 
 ---
 
-## Finance Page (current implementation)
+## Finance Section (current implementation)
 
-File: `src/components/FinancePage.jsx`
+Finance is a four-sub-page group. **Overview is the default landing page** (`App.jsx` falls through to it when `activeSubItem` is null).
 
-### Section 1 — Summary cards (grid, 4 columns)
+| Sub-page | File | Purpose |
+|---|---|---|
+| Overview | `FinanceOverviewPage.jsx` | Cross-cutting landing page — net worth hero, always-AUD snapshot row, flags grid |
+| Net Worth | `NetWorthPage.jsx` | Per-account balances, two-tier grouping, asset-class donut, UK/AU donut, add account, snapshot history |
+| Budgeting | `FinancePage.jsx` | Recurring items, monthly budget, transactions, soft targets, insights — **wrapped in `<ForceCurrency currency="AUD">`** |
+| Projections | `ProjectionsPage.jsx` | 25-year projection engine with live assumption sliders |
+
+### Budgeting sub-page (`FinancePage.jsx`)
+
+**Section 1 — Summary cards (grid, 4 columns)**
 - Net Worth: current total (GBP), m/m delta + percentage, sparkline
 - Runway: liquid cash ÷ monthly burn in months
 - Income/mo: sum of active income recurring items converted to monthly
 - Burn/mo: sum of active subscriptions + fixed costs, save rate
 
-### Section 2 — Asset cards (2 columns)
-- Liquid Cash: sum of Cash-type accounts from latest snapshot, % of NW, sparkline, per-account list
-- Invested Assets: Investments + Crypto accounts, same treatment
-
-### Section 3 — Recurring items (3 columns)
+**Section 3 — Recurring items (3 columns)**
 - Subscriptions | Fixed Costs | Income Sources
 - Each card: list with name, frequency badge, monthly-equivalent amount; add/edit/delete; monthly total
 - Currency field (GBP/AUD) on each item — amounts convert via CurrencyContext
 - Uses `recurring_items` table (type: subscription / fixed_cost / income)
 
-### Section 4 — Monthly Budget
+**Section 4 — Monthly Budget**
 - Month selector dropdown (rolling 12 months)
 - Summary stats: Income, Expenses, Saved, Save Rate
-- On first load for a given month, active recurring items are auto-inserted as budget entries (income sources → Income column; subscriptions + fixed costs → Expenses column)
-- Auto-populated entries show a RECURRING badge; no delete button; Edit button opens inline form to override amount, category, and notes for that month without affecting the recurring item
+- On first load for a given month, active recurring items are auto-inserted as budget entries (income sources → Income column; subscriptions + fixed costs → Expenses column). **The seed is an upsert**, guarded by a unique index on `(month, recurring_item_id)` — see the double-seed fix under Budgeting fit-up
+- Auto-populated entries show a RECURRING badge; no delete button; Edit opens a form to override amount, category, and notes for that month without affecting the recurring item
 - Manual one-off entries can still be added and deleted as before
 - Uses `budget_entries` table with `recurring_item_id` FK to track origin
 
-### Section 4b — Budgeting Insights
-- `<BudgetingInsights>` two-tab analytics (Overview / Spending Intelligence), unlocked once a statement is imported for the selected month; empty state otherwise. See "Budgeting Insights & Analytics" under Build Phases for the full spec, data limits, settings-in-localStorage decision, and Recharts mapping.
+**Section 4b — Budgeting Insights**
+- `<BudgetingInsights>` two-tab analytics (Overview / Spending Intelligence), unlocked once a statement is imported for the selected month; empty state otherwise. See "Budgeting Insights & Analytics" under Build Phases.
 
-### Section 5 — Snapshot History
-- Table columns: Period, Net Worth, Cash, Invested, Δ vs Prior (value + percentage e.g. +£6,269 (+6.4%))
-- Each row: Edit button opens inline edit form pre-populated with account values; Del button
-- "+ New Snapshot" button opens form, pre-fills from latest snapshot
-- Uses `net_worth_snapshots` table
+**Transactions + soft targets** — `BulkEditTransactions.jsx` (per-transaction table, shared/individual tagging) and `SoftTargets.jsx` (advisory per-category progress bars). Added in the Budgeting fit-up, 9 August 2026.
+
+### Gated-off legacy code on FinancePage (do not revive)
+
+Two flags at the top of `FinancePage.jsx` are permanently `false`, with the dead JSX left in place:
+- `LEGACY_NETWORTH_DISPLAY_ENABLED` (line ~28) — the old Section 2 asset cards. Net worth now lives on its own page; this duplicated it and read the legacy snapshot table.
+- `LEGACY_SNAPSHOT_FORM_ENABLED` (line ~22) — the old Section 5 snapshot entry form. It wrote to `net_worth_snapshots`, which is no longer the source of truth, so leaving it live was a data-loss trap.
 
 ### Frequency-to-monthly conversion
 - Monthly × 1, Fortnightly × 26 ÷ 12, Weekly × 52 ÷ 12, Quarterly ÷ 3, Annual ÷ 12
@@ -432,7 +439,11 @@ File: `src/components/FinancePage.jsx`
 
 | Table | Purpose |
 |---|---|
-| `net_worth_snapshots` | date, entries (jsonb array of {name, type, value, currency}), total (GBP) |
+| ~~`net_worth_snapshots`~~ | **LEGACY as of 26 July 2026.** date, entries (jsonb array of {name, type, value, currency}), total (GBP). Superseded by `accounts` + `account_snapshots`. **Left in place deliberately as a safety copy of the original data — not dropped.** Both UI surfaces that read it are gated off |
+| `accounts` | id (uuid PK), name (text NOT NULL, **unique** — the back-migration matches historical entries to accounts by name), asset_class ('cash'/'investments'/**'crypto'**/'pension'/'property'/'other'), country ('UK'/'AU'), currency ('GBP'/'AUD'), active (bool default true), created_at — one row per account; 11 real accounts seeded; RLS disabled; `sql/finance_rebuild.sql`, `sql/crypto_asset_class.sql` |
+| `account_snapshots` | id (uuid PK), account_id (FK→accounts ON DELETE CASCADE), snapshot_date (date — **no enforced cadence, any date allowed**), balance (numeric, **native currency of the account**, not pre-converted), created_at — unique on (account_id, snapshot_date); RLS disabled |
+| `transactions` | id (uuid PK), tx_date (date), merchant, category, amount (numeric, **AUD**), currency (default 'AUD'), tag ('shared'/'individual', default 'individual'), month (date, first-of-month bucket matching `budget_entries.month`), source ('commbank'/'amex'/'manual'), one_off (bool), created_at — per-transaction storage, **going forward from the 9 Aug 2026 fit-up only**; older months keep category aggregates in `budget_entries`; index on month; RLS disabled |
+| `budget_targets` | id (uuid PK), category (text **unique**), target_amount (numeric, AUD/month), created_at — standing advisory soft target per category; purely informational, amber when trending over, never blocks; RLS disabled |
 | `budget_entries` | month, category, type (income/expense), amount, currency, notes, recurring_item_id (FK, nullable), **one_off (boolean, default false)** — one_off marks a single imported transaction split into its own row so the insights layer can exclude it from category averages |
 | `statement_imports` | id (uuid), imported_at, statement_month (date, first-of-month), commbank_filename, amex_filename, transaction_count (int), category_totals (jsonb), reimbursements_total (numeric) — one audit row per statement import; RLS disabled |
 | `app_settings` | id (uuid), savings_target (numeric, fraction of income), fi_target (numeric, GBP), fi_target_date (date), created_at — single row holding Budgeting Insights targets; RLS disabled; created via `sql/app_settings.sql` |
@@ -646,13 +657,15 @@ A book/audiobook reading-goal tracker built from an approved design handoff, in 
 
 Sub-navigation mechanic and structure are **built** (see "Sidebar sub-navigation shell", 6 July 2026). Agreed sub-item structure:
 
-- **Finance:** Net Worth, Budgeting, Projections (placeholder, to be scoped properly later)
+- **Finance:** Overview, Net Worth, Budgeting, Projections — all four built and routed (26 July – 1 August 2026)
 - **Productivity:** Overview, Habits & Goals (weekly / yearly / long-term goal tiers, manual entry for now), Tasks, Reading
 - **Health:** Daily Metrics, Nutrition, Mood (placeholder), Insights (placeholder)
 - **Training:** Overview, Log Session, Programmes, Exercise Bank, Analysis (ordered by frequency of use)
 - **Home** and **Trading** remain flat — no sub-navigation
 
-**Group overview / landing pages** are the remaining work: only **Training → Overview** is built so far (`TrainingOverview.jsx`, 6 July 2026). Until a group has its own overview page, the interim routing rule lands it on `subs[0]`; the individual sub-items (Log Session, Programmes, etc.) are not yet split into their own routed views — they still open from within the existing page/modals.
+**Group overview / landing pages** — three of four are built: **Training** (`TrainingOverview.jsx`, 6 July), **Productivity** (`ProductivityOverview.jsx`, 10 July), **Finance** (`FinanceOverviewPage.jsx`, 1 August). **Health is the only group still without one** — it lands on `subs[0]` (Daily Metrics) via the interim routing rule.
+
+Splitting sub-items into their own routed views is done for Productivity (all four) and Finance (all four). Still open for **Training** — Log Session, Programmes, Exercise Bank and Analysis all still open from within `TrainingPage`/modals — and for **Health**.
 
 #### Productivity redesign — Session 2 of 3 complete (10 July 2026): Habits & Goals + Overview
 
@@ -701,8 +714,8 @@ Data decisions / notes:
 ### Next up — agreed build order
 
 1. ~~Sub-navigation design brief~~ — done; mockups approved and shell built (6 July 2026).
-2. **Group overview / landing pages** — one group at a time. **Training Overview done. Productivity fully done** (Overview + Habits & Goals + Tasks + Reading + Weekly Review modal — all four sub-items are now their own routed views, 10–11 July 2026). Remaining recommended order: Health, then Finance last (Projections needs separate scoping). Wiring the non-overview sub-items to their own routed views is still open for Training (Log Session/Programmes/etc. still open from within `TrainingPage`/modals) and the other groups.
-3. **Statement import and recurring reconciliation** — design brief written and approved; build queued to land against the new sub-page structure, not the old flat Finance page.
+2. ~~**Group overview / landing pages**~~ — **Training** (6 July), **Productivity** (10–11 July), **Finance** (1 August) all done. **Only Health remains** — it still lands on `subs[0]` (Daily Metrics) with no overview page. Wiring non-overview sub-items to their own routed views is done for Productivity and Finance; still open for **Training** (Log Session/Programmes/Exercise Bank/Analysis open from within `TrainingPage`/modals) and Health.
+3. ~~**Statement import and recurring reconciliation**~~ — done. Built 2–5 July, fitted up and bug-fixed 9 August, proven against four real statement months. See the Statement Import, Budgeting Insights, Budgeting fit-up and Statement import fixes sections.
 4. **Auto-linking engine for goals** — one reusable sync mechanism (not built per-feature): net worth snapshots auto-fill linked net-worth goals, habit completions auto-increment linked habit goals, steps data feeds linked step goals. The goals table needs a `linked_source` field reserved from the start.
 5. **Remaining horizon items** (sequenced as makes sense): app icon/logo (brief sent), Export Coach Data build (mockup approved), mood tracker, AI health insights, MyFitnessPal exploration, Trading tab proper build, password gate, Telegram bot for voice meal logging.
 
@@ -726,11 +739,135 @@ Data decisions / notes:
 - **Settings persist to the `app_settings` table** (single row, RLS disabled — same pattern as `health_settings`): `{ savings_target, fi_target (GBP), fi_target_date }`, editable via the gear icon. `insightsSettings.js` `loadSettings()`/`saveSettings()` read/upsert it async (component tracks the row `id` in `settingsId`, insert-if-missing else update). **Run `sql/app_settings.sql` once in the Supabase dashboard** — `loadSettings()` tolerates the table being absent (returns defaults) so nothing breaks before the migration is run.
 - **Currency:** every figure is run through `CurrencyContext.convert(amount, row.currency)` so charts respect the GBP/AUD toggle; net worth is GBP, most budget rows AUD, FI target stored in GBP.
 - **Derived "forecast":** there is no stored per-category budget, so forecast = **trailing 3-month average (one-offs excluded)**; the same baseline drives Unusual Spend. One-offs are excluded from all averages but included in cashflow totals (waterfall/net/velocity), matching `budget_entries.one_off`.
-- **Two honest data limits from build 1's schema** (surfaced in-UI, not faked): (1) the import stores per-category monthly aggregates, so **merchant breakdown** can only list one-off rows + an aggregated remainder; (2) **no per-transaction dates are retained**, so **spending velocity** is a linear 0→total approximation vs forecast pace (captioned as such). Both improve automatically if build 1 later persists transaction-level rows.
+- **Two data limits from build 1's schema — BOTH FIXED for months imported since 9 August 2026.** As originally built: (1) the import stored per-category monthly aggregates only, so **merchant breakdown** could list one-off rows + an aggregated remainder; (2) **no per-transaction dates were retained**, so **spending velocity** was a linear 0→total approximation vs forecast pace. The `transactions` table added in the Budgeting fit-up persists transaction-level rows, so both limits are lifted for any month with transaction rows (July 2026 onward). **Months before that still fall back to aggregates and retain the old limits** — the component handles both paths, so do not assume transaction-level data is available for every month.
 - **Sparse-data guards:** Unusual Spend needs ≥2 prior months of data before flagging (prevents absurd %s off a single-month baseline); subscription "creep" needs ≥3 real data points; displayed %s cap at `500%+`. With only May+June imported today most trend/creep/callout panels are intentionally quiet.
 - **Recharts mapping (for future adjustments):** waterfall = `ComposedChart` with an invisible spacer `Bar` (`dataKey="base"`) + a coloured `Bar` (`dataKey="size"`, per-bar `<Cell>`, value `LabelList` on income/net only); savings gauge = **hand-built SVG 270° arc** (`arcPath`/`polar`), not Recharts; sparkline + small-multiples = axis-less `LineChart`/`AreaChart`; forecast-vs-actual, heatmap, needs/wants, merchant bars = **CSS** (flex/grid), no chart lib; spending velocity + subscription creep = `AreaChart` (+ a dashed `Line` child for pace/trend); FI trajectory = `LineChart` with three `Line`s (actual/projected/required) + `ReferenceLine` for target & "today". All charts: `CartesianGrid` stroke `rgba(255,255,255,0.045)`, custom dark `Tooltip`, app tokens only.
 - **State** follows the handoff `InsightsState`: `activeTab` (switching clears `expandedCategory`), `expandedCategory` (single-open merchant drill-down), `whatIf` (six sliders initialised from the current month's actuals; impact panel updates synchronously on `onChange`).
 - **Verified** against live data + headless-Chrome render: June (populated) Overview + Intelligence, July (empty state); negative-net month renders the waterfall net bar red and shows "—" for unreachable FI timelines; heatmap renders with only 2 of 12 months populated (sparse cells, no errors); merchant drill-down opens one-at-a-time. The `fadeIn` keyframe used by the drill-down panel was added to `src/index.css`.
+
+### Finance rebuild — Net Worth, Projections, Overview (26 July – 1 August 2026)
+
+Three sequential builds that restructured Finance from a single flat page into the four-sub-page group described under "Finance Section (current implementation)".
+
+**Net worth restructure (`sql/finance_rebuild.sql`, run in Supabase).** Moved Net Worth off flat point-in-time JSON snapshots (`net_worth_snapshots`) onto a proper per-account model with per-account dated balance history (`accounts` + `account_snapshots`). Decisions confirmed before writing, and recorded in the SQL file's header comment:
+- **Taxonomy is two-tier** — top group Cash vs Invested Assets; Invested Assets contains investments / pension / property / other. Only the leaf `asset_class` is stored in the DB; the two-tier grouping, labels and order live in **`src/utils/financeTaxonomy.js`** as a single source of truth that can't drift. There is deliberately no `asset_group` column.
+- **`country` (UK/AU) and `currency` (GBP/AUD) are separate fields** — country drives the split donut, currency is the denomination balances are stored in. Usually aligned, decoupled by design.
+- **Balances are stored in each account's native currency**, not pre-converted to GBP. FX conversion happens on read via `CurrencyContext`.
+- **Full back-migration** — 11 real accounts seeded and every dated balance back-filled from the 7 legacy snapshots, so per-account sparklines and the Overview trend had full history from day one. Reclassifications: SIPP/Super → pension, Crypto → investments (the new taxonomy has no Crypto class). Comm Cash → country AU.
+- **Snapshot dates are unrestricted** — no 1st/15th cadence enforced anywhere.
+
+UI: `NetWorthPage.jsx` (grouped expandable list with subtotals, per-account sparklines, country tags, UK/AU split-ring donut), `AccountModal.jsx` (trend chart, add entry on any date, history with all-time + per-entry growth %), `NewSnapshotModal.jsx` (bulk one-date entry across all accounts).
+
+**Projections (`ProjectionsPage.jsx` + `src/utils/projectionEngine.js`).** Monthly-resolution GBP projection over a 25-year horizon, plus reverse calculation and sensitivity analysis. Live assumption sliders, a three-line advice/trading/total chart with a £1.5m target line and milestone markers, milestone cards, and time-to-£X tools. `DEFAULT_ASSUMPTIONS` lives in `projectionEngine.js` so the Overview FI-pace flag and Projections share one source of truth.
+
+**Finance Overview (`FinanceOverviewPage.jsx`).** The group's landing page: net worth hero (total, delta vs last snapshot, full-history trend, % to £1.5m, FI-projected date), an always-AUD snapshot row (savings rate, FI pace, monthly budget position), and a cross-metric flags grid (net worth momentum, savings-rate drift, FI-pace check, spend-vs-average, currency exposure). **Rolling-average comparisons require >=2 prior months** before they render, to avoid drawing conclusions off thin history.
+
+### Budgeting fit-up (9 August 2026 — `sql/budgeting_fitup.sql`, run in Supabase)
+
+Fitted the Budgeting sub-page around real use, after the first months of live imports.
+
+- **Per-transaction storage** — new `transactions` table; the importer writes per-transaction rows going forward. `BudgetingInsights` and `SoftTargets` read transactions where present and **fall back to `budget_entries` aggregates for older months**. Historical raw transactions were never persisted, so that fallback is permanent for pre-July 2026 months.
+- **Shared/individual tagging** — per-transaction `tag` set in the bulk-edit table (`BulkEditTransactions.jsx`), with a page-level include/exclude toggle feeding insights.
+- **Soft targets** — `budget_targets` table + `SoftTargets.jsx`. Advisory per-category progress bars, amber when over. Purely informational, never blocks.
+- **Budgeting locked to AUD** via a `ForceCurrency` wrapper in `App.jsx`; the header GBP/AUD toggle is rendered inert (not hidden) on this sub-page only.
+- **Recurring double-seed fixed at the DB level** — a seed race could insert two `budget_entries` for the same recurring item in the same month (August salary was counted twice). The migration deletes duplicates keeping the first row per `(month, recurring_item_id)`, then adds a partial unique index so it cannot recur; the app's seed insert also switched to upsert.
+
+### Statement import fixes (9 August 2026)
+
+Three fixes found by running the importer against real July data:
+
+- **Amex sign bug** — the Amex parser now mirrors CommBank (`amount = abs(signed)`, kind derived from sign), so credits (bill payments, refunds, offer credits) are detected instead of being counted as spend. A JB Hi-Fi -$10 offer credit was being added to spend.
+- **Excluded/Transfer category + Layer-1 rules** — Amex `ONLINE PAYMENT RECEIVED`, and own-account transfers via `/TRANSFER (TO|FROM) XX\d+/`, which had been inflating reimbursement income. Also `Fast Transfer From Ben George Barton`, matched on the **precise payer phrase** rather than the shared `CREDIT TO ACCOUNT` suffix — that suffix also appears on genuine PayID reimbursements, so a broad match would have swallowed real income. Verified: July reimbursements dropped $1,250.61 while a genuine June PayID reimbursement stayed classified as income.
+- **Excluded items are written as real tagged transactions** — visible but greyed in bulk-edit, never counted in insights, soft targets or totals — instead of silently vanishing.
+- New **Holidays / Travel** standing category for manual trip-spend confirmation.
+- A commit-path crash was fixed where `buildReviewState` exposed only `excludedCount` (a number) while `commitImport` iterated `review.excluded` as an array.
+
+**Proven in live use:** four statement months are imported (May, June, July, August 2026). July and August were imported on 2 September 2026 with these fixes in place — 219 transaction rows across both — so the importer is validated end to end against real CommBank and Amex exports.
+
+### Fixes and tweaks batch (11 September 2026)
+
+Six items, each investigated against the live code before changing anything. Two turned out to be substantially different from the brief, and one uncovered a pre-existing bug.
+
+**1 — Home page showed stale net worth and budget.** Two distinct causes, both fixed by sharing one data layer:
+- `HomePage.jsx` read the **legacy `net_worth_snapshots` table**, frozen at the 26 July restructure, while Net Worth and Finance Overview read `accounts`/`account_snapshots`. (The brief's guess — "reading the wrong snapshot" — was close; it was the wrong *table*.)
+- The budget card read `budget_entries` raw without the recurring seed, so an unopened month showed nothing.
+- **New `src/useNetWorth.js`** — the single fetch surface for the per-account model (accounts + snapshots, GBP-normalised totals, carry-forward history, delta, per-class totals). Now used by **Home, Net Worth and Finance Overview**, replacing three copies of the same query and derivation.
+- **New `src/useMonthlyBudget.js`** + **`src/utils/budgetHelpers.js`** (`toMonthly`, `monthEnd`, `currentMonth`, `seedMissingRecurring`). `FinancePage` and Home now seed and total a month through the same code; `toMonthly` is no longer duplicated in `FinancePage`.
+- **The Budgeting page had the same bug**, found while regression-testing: its Section 1 Net Worth card and Runway "Liquid" figure also read the legacy table, showing **A$249,020** against a true **A$262,784**, and a 8-month runway against a true 10. Both now read `useNetWorth`, as does the `snapshots` prop passed to `BudgetingInsights` (rebuilt as `[{ date, total }]` from per-account history rather than the dead table). All three surfaces — Home, Net Worth, Budgeting — now agree to the pound.
+- **`recurring_overrides` does not exist** and never did — it appears in no code, migration or table. Nothing was built against it.
+- `FinancePage` still holds a `snapshots` state reading `net_worth_snapshots`, but it now feeds **only** the gated-off legacy Section 2/5 blocks so that dead code still compiles. No live surface reads it.
+
+**Pre-existing bug found and fixed — the recurring seed had been silently failing since 9 August 2026.** The Budgeting fit-up switched the seed to `.upsert(..., { onConflict: 'month,recurring_item_id' })` while adding a **partial** unique index (`where recurring_item_id is not null`). Postgres cannot infer a partial index for `ON CONFLICT` unless the predicate is restated, which PostgREST cannot express, so every seed since raised `42P10: there is no unique or exclusion constraint matching the ON CONFLICT specification` and **no new month was ever populated** — September was empty on both pages. `seedMissingRecurring` now does a plain insert of only the missing rows (duplicates are already excluded in JS) and swallows a unique-index rejection as the race guard doing its job. Verified: September seeded 10 rows, and the Home card reconciles exactly against the database (income £2,764, expenses £994, saved £1,769, 64%).
+
+**2 — Weekly goals now navigate past weeks.** `WeeklyGoalsSection` gained the same ‹ › navigator as `HabitTracker`. `HabitsGoalsPage` now fetches **all** weekly goals (not just `active = true`) plus a **52-week** completion window, so paging back never refetches. Two subtleties handled: past weeks also list goals that were **soft-deleted after being logged** (delete sets `active = false`, so filtering on active alone would silently drop them from history), and the summary strip stays pinned to the current week regardless of where the section is navigated. Adding a goal is disabled on past weeks — a new goal applies going forward, not retroactively. Verified against live data across three weeks; every rendered count matches the database.
+
+**3 — Identity Check-In removed entirely.** Deleted `DailyIdentityModal.jsx`, `src/utils/identityDomains.js` and `sql/identity_checkin.sql`; stripped 40 references from `ProductivityOverview.jsx` (stat card — the snapshot strip drops 5 cards to 4 — trailing-window widget, banner, modal mount) and the Identity Check section from `WeeklyReviewModal.jsx`, which is back to its core six fields. Zero references remain anywhere in `src/`, `api/` or `sql/`. **`sql/remove_identity_checkin.sql`** drops `identity_votes` (32 rows); the four `weekly_reviews` columns are a **separate, commented-out, optional** step because they hold real written prose on two sealed weeks (2026-07-13 and 2026-07-20) — see the warning in that file. Note `trading_lesson` is arguably not an identity field at all; it merely lived in that section.
+
+**4 — Logo integrated.** The sidebar's inline circuit-board SVG was replaced with the supplied artwork: a horizontal icon+wordmark lockup for the expanded rail and mobile drawer (the separate text label was removed from both, since the lockup contains the name) and the square icon for the collapsed rail. `favicon.ico` is now the site favicon, replacing a leftover purple Vite-style `favicon.svg` unrelated to the app. Added **`public/manifest.webmanifest`** plus `apple-touch-icon` and `theme-color` in `index.html`. Full asset table under "Logo" below.
+
+**5 — Add Account.** New `src/components/AddAccountModal.jsx` (modal-first, shared `Modal`), opened from a `+ Add Account` button on the Net Worth header. Creates the `accounts` row plus its first `account_snapshots` balance in one action, so the account appears immediately in the grouped list, the breakdown donut and every future bulk snapshot. Country selection pre-selects the usual currency but the two stay independently changeable, per the taxonomy's country/currency split. Verified end to end against the live database (created, checked, removed).
+
+**6 — Asset-class breakdown + Crypto promoted.** `asset_class` already existed with a two-tier taxonomy, and accounts were already grouped by class with subtotals, so **no schema addition, migration or re-categorisation of existing accounts was needed** — the genuinely missing piece was the chart (the existing donut splits UK/AU by *country*). Added `AssetClassDonut` on the Net Worth page: a segmented ring in `ASSET_CLASS_ORDER` with a 2px gap between arcs, the total in the centre, and a legend giving every class a name, percentage and value so identity is never colour-alone. Classes with no balance take no colour.
+- **Crypto is now its own leaf class**, reversing the 26 July decision that folded it into `investments`. Requires **`sql/crypto_asset_class.sql`** — it widens the `asset_class` CHECK constraint *then* reclassifies the Crypto account (order matters). Until it is run, Crypto still reports under Investments and picking "Crypto" in Add Account will fail the constraint.
+- **`ASSET_CLASS_COLOURS`** added to `financeTaxonomy.js`. The app's usual 400-step tokens all sit too light for a dark chart surface and failed the dark-mode lightness band. See the revision below — the first cut passed only adjacent-pair separation and had to be re-stepped for a ring.
+
+### Follow-ups (11 September 2026)
+
+**Edit-account asset class.** `AccountModal` gained an Asset Class selector (same six taxonomy options as Add Account), so an account can be reclassified from the UI instead of a one-off SQL update. It saves immediately on change, optimistically with a revert on error, and calls `onSaved` so the grouped list, the breakdown donut and the Home Assets card all re-derive at once. Verified round-trip against the live database.
+
+**Home Assets card is now the same donut.** `AssetClassDonut` was extracted from `NetWorthPage.jsx` into **`src/components/AssetClassDonut.jsx`** and is now shared by the Net Worth page and the Home Assets card, which previously drew per-class percentage bars. One implementation, so colour, ordering and geometry can never drift between the two. The component takes a `size` prop — Home renders a 116px ring with the legend stacked beneath it, because that card sits in a 200px column; Net Worth keeps the 132px ring with the legend alongside. Stroke width and centre text scale from `size`.
+
+**Palette re-validated for a ring — the first cut was wrong.** The original colours were validated for *adjacent pairs in list order*, which is the right check for a bar chart but not for a donut: **the last segment wraps around to touch the first**, so any two classes can end up neighbours. With the four classes actually in use, `pension` (teal-600) rendered directly against `cash` (emerald-600) at **ΔE 4.9 normal-vision, against a floor of 15** — two greens that were genuinely hard to tell apart, and visibly so once rendered.
+
+Re-stepped and re-validated with **all-pairs** separation:
+
+| Class | Colour | Tailwind |
+|---|---|---|
+| cash | `#047857` | emerald-700 |
+| investments | `#0284c7` | sky-600 |
+| crypto | `#d97706` | amber-600 |
+| pension | `#7c3aed` | violet-600 |
+| property | `#e11d48` | rose-600 |
+| other | `#64748b` | slate-500 — deliberately neutral, see below |
+
+The five chromatic classes pass the lightness band, chroma floor, normal-vision floor and contrast on **all** pairs. CVD separation sits at ΔE 7.3 (cash↔property), inside the 6–8 band that is permitted only with secondary encoding — which this chart has: every segment is named in the legend with its own percentage and value, plus an SVG `<title>` on hover. **`other` is a neutral grey on purpose**: six chromatic classes cannot all clear the all-pairs floor inside the dark lightness band, and a residual bucket should not compete with a real class for identity.
+
+**Open question — violet.** BRIEF records purple being deliberately removed from the *Productivity* section (recurring items use teal). That rule is section-scoped and Finance uses no purple, so violet-600 is used here for `pension`. If purple is unwanted app-wide, **pink-600 `#db2777` is a drop-in replacement that validates marginally better** (CVD 9.6 vs 9.2, all checks pass) — a one-line change in `ASSET_CLASS_COLOURS`.
+
+### Logo
+
+Supplied 11 September 2026. Two lockups drive the UI, both with transparent backgrounds sitting directly on the gray-900 surface (no tile or border behind them):
+
+| Asset | Where it is used |
+|---|---|
+| `src/assets/logo_horizontal.png` (975×108) | Sidebar **expanded** rail (22px tall) and **mobile drawer** (24px tall). It is an icon + wordmark lockup, so **neither placement renders a separate "The Motherboard" text label any more** — the old `font-syne` span was removed from both |
+| `src/assets/logo_icon_512.png` (512×512) | Sidebar **collapsed** rail (64px wide), where a ~9:1 horizontal lockup cannot fit |
+| `public/favicon.ico` (256×256) | Browser tab icon — `<link rel="icon" type="image/x-icon">` |
+| `public/logo_icon_512.png` | PWA manifest icons (`any` + `maskable`) and `apple-touch-icon` |
+| `src/assets/logo_full.png` (869×573) | **Not wired to anything.** Held for a future splash / login / loading screen |
+
+`Sidebar.jsx` exposes two components: `LogoLockup` (horizontal, width-permitting placements) and `LogoMark` (square icon). The earlier placeholder `src/assets/logo.svg` and `public/favicon.svg` were deleted.
+
+**`public/manifest.webmanifest`** — standalone display, `#0a0a0a` theme and background. Icon/metadata only: **no service worker and no offline support**, so this is not a full PWA. Verified rendering at all three placements (expanded rail 159×22 with no overflow in the 220px rail, collapsed rail, mobile drawer).
+
+`logo_mark.png` was listed as supplied but was not present in Downloads; `logo_icon_512.png` covers the square-icon role it would have filled.
+
+### Current position (as of 11 September 2026)
+
+Last commit is **9 August 2026** (`ad1a98f`); the 11 September fixes-and-tweaks batch above is **in the working tree, uncommitted**. The app had been in live use since August — statements imported 2 September, net worth snapshot 1 September.
+
+**Three SQL scripts are pending a manual run in Supabase** (the app works without them, with the noted limitations):
+1. `sql/crypto_asset_class.sql` — **required** for Crypto to appear as its own class and for the Add Account "Crypto" option to save.
+2. `sql/remove_identity_checkin.sql` — part 1 drops `identity_votes`; part 2 is optional and destroys written prose.
+3. Optional: replace the partial `budget_entries_recurring_unique` index with a plain one if the upsert form is ever wanted back. Not needed — `seedMissingRecurring` no longer relies on `ON CONFLICT`.
+
+**Finance is now the most-built section of the app** and has overtaken the original build order: Overview, Net Worth, Budgeting (with import, insights, transactions, soft targets) and Projections are all live.
+
+**Candidates for the next build**, roughly in order of how well they follow from what's there:
+1. **Health group overview page** — the last missing landing page, and the next item on the agreed build order. Follows the established pattern three times over.
+2. **Soft targets are built but unused** — `budget_targets` has 0 rows. Either a small onboarding pass to set them, or a decision that the feature isn't wanted.
+3. **Auto-linking engine for goals** — item 4 below; still unbuilt, and `linked_source` is already reserved on `long_term_goals`.
+4. **Training sub-item routing** — split Log Session / Programmes / Exercise Bank / Analysis out of `TrainingPage` into routed views, matching Productivity and Finance.
 
 ### Note on approach
 

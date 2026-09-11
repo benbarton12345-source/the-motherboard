@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import { useCurrency } from '../CurrencyContext'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { latestBalance, groupSnapshots } from '../utils/netWorthHelpers'
+import { latestBalance } from '../utils/netWorthHelpers'
+import { useNetWorth } from '../useNetWorth'
 import { NET_WORTH_TARGET_GBP } from '../utils/financeTaxonomy'
 import { projectSeries, findCrossingMonth, monthsToLabel, DEFAULT_ASSUMPTIONS } from '../utils/projectionEngine'
 
@@ -17,45 +18,24 @@ function monthKey(d = new Date()) {
 }
 
 export default function FinanceOverviewPage() {
-  const { convert, format, rate } = useCurrency()
-  const [accounts, setAccounts] = useState([])
-  const [snaps, setSnaps] = useState({})
+  const { convert, format } = useCurrency()
+  const { accounts, snaps, loading: nwLoading, toGbp, totalGbp, historyGbp, deltaPct } = useNetWorth()
   const [budget, setBudget] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [budgetLoading, setBudgetLoading] = useState(true)
+  const loading = nwLoading || budgetLoading
 
   useEffect(() => {
-    Promise.all([
-      supabase.from('accounts').select('*').eq('active', true),
-      supabase.from('account_snapshots').select('*'),
-      supabase.from('budget_entries').select('month,type,amount'),
-    ]).then(([a, s, b]) => {
-      if (a.data) setAccounts(a.data)
-      if (s.data) setSnaps(groupSnapshots(s.data))
-      if (b.data) setBudget(b.data)
-      setLoading(false)
-    })
+    supabase.from('budget_entries').select('month,type,amount')
+      .then(({ data }) => { if (data) setBudget(data); setBudgetLoading(false) })
   }, [])
 
-  const fx = rate || 2.05
-  const toGbp = (native, ccy) => (ccy === 'GBP' ? native : native / fx)
-
-  // ── Net worth history (carry-forward per account) ───────────────────────────
-  const allDates = [...new Set(Object.values(snaps).flat().map(r => r.snapshot_date))].sort()
-  const history = allDates.map(date => {
-    let gbp = 0
-    for (const a of accounts) {
-      const h = snaps[a.id] || []
-      let bal = null
-      for (const r of h) { if (r.snapshot_date <= date) bal = Number(r.balance); else break }
-      if (bal != null) gbp += toGbp(bal, a.currency)
-    }
-    return { date: date.slice(5), gbp, disp: Math.round(convert(gbp, 'GBP')) }
-  })
-  const totalGbp = accounts.reduce((s, a) => s + toGbp(latestBalance(snaps[a.id]), a.currency), 0)
+  // Net worth history comes from useNetWorth (GBP); map to display currency here.
+  const history = historyGbp.map(h => ({
+    date: h.date.slice(5), gbp: h.gbp, disp: Math.round(convert(h.gbp, 'GBP')),
+  }))
   const cur = history[history.length - 1]
   const prev = history[history.length - 2]
   const deltaDisp = cur && prev ? cur.disp - prev.disp : null
-  const deltaPct = deltaDisp != null && prev?.disp ? (deltaDisp / prev.disp) * 100 : null
   const pctToTarget = Math.min(100, (totalGbp / NET_WORTH_TARGET_GBP) * 100)
 
   // ── FI pace (shared engine) ─────────────────────────────────────────────────

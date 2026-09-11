@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../supabase'
 import { useCurrency } from '../CurrencyContext'
 import { localDate } from '../utils/taskHelpers'
+import { ASSET_CLASS_ORDER, classLabel } from '../utils/financeTaxonomy'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 // Account detail modal — current balance, full trend chart, an unrestricted-date
@@ -14,6 +15,9 @@ export default function AccountModal({ account, history, onClose, onSaved }) {
   const [date, setDate] = useState(localDate())
   const [amount, setAmount] = useState('')
   const [busy, setBusy] = useState(false)
+  const [assetClass, setAssetClass] = useState(account.asset_class)
+  const [classBusy, setClassBusy] = useState(false)
+  const [classError, setClassError] = useState('')
 
   const nativeSym = account.currency === 'GBP' ? '£' : 'A$'
   const disp = native => format(convert(Number(native) || 0, account.currency))
@@ -45,6 +49,24 @@ export default function AccountModal({ account, history, onClose, onSaved }) {
       { onConflict: 'account_id,snapshot_date' })
     setAmount('')
     setBusy(false)
+    onSaved?.()
+  }
+
+  // Reclassify the account. Saves immediately on change — the grouped list,
+  // asset-class donut and Home allocation card all re-derive from `asset_class`,
+  // so `onSaved` refreshes every surface at once.
+  async function changeAssetClass(next) {
+    const previous = assetClass
+    setAssetClass(next)          // optimistic
+    setClassBusy(true)
+    setClassError('')
+    const { error } = await supabase.from('accounts').update({ asset_class: next }).eq('id', account.id)
+    setClassBusy(false)
+    if (error) {
+      setAssetClass(previous)    // revert
+      setClassError(error.message)
+      return
+    }
     onSaved?.()
   }
 
@@ -106,6 +128,26 @@ export default function AccountModal({ account, history, onClose, onSaved }) {
           ) : (
             <div className="text-sm text-gray-600">Not enough history to chart yet — add a second entry.</div>
           )}
+
+          {/* Asset class */}
+          <div className="border-t border-gray-800 pt-4">
+            <div className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2.5">Asset Class</div>
+            <div className="flex items-center gap-2">
+              <select
+                value={assetClass}
+                disabled={classBusy}
+                onChange={e => changeAssetClass(e.target.value)}
+                className={`flex-1 ${inputCls} disabled:opacity-50`}
+              >
+                {ASSET_CLASS_ORDER.map(cls => (
+                  <option key={cls} value={cls}>{classLabel(cls)}</option>
+                ))}
+              </select>
+              {classBusy && <span className="text-[11px] text-gray-500">Saving…</span>}
+            </div>
+            <div className="text-[11px] text-gray-600 mt-1.5">Saved immediately. Moves the account between groups and updates the breakdown.</div>
+            {classError && <div className="text-[11px] text-red-400 mt-1.5">{classError}</div>}
+          </div>
 
           {/* Add entry */}
           <div className="border-t border-gray-800 pt-4">

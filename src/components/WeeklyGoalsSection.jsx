@@ -1,19 +1,35 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
 import { localDate } from '../utils/taskHelpers'
-import { isoMonday, weekDates, dayLabel, DAY_LABELS } from '../utils/productivityHelpers'
+import { isoMonday, weekDates, dayLabel, DAY_LABELS, weekOffsetLabel, weekRangeLabel } from '../utils/productivityHelpers'
 import ConfirmPopover from './ConfirmPopover'
 
-// Weekly Goals — frequency targets for the CURRENT week only (Gym 3x, Sauna 1x,
-// Facetime Mum 1x). They reset weekly. Completions live in
-// `weekly_goal_completions`, keyed by week_start_date, so the current week is
-// naturally fresh on rollover and past weeks stay as permanent history — no
-// deletion or separate persistence is needed. `goal_type` is 'numeric' (N×/week)
-// or 'boolean' (single 1× completion).
+// Weekly Goals — frequency targets per week (Gym 3x, Sauna 1x, Facetime Mum 1x).
+// They reset weekly. Completions live in `weekly_goal_completions`, keyed by
+// week_start_date, so the current week is naturally fresh on rollover and past
+// weeks stay as permanent history. `goal_type` is 'numeric' (N×/week) or
+// 'boolean' (single 1× completion).
+//
+// Past weeks are navigable with the same ‹ › control as Habits. `completions` is
+// a multi-week window from the parent, filtered to the selected week here, so
+// paging back never refetches.
 export default function WeeklyGoalsSection({ goals, setGoals, completions, setCompletions }) {
-  const monday = isoMonday(0)
+  const [weekOffset, setWeekOffset] = useState(0)
+  const monday = isoMonday(weekOffset)
   const days = weekDates(monday)
   const today = localDate()
+  const isCurrentWeek = weekOffset === 0
+
+  // Only this week's completions drive the dots and counts.
+  const weekCompletions = completions.filter(c => c.week_start_date === monday)
+
+  // Current week shows the active goal list. Past weeks additionally include
+  // goals since soft-deleted (`active = false`) that were actually logged that
+  // week, so history stays truthful rather than silently dropping them.
+  const loggedThisWeek = new Set(weekCompletions.map(c => c.weekly_goal_id))
+  const visibleGoals = isCurrentWeek
+    ? goals.filter(g => g.active)
+    : goals.filter(g => g.active || loggedThisWeek.has(g.id))
 
   const [popover, setPopover] = useState(null)
   const [editingId, setEditingId] = useState(null)
@@ -22,13 +38,13 @@ export default function WeeklyGoalsSection({ goals, setGoals, completions, setCo
   const [addForm, setAddForm] = useState({ name: '', target_count: 3, goal_type: 'numeric' })
 
   const goalTarget = g => (g.goal_type === 'boolean' ? 1 : g.target_count || 1)
-  const isDone = (goalId, dateStr) => completions.some(c => c.weekly_goal_id === goalId && c.completed_date === dateStr)
-  const goalCount = goalId => completions.filter(c => c.weekly_goal_id === goalId).length
+  const isDone = (goalId, dateStr) => weekCompletions.some(c => c.weekly_goal_id === goalId && c.completed_date === dateStr)
+  const goalCount = goalId => weekCompletions.filter(c => c.weekly_goal_id === goalId).length
 
   async function setCompletion(goalId, dateStr, done) {
     setCompletions(prev => done
       ? [...prev, { weekly_goal_id: goalId, week_start_date: monday, completed_date: dateStr }]
-      : prev.filter(c => !(c.weekly_goal_id === goalId && c.completed_date === dateStr)))
+      : prev.filter(c => !(c.weekly_goal_id === goalId && c.week_start_date === monday && c.completed_date === dateStr)))
     if (done) {
       await supabase.from('weekly_goal_completions')
         .upsert({ weekly_goal_id: goalId, week_start_date: monday, completed_date: dateStr },
@@ -85,8 +101,11 @@ export default function WeeklyGoalsSection({ goals, setGoals, completions, setCo
   }
 
   async function deleteGoal(goal) {
+    // Soft delete — the goal keeps its completion history, so mark it inactive
+    // locally rather than dropping the row. Past weeks still list it if it was
+    // logged then; the current week filters it out.
     await supabase.from('weekly_goals').update({ active: false }).eq('id', goal.id)
-    setGoals(prev => prev.filter(g => g.id !== goal.id))
+    setGoals(prev => prev.map(g => (g.id === goal.id ? { ...g, active: false } : g)))
     setEditingId(null)
   }
 
@@ -95,14 +114,32 @@ export default function WeeklyGoalsSection({ goals, setGoals, completions, setCo
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-3">
         <h2 className="text-sm tracking-widest uppercase text-gray-400">Weekly Goals</h2>
-        <span className="text-[10px] text-gray-600 uppercase tracking-widest">Resets weekly</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setWeekOffset(o => o - 1)}
+            className="text-gray-500 hover:text-white transition-colors text-xl leading-none"
+          >‹</button>
+          <div className="text-center">
+            <div className="text-xs text-white">{weekOffsetLabel(weekOffset)}</div>
+            <div className="text-[10px] text-gray-600">{weekRangeLabel(monday)}</div>
+          </div>
+          <button
+            onClick={() => setWeekOffset(o => Math.min(0, o + 1))}
+            disabled={isCurrentWeek}
+            className="text-gray-500 hover:text-white transition-colors text-xl leading-none disabled:opacity-30 disabled:cursor-default"
+          >›</button>
+        </div>
       </div>
 
       <div className="space-y-3">
-        {goals.length === 0 && <div className="text-sm text-gray-600">No weekly goals set</div>}
-        {goals.map(goal => {
+        {visibleGoals.length === 0 && (
+          <div className="text-sm text-gray-600">
+            {isCurrentWeek ? 'No weekly goals set' : 'No weekly goals tracked this week'}
+          </div>
+        )}
+        {visibleGoals.map(goal => {
           const target = goalTarget(goal)
           const count = goalCount(goal.id)
           const hit = count >= target
@@ -179,8 +216,12 @@ export default function WeeklyGoalsSection({ goals, setGoals, completions, setCo
         })}
       </div>
 
+      {/* Adding a goal only makes sense for the current week — a new goal applies
+          going forward, not retroactively. */}
       <div className="mt-4">
-        {adding ? (
+        {!isCurrentWeek ? (
+          <div className="text-[10px] text-gray-600 uppercase tracking-widest">Viewing a past week — read-only list</div>
+        ) : adding ? (
           <div className="p-3 bg-gray-800/60 rounded-lg space-y-2">
             <input
               value={addForm.name}
