@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#05080b; color:#e6edf3; font-family:'Barlow', system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  * { box-sizing:border-box; }
+  a { color:#34e59b; text-decoration:none; }
+  a:hover { color:#7df3c0; }
+  input { font-family:'IBM Plex Mono', monospace; }
+  ::-webkit-scrollbar { width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb { background:#1a2530; border-radius:6px; }
+  ::-webkit-scrollbar-track { background:#0a0e13; }
+  @keyframes dash { from { stroke-dashoffset:1400; } to { stroke-dashoffset:0; } }
+  @media (max-width: 900px) { [data-rail], [data-wide-only] { display:none !important; } }
+  @media (min-width: 901px) { [data-narrow-only] { display:none !important; } }
+</style>
+</helmet>
+
+<div style="display:flex; min-height:100vh; background:#05080b;">
+
+    <div data-rail="1" style="width:62px; flex:0 0 62px; background:#03070a; border-right:1px solid rgba(255,255,255,.05); display:flex; flex-direction:column; align-items:center; padding:14px 0 18px; gap:10px;">
+      <div style="width:30px; height:30px; border-radius:8px; background:#0f1a22; border:1px solid rgba(52,229,155,.35); display:flex; align-items:center; justify-content:center; color:#34e59b; font-weight:800; font-size:14px; margin-bottom:16px;">M</div>
+      <div style="width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#4d5c6b;">
+        <svg width="17" height="17" viewBox="0 0 16 16"><rect x="1" y="7" width="14" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"></rect><rect x="5" y="10" width="6" height="5" fill="none" stroke="currentColor" stroke-width="1.4"></rect></svg>
+      </div>
+      <div style="width:36px; height:36px; border-radius:9px; background:#0f2119; border:1px solid rgba(52,229,155,.22); display:flex; align-items:center; justify-content:center; color:#34e59b;">
+        <svg width="17" height="17" viewBox="0 0 16 16"><rect x="2" y="9" width="3" height="5" fill="currentColor"></rect><rect x="6.5" y="5" width="3" height="9" fill="currentColor"></rect><rect x="11" y="2" width="3" height="12" fill="currentColor"></rect></svg>
+      </div>
+      <div style="width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#4d5c6b;">
+        <svg width="17" height="17" viewBox="0 0 16 16"><polyline points="1,12 5,7 8,9 15,3" fill="none" stroke="currentColor" stroke-width="1.5"></polyline></svg>
+      </div>
+      <div style="width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#4d5c6b;">
+        <svg width="17" height="17" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="1.6" fill="currentColor"></rect><rect x="2" y="7.2" width="12" height="1.6" fill="currentColor"></rect><rect x="2" y="11.4" width="12" height="1.6" fill="currentColor"></rect></svg>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="width:28px; height:28px; border-radius:50%; background:#0f2119; border:1px solid rgba(52,229,155,.3); color:#34e59b; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;">B</div>
+    </div>
+
+  <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+
+    <div style="height:58px; flex:0 0 58px; border-bottom:1px solid rgba(255,255,255,.05); background:#03070a; display:flex; align-items:center; justify-content:space-between; padding:0 clamp(14px,3vw,26px); gap:12px;">
+      <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+        <div data-narrow-only="1" style="width:26px; height:26px; border-radius:7px; background:#0f1a22; border:1px solid rgba(52,229,155,.35); display:flex; align-items:center; justify-content:center; color:#34e59b; font-weight:800; font-size:13px;">M</div>
+        <div style="font-size:17px; font-weight:700; letter-spacing:-.01em;">Trading</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.09em; color:#4d5c6b; text-transform:uppercase; white-space:nowrap;">
+        <span style="width:6px; height:6px; border-radius:50%; background:#34e59b; box-shadow:0 0 8px rgba(52,229,155,.8);"></span>
+        IG · synced {{ syncedAt }}
+      </div>
+    </div>
+
+    <div style="flex:1; padding:clamp(14px,2.6vw,26px); display:flex; flex-direction:column; gap:14px; max-width:1360px; width:100%;">
+
+      <sc-if value="{{ showOverview }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; flex-direction:column; gap:14px;">
+
+          <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
+            <div style="display:flex; background:#0b1219; border:1px solid rgba(255,255,255,.07); border-radius:10px; padding:3px; gap:2px;">
+              <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+                <div onClick="{{ t.onClick }}" style="padding:7px 13px; border-radius:7px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; white-space:nowrap; background:{{ t.bg }}; color:{{ t.fg }};">{{ t.label }}</div>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ showMonthNav }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; align-items:center; gap:2px; background:#0b1219; border:1px solid rgba(255,255,255,.07); border-radius:10px; padding:3px;">
+                <div onClick="{{ prevMonth }}" style="width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#8b9aa9; cursor:pointer; font-size:14px;">‹</div>
+                <div style="min-width:104px; text-align:center; font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.06em; color:#e6edf3;">{{ monthLabel }}</div>
+                <div onClick="{{ nextMonth }}" style="width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#8b9aa9; cursor:pointer; font-size:14px;">›</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ showCustom }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:center; gap:8px; background:#0b1219; border:1px solid rgba(255,255,255,.07); border-radius:10px; padding:5px 10px;">
+                <input type="date" value="{{ from }}" onChange="{{ setFrom }}" style="background:transparent; border:none; color:#e6edf3; font-size:11.5px; outline:none; color-scheme:dark;">
+                <span style="color:#3d4a57; font-size:11px;">→</span>
+                <input type="date" value="{{ to }}" onChange="{{ setTo }}" style="background:transparent; border:none; color:#e6edf3; font-size:11.5px; outline:none; color-scheme:dark;">
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="background:#0e1620; border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:clamp(16px,2vw,24px); display:flex; flex-wrap:wrap; gap:clamp(16px,3vw,32px);">
+            <div style="flex:1 1 230px; min-width:210px; display:flex; flex-direction:column; justify-content:center;">
+              <div style="font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:#6b7987;">Net P&amp;L · {{ periodLabel }}</div>
+              <div style="font-size:clamp(38px,6.4vw,64px); font-weight:800; letter-spacing:-.025em; line-height:1.05; margin-top:8px; color:{{ netColor }}; text-shadow:0 0 34px rgba(52,229,155,.18);">{{ netStr }}</div>
+              <div style="margin-top:8px; font-size:13.5px; color:{{ deltaColor }};">{{ deltaStr }}</div>
+              <div style="margin-top:14px; font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.06em; color:#5a6673;">{{ tradeSummary }}</div>
+            </div>
+            <div style="flex:2 1 320px; min-width:250px;">
+              <svg viewBox="0 0 600 170" preserveAspectRatio="none" style="width:100%; height:clamp(128px, 17vw, 170px); display:block; overflow:visible;">
+                <defs>
+                  <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#34e59b" stop-opacity="0.26"></stop>
+                    <stop offset="100%" stop-color="#34e59b" stop-opacity="0"></stop>
+                  </linearGradient>
+                </defs>
+                <path d="{{ zeroLine }}" stroke="rgba(255,255,255,.1)" stroke-width="1" stroke-dasharray="3 4" fill="none" vector-effect="non-scaling-stroke"></path>
+                <path d="{{ areaPath }}" fill="url(#pnlGrad)"></path>
+                <path d="{{ linePath }}" fill="none" stroke="#34e59b" stroke-width="2.2" vector-effect="non-scaling-stroke" style="filter:blur(7px); opacity:.55;"></path>
+                <path d="{{ linePath }}" fill="none" stroke="#34e59b" stroke-width="2.2" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+              </svg>
+              <div style="display:flex; justify-content:space-between; margin-top:10px; font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.06em; color:#4d5c6b;">
+                <sc-for list="{{ xLabels }}" as="l" hint-placeholder-count="5">
+                  <span>{{ l.t }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:12px;">
+
+            <div style="flex:1 1 150px; min-width:0; background:#0e1620; border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:16px;">
+              <div style="font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#6b7987;">Win rate</div>
+              <div style="font-size:30px; font-weight:800; letter-spacing:-.02em; margin-top:6px;">{{ winRateStr }}</div>
+              <div style="margin-top:12px; height:5px; border-radius:3px; background:#17212b; position:relative; overflow:hidden;">
+                <div style="height:100%; border-radius:3px; background:#34e59b; width:{{ winBarW }};"></div>
+              </div>
+              <div style="margin-top:9px; display:flex; justify-content:space-between; font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.05em;">
+                <span style="color:{{ winDeltaColor }};">{{ winDelta }}</span>
+                <span style="color:#4d5c6b;">target {{ winTargetStr }}</span>
+              </div>
+            </div>
+
+            <div style="flex:1 1 150px; min-width:0; background:#0e1620; border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:16px;">
+              <div style="font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#6b7987;">Profit factor</div>
+              <div style="font-size:30px; font-weight:800; letter-spacing:-.02em; margin-top:6px;">{{ profitFactor }}</div>
+              <div style="margin-top:12px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.05em; color:#5a6673;">{{ grossLine }}</div>
+            </div>
+
+            <div style="flex:1 1 150px; min-width:0; background:#0e1620; border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:16px;">
+              <div style="font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#6b7987;">Avg return / trade</div>
+              <div style="font-size:30px; font-weight:800; letter-spacing:-.02em; margin-top:6px; color:{{ avgColor }};">{{ avgReturn }}</div>
+              <div style="margin-top:12px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.05em; color:#5a6673;">{{ avgLine }}</div>
+            </div>
+
+            <div style="flex:1 1 150px; min-width:0; background:#0e1620; border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:16px;">
+              <div style="font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#6b7987;">Risk : reward</div>
+              <div style="font-size:30px; font-weight:800; letter-spacing:-.02em; margin-top:6px;">{{ rrStr }}</div>
+              <div style="margin-top:12px; height:5px; border-radius:3px; background:#17212b; position:relative; overflow:hidden;">
+                <div style="height:100%; border-radius:3px; background:#34e59b; width:{{ rrBarW }};"></div>
+              </div>
+              <div style="margin-top:9px; display:flex; justify-content:space-between; font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.05em;">
+                <span style="color:{{ rrDeltaColor }};">{{ rrDelta }}</span>
+                <span style="color:#4d5c6b;">target {{ rrTargetStr }}</span>
+              </div>
+            </div>
+
+            <div style="flex:1 1 150px; min-width:0; background:#0e1620; border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:16px;">
+              <div style="font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#6b7987;">Max drawdown</div>
+              <div style="font-size:30px; font-weight:800; letter-spacing:-.02em; margin-top:6px;">{{ ddStr }}</div>
+              <div style="margin-top:12px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.05em; color:#5a6673;">{{ ddLine }}</div>
+            </div>
+
+          </div>
+
+          <div style="background:#0e1620; border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:clamp(14px,2vw,20px);">
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:6px;">
+              <div style="font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:#6b7987;">Markets by P&amp;L</div>
+              <div style="font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.06em; color:#3d4a57;">tap to drill in</div>
+            </div>
+            <sc-for list="{{ markets }}" as="m" hint-placeholder-count="6">
+              <div onClick="{{ m.onClick }}" style="display:flex; align-items:center; gap:12px; padding:11px 8px; border-bottom:1px solid rgba(255,255,255,.04); cursor:pointer; border-radius:8px;" style-hover="background:rgba(255,255,255,.03);">
+                <div style="flex:1 1 90px; min-width:0; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ m.name }}</div>
+                <div data-wide-only="1" style="flex:0 0 46px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:#4d5c6b; text-align:right;">{{ m.count }}</div>
+                <div style="flex:2 1 70px; height:6px; border-radius:3px; background:#141d26; overflow:hidden; display:flex;">
+                  <div style="height:100%; border-radius:3px; width:{{ m.barW }}; background:{{ m.barColor }};"></div>
+                </div>
+                <div style="flex:0 0 84px; text-align:right; font-family:'IBM Plex Mono', monospace; font-size:13px; font-weight:500; color:{{ m.color }};">{{ m.pnl }}</div>
+                <div style="flex:0 0 10px; color:#3d4a57; font-size:13px;">›</div>
+              </div>
+            </sc-for>
+          </div>
+
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showDetail }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; flex-direction:column; gap:14px;">
+
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div onClick="{{ back }}" style="display:flex; align-items:center; gap:7px; background:#0b1219; border:1px solid rgba(255,255,255,.07); border-radius:9px; padding:7px 12px; cursor:pointer; font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:#8b9aa9;">‹ all markets</div>
+            <div style="font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:#4d5c6b;">{{ periodLabel }}</div>
+          </div>
+
+          <div style="background:#0e1620; border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:clamp(16px,2vw,24px); display:flex; flex-wrap:wrap; gap:clamp(16px,3vw,32px);">
+            <div style="flex:1 1 220px; min-width:200px;">
+              <div style="font-size:clamp(20px,3vw,26px); font-weight:700; letter-spacing:-.01em;">{{ selName }}</div>
+              <div style="font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:#6b7987; margin-top:14px;">Net P&amp;L</div>
+              <div style="font-size:clamp(32px,5vw,48px); font-weight:800; letter-spacing:-.025em; line-height:1.1; margin-top:4px; color:{{ selNetColor }}; text-shadow:0 0 30px rgba(52,229,155,.16);">{{ selNet }}</div>
+              <div style="margin-top:8px; font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.06em; color:#5a6673;">{{ selSummary }}</div>
+            </div>
+            <div style="flex:1 1 280px; min-width:240px;">
+              <svg viewBox="{{ selChartVB }}" preserveAspectRatio="none" style="width:100%; height:120px; display:block; overflow:visible;">
+                <defs>
+                  <linearGradient id="selGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#34e59b" stop-opacity="0.22"></stop>
+                    <stop offset="100%" stop-color="#34e59b" stop-opacity="0"></stop>
+                  </linearGradient>
+                </defs>
+                <path d="{{ selZeroLine }}" stroke="rgba(255,255,255,.1)" stroke-width="1" stroke-dasharray="3 4" fill="none" vector-effect="non-scaling-stroke"></path>
+                <path d="{{ selArea }}" fill="url(#selGrad)"></path>
+                <path d="{{ selLine }}" fill="none" stroke="#34e59b" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+              </svg>
+              <div style="display:flex; justify-content:space-between; margin-top:8px; font-family:'IBM Plex Mono', monospace; font-size:10px; color:#4d5c6b;">
+                <span>{{ selFirstDate }}</span>
+                <span>{{ selLastDate }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px;">
+            <div style="flex:1 1 150px; min-width:0; background:#0e1620; border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:16px;">
+              <div style="font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#6b7987;">Win rate</div>
+              <div style="font-size:28px; font-weight:800; letter-spacing:-.02em; margin-top:6px;">{{ selWin }}</div>
+              <div style="margin-top:10px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:#5a6673;">{{ selWinLine }}</div>
+            </div>
+            <div style="flex:1 1 150px; min-width:0; background:#0e1620; border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:16px;">
+              <div style="font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#6b7987;">Avg return / trade</div>
+              <div style="font-size:28px; font-weight:800; letter-spacing:-.02em; margin-top:6px; color:{{ selAvgColor }};">{{ selAvg }}</div>
+              <div style="margin-top:10px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:#5a6673;">{{ selAvgLine }}</div>
+            </div>
+            <div style="flex:1 1 150px; min-width:0; background:#0e1620; border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:16px;">
+              <div style="font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#6b7987;">Profit factor</div>
+              <div style="font-size:28px; font-weight:800; letter-spacing:-.02em; margin-top:6px;">{{ selPF }}</div>
+              <div style="margin-top:10px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:#5a6673;">{{ selPFLine }}</div>
+            </div>
+          </div>
+
+          <div style="background:#0e1620; border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:clamp(14px,2vw,20px);">
+            <div style="font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:#6b7987; margin-bottom:10px;">Trade history</div>
+            <sc-for list="{{ selTrades }}" as="tr" hint-placeholder-count="8">
+              <div style="display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid rgba(255,255,255,.04);">
+                <div style="flex:0 0 58px; font-family:'IBM Plex Mono', monospace; font-size:11px; color:#8b9aa9;">{{ tr.date }}</div>
+                <div style="flex:0 0 38px; font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:.08em; padding:2px 0; color:{{ tr.dirColor }};">{{ tr.dir }}</div>
+                <div style="flex:1 1 110px; min-width:0; font-family:'IBM Plex Mono', monospace; font-size:11px; color:#5a6673; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ tr.prices }}</div>
+                <div style="flex:0 0 40px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:#4d5c6b; text-align:right;">{{ tr.r }}</div>
+                <div style="flex:0 0 80px; text-align:right; font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:{{ tr.color }};">{{ tr.pnl }}</div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ selMore }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:12px 4px 2px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:#3d4a57;">{{ selMoreLabel }}</div>
+            </sc-if>
+          </div>
+
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;defaultPeriod&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;month&quot;,&quot;all&quot;,&quot;custom&quot;],&quot;default&quot;:&quot;month&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Behaviour&quot;},&quot;winRateTarget&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:60,&quot;min&quot;:30,&quot;max&quot;:90,&quot;unit&quot;:&quot;%&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Targets&quot;},&quot;rrTarget&quot;:{&quot;editor&quot;:&quot;float&quot;,&quot;default&quot;:2,&quot;min&quot;:1,&quot;max&quot;:4,&quot;step&quot;:0.1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Targets&quot;}}">
+class Component extends DCLogic {
+  state = { period: null, monthIdx: 8, sel: null, from: '2026-07-01', to: '2026-09-15' };
+
+  rngFactory(seed) {
+    let a = seed >>> 0;
+    return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+
+  instruments() {
+    return [
+      { n: 'GBP/USD', p: 1.2740, dp: 4, w: 0.66, c: 62 },
+      { n: 'US 500', p: 5420, dp: 1, w: 0.60, c: 53 },
+      { n: 'Germany 40', p: 18240, dp: 1, w: 0.55, c: 41 },
+      { n: 'Gold', p: 2390, dp: 2, w: 0.63, c: 44 },
+      { n: 'EUR/USD', p: 1.0860, dp: 4, w: 0.47, c: 37 },
+      { n: 'Nasdaq 100', p: 19680, dp: 1, w: 0.61, c: 32 },
+      { n: 'Oil - Brent', p: 78.40, dp: 2, w: 0.41, c: 27 },
+      { n: 'GBP/JPY', p: 196.20, dp: 2, w: 0.52, c: 25 },
+      { n: 'Tesla', p: 214.60, dp: 2, w: 0.40, c: 21 },
+      { n: 'Bitcoin', p: 64200, dp: 0, w: 0.56, c: 16 }
+    ];
+  }
+
+  allTrades() {
+    if (this._trades) return this._trades;
+    const rnd = this.rngFactory(20260915);
+    const start = Date.UTC(2026, 0, 2), day = 86400000, span = 256;
+    const out = [];
+    this.instruments().forEach((ins, k) => {
+      for (let i = 0; i < ins.c; i++) {
+        const od = Math.floor(rnd() * span);
+        const hold = Math.floor(rnd() * 7);
+        const cd = Math.min(span, od + hold);
+        const win = rnd() < ins.w;
+        const R = win ? 1.05 + rnd() * 2.2 : -(0.7 + rnd() * 0.5);
+        const risk = 90 + rnd() * 170;
+        const pnl = Math.round(R * risk);
+        const dir = rnd() < 0.56 ? 'BUY' : 'SELL';
+        const open = ins.p * (1 + (rnd() - 0.5) * 0.06);
+        const pct = R * 0.0042;
+        const close = dir === 'BUY' ? open * (1 + pct) : open * (1 - pct);
+        out.push({
+          id: k + '-' + i, name: ins.n, dp: ins.dp, dir, pnl, R,
+          openDate: new Date(start + od * day), closeDate: new Date(start + cd * day),
+          open, close
+        });
+      }
+    });
+    out.sort((a, b) => a.closeDate - b.closeDate);
+    this._trades = out;
+    return out;
+  }
+
+  money(v, dp) {
+    const n = Math.abs(v).toLocaleString('en-GB', { minimumFractionDigits: dp || 0, maximumFractionDigits: dp || 0 });
+    return (v < 0 ? '−£' : '£') + n;
+  }
+  signed(v) { return (v > 0 ? '+' : v < 0 ? '−' : '') + '£' + Math.abs(Math.round(v)).toLocaleString('en-GB'); }
+  price(v, dp) { return v.toLocaleString('en-GB', { minimumFractionDigits: dp, maximumFractionDigits: dp }); }
+  dstr(d) { return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' }); }
+
+  period() { return this.state.period || this.props.defaultPeriod || 'month'; }
+
+  range() {
+    const p = this.period();
+    if (p === 'all') return { a: new Date(Date.UTC(2026, 0, 1)), b: new Date(Date.UTC(2026, 8, 15)), label: 'All time' };
+    if (p === 'custom') {
+      const a = new Date(this.state.from + 'T00:00:00Z'), b = new Date(this.state.to + 'T23:59:59Z');
+      return { a, b, label: this.dstr(a) + ' – ' + this.dstr(b) };
+    }
+    const m = this.state.monthIdx;
+    const a = new Date(Date.UTC(2026, m, 1)), b = new Date(Date.UTC(2026, m + 1, 0, 23, 59));
+    return { a, b, label: a.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) };
+  }
+
+  inRange(t, r) { return t.closeDate >= r.a && t.closeDate <= r.b; }
+
+  stats(ts) {
+    const n = ts.length, wins = ts.filter(t => t.pnl > 0), losses = ts.filter(t => t.pnl <= 0);
+    const gp = wins.reduce((s, t) => s + t.pnl, 0), gl = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
+    const net = gp - gl;
+    const avgW = wins.length ? gp / wins.length : 0, avgL = losses.length ? gl / losses.length : 0;
+    let peak = 0, cum = 0, dd = 0, ddAt = null, peakAt = null, pAt = null;
+    ts.forEach(t => {
+      cum += t.pnl;
+      if (cum > peak) { peak = cum; pAt = t.closeDate; }
+      if (peak - cum > dd) { dd = peak - cum; ddAt = t.closeDate; peakAt = pAt; }
+    });
+    return {
+      n, net, gp, gl, wins: wins.length, losses: losses.length,
+      winRate: n ? wins.length / n * 100 : 0,
+      pf: gl ? gp / gl : gp > 0 ? Infinity : 0,
+      avg: n ? net / n : 0,
+      rr: avgL ? avgW / avgL : 0,
+      dd, ddAt, peakAt
+    };
+  }
+
+  curve(ts, r, W, H) {
+    if (!ts.length) return { line: '', area: '', zero: '', labels: [] };
+    const dataEnd = Date.UTC(2026, 8, 15, 23, 59);
+    const t0 = r.a.getTime(), t1 = Math.max(Math.min(r.b.getTime(), dataEnd), t0 + 1);
+    const pts = [[0, 0]]; let cum = 0;
+    ts.forEach(t => { cum += t.pnl; pts.push([(t.closeDate.getTime() - t0) / (t1 - t0), cum]); });
+    const ys = pts.map(p => p[1]);
+    let lo = Math.min(0, ...ys), hi = Math.max(0, ...ys);
+    if (hi === lo) hi = lo + 1;
+    const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+    const sx = p => p[0] * W, sy = p => H - (p[1] - lo) / (hi - lo) * H;
+    const P = pts.map(p => [sx(p), sy(p)]);
+    const d = this.smooth(P);
+    const y0 = H - (0 - lo) / (hi - lo) * H;
+    const labels = [];
+    for (let i = 0; i < 5; i++) {
+      const t = new Date(t0 + (t1 - t0) * (i / 4));
+      labels.push({ t: this.dstr(t) });
+    }
+    const lastX = P[P.length - 1][0];
+    return { line: d, area: d + ' L' + lastX + ',' + y0 + ' L' + P[0][0] + ',' + y0 + ' Z', zero: 'M0,' + y0 + ' L' + W + ',' + y0, labels };
+  }
+
+  smooth(P) {
+    if (!P.length) return '';
+    let d = 'M' + P[0][0] + ',' + P[0][1];
+    for (let i = 0; i < P.length - 1; i++) {
+      const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || P[i + 1];
+      d += 'C' + (p1[0] + (p2[0] - p0[0]) / 6) + ',' + (p1[1] + (p2[1] - p0[1]) / 6) + ' ' +
+        (p2[0] - (p3[0] - p1[0]) / 6) + ',' + (p2[1] - (p3[1] - p1[1]) / 6) + ' ' + p2[0] + ',' + p2[1];
+    }
+    return d;
+  }
+
+  renderVals() {
+    const GREEN = '#34e59b', RED = '#f2645f', DIM = '#8b9aa9';
+    const winTarget = this.props.winRateTarget ?? 60;
+    const rrTarget = this.props.rrTarget ?? 2;
+    const r = this.range();
+    const all = this.allTrades();
+    const ts = all.filter(t => this.inRange(t, r));
+    const s = this.stats(ts);
+
+    // previous comparable period
+    let prev = null;
+    if (this.period() === 'month') {
+      const m = this.state.monthIdx - 1;
+      const pa = new Date(Date.UTC(2026, m, 1)), pb = new Date(Date.UTC(2026, m + 1, 0, 23, 59));
+      const pts = all.filter(t => t.closeDate >= pa && t.closeDate <= pb);
+      if (pts.length) prev = { net: this.stats(pts).net, label: pa.toLocaleDateString('en-GB', { month: 'long' }) };
+    }
+    const deltaStr = prev
+      ? (s.net - prev.net >= 0 ? '▲ ' : '▼ ') + this.signed(s.net - prev.net).replace('+', '') + ' vs ' + prev.label
+      : s.n + ' closed trades · ' + this.dstr(r.a) + ' – ' + this.dstr(r.b);
+    const deltaColor = prev ? (s.net - prev.net >= 0 ? GREEN : RED) : DIM;
+
+    const c = this.curve(ts, r, 600, 170);
+
+    const byName = {};
+    ts.forEach(t => { (byName[t.name] = byName[t.name] || []).push(t); });
+    const mkts = Object.keys(byName).map(k => ({ name: k, ts: byName[k], net: byName[k].reduce((a, t) => a + t.pnl, 0) }))
+      .sort((a, b) => b.net - a.net);
+    const maxAbs = Math.max(1, ...mkts.map(m => Math.abs(m.net)));
+
+    const tabs = [
+      { id: 'month', label: 'Month' }, { id: 'all', label: 'All time' }, { id: 'custom', label: 'Custom' }
+    ].map(t => ({
+      label: t.label,
+      bg: this.period() === t.id ? 'rgba(52,229,155,.12)' : 'transparent',
+      fg: this.period() === t.id ? GREEN : '#6b7987',
+      onClick: () => this.setState({ period: t.id, sel: null })
+    }));
+
+    const v = {
+      syncedAt: '09:14',
+      tabs,
+      showMonthNav: this.period() === 'month',
+      showCustom: this.period() === 'custom',
+      monthLabel: new Date(Date.UTC(2026, this.state.monthIdx, 1)).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
+      prevMonth: () => this.setState({ monthIdx: Math.max(0, this.state.monthIdx - 1) }),
+      nextMonth: () => this.setState({ monthIdx: Math.min(8, this.state.monthIdx + 1) }),
+      from: this.state.from, to: this.state.to,
+      setFrom: e => this.setState({ from: e.target.value }),
+      setTo: e => this.setState({ to: e.target.value }),
+      periodLabel: r.label,
+      netStr: this.signed(s.net), netColor: s.net >= 0 ? GREEN : RED,
+      deltaStr, deltaColor,
+      tradeSummary: s.n + ' trades · ' + s.wins + 'W / ' + s.losses + 'L',
+      linePath: c.line, areaPath: c.area, zeroLine: c.zero, xLabels: c.labels,
+      winRateStr: s.winRate.toFixed(0) + '%',
+      winBarW: Math.max(2, Math.min(100, s.winRate)) + '%',
+      winTargetStr: winTarget + '%',
+      winDelta: (s.winRate - winTarget >= 0 ? '+' : '−') + Math.abs(s.winRate - winTarget).toFixed(0) + ' pts',
+      winDeltaColor: s.winRate >= winTarget ? GREEN : RED,
+      profitFactor: s.pf === Infinity ? '∞' : s.pf.toFixed(2),
+      grossLine: this.money(s.gp) + ' in · ' + this.money(s.gl) + ' out',
+      avgReturn: this.signed(s.avg), avgColor: s.avg >= 0 ? GREEN : RED,
+      avgLine: 'across ' + s.n + ' closed trades',
+      rrStr: s.rr.toFixed(1) + ' : 1',
+      rrBarW: Math.max(2, Math.min(100, s.rr / rrTarget * 100)) + '%',
+      rrTargetStr: rrTarget + ' : 1',
+      rrDelta: (s.rr - rrTarget >= 0 ? '+' : '−') + Math.abs(s.rr - rrTarget).toFixed(1),
+      rrDeltaColor: s.rr >= rrTarget ? GREEN : RED,
+      ddStr: this.money(s.dd),
+      ddLine: s.peakAt ? 'peak ' + this.dstr(s.peakAt) + ' → trough ' + this.dstr(s.ddAt) : 'no drawdown in period',
+      markets: mkts.map(m => ({
+        name: m.name, count: m.ts.length + ' tr',
+        pnl: this.signed(m.net), color: m.net >= 0 ? GREEN : RED,
+        barW: Math.max(3, Math.abs(m.net) / maxAbs * 100) + '%',
+        barColor: m.net >= 0 ? GREEN : RED,
+        onClick: () => this.setState({ sel: m.name })
+      })),
+      showOverview: !this.state.sel, showDetail: !!this.state.sel,
+      back: () => this.setState({ sel: null })
+    };
+
+    if (this.state.sel) {
+      const st = ts.filter(t => t.name === this.state.sel);
+      const ss = this.stats(st);
+      const sc = this.curve(st, r, 400, 120);
+      const rows = st.slice().reverse();
+      v.selName = this.state.sel;
+      v.selNet = this.signed(ss.net);
+      v.selNetColor = ss.net >= 0 ? GREEN : RED;
+      v.selSummary = ss.n + ' trades · ' + ss.wins + 'W / ' + ss.losses + 'L';
+      v.selChartVB = '0 0 400 120';
+      v.selLine = sc.line; v.selArea = sc.area; v.selZeroLine = sc.zero;
+      v.selFirstDate = st.length ? this.dstr(st[0].closeDate) : '';
+      v.selLastDate = st.length ? this.dstr(st[st.length - 1].closeDate) : '';
+      v.selWin = ss.winRate.toFixed(0) + '%';
+      v.selWinLine = ss.wins + ' of ' + ss.n + ' · target ' + winTarget + '%';
+      v.selAvg = this.signed(ss.avg); v.selAvgColor = ss.avg >= 0 ? GREEN : RED;
+      v.selAvgLine = 'per trade, this market';
+      v.selPF = ss.pf === Infinity ? '∞' : ss.pf.toFixed(2);
+      v.selPFLine = this.money(ss.gp) + ' in · ' + this.money(ss.gl) + ' out';
+      v.selTrades = rows.slice(0, 24).map(t => ({
+        date: this.dstr(t.closeDate),
+        dir: t.dir, dirColor: t.dir === 'BUY' ? '#7d8b9a' : '#7d8b9a',
+        prices: this.price(t.open, t.dp) + ' → ' + this.price(t.close, t.dp),
+        r: (t.R > 0 ? '+' : '−') + Math.abs(t.R).toFixed(1) + 'R',
+        pnl: this.signed(t.pnl), color: t.pnl >= 0 ? GREEN : RED
+      }));
+      v.selMore = rows.length > 24;
+      v.selMoreLabel = '+ ' + (rows.length - 24) + ' earlier trades';
+    }
+    return v;
+  }
+}
+
+</script>
+</body>
+</html>

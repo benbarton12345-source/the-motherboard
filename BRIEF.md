@@ -144,7 +144,7 @@ The flat top tab bar was replaced with a collapsible sidebar (`src/components/Si
 - **Desktop:** sidebar is a flex sibling of the main content (`flex h-screen overflow-hidden`); expanded 220px (`w-[220px]`) or collapsed 64px (`w-16`) icon rail. Header = logo mark + "The Motherboard" wordmark + collapse chevron. Six nav items with an emerald left-border active indicator, `bg-emerald-400/10` active row, and accent icon/label. User area (avatar "B" / "Ben" / "Personal") pinned at the bottom. `collapsed` persists in `localStorage` ('sidebarCollapsed').
 - **Mobile (<768px, Tailwind `md:`):** desktop sidebar is `hidden md:flex`; a hamburger in the top bar opens a 280px drawer (`MobileDrawer`) over a scrim. The drawer stays mounted and slides in/out from the left via a `translateX` transition (`duration-300 ease-out`) over a fading scrim — not mount/unmount. Scrim tap, close button, or selecting a group all close it. Drawer z-40 / scrim z-30 sit **below** the app's modals (z-50) so overlays still cover correctly.
 - **Top bar (60px):** shows the active group title; the global GBP/AUD toggle and live FX ticker moved here from the old header (ticker hidden below `sm`). Page content keeps the prior `max-w-7xl mx-auto px-6 py-6` wrapper so every page renders exactly as before.
-- **Trading** shows a reduced-opacity row + SOON badge and routes to a "coming soon" placeholder; still clickable.
+- **Trading** was a reduced-opacity row + SOON badge routing to a "coming soon" placeholder until **16 September 2026**; it is now a live flat nav item routing to `TradingPage` (see "Trading Section").
 
 Two post-build fixes applied (30 June 2026): the mobile drawer's entrance/exit animation (was appearing instantly; now slides smoothly) and the hamburger icon's three lines (were uneven; now equal-length and symmetrical). Tested on desktop and an actual mobile device, confirmed working, committed and pushed.
 
@@ -267,12 +267,15 @@ Modal component extended with two new props: `maxWidth` (default `'max-w-md'`) a
 
 ### Phase 3 — Trading Analytics
 
-Manual input initially. IG API integration later (IG has REST + Lightstreamer APIs — future work).
+**Complete as of 16 September 2026 — see "Trading Section (current implementation)" for the built detail.**
 
-Metrics:
-- Win rate, P&L over time, R:R ratio, profit factor, max drawdown, average hold time, top markets by P&L, P&L per trade
-- Supply and demand swing trading strategy
-- DEMO mode badge until live capital deployed
+Shipped the opposite way round to the original plan: there is **no manual input at all**, and the IG REST integration was built first rather than "later". Closed trades sync from IG on demand; the page is read-only analytics over them. Lightstreamer (live prices) remains unbuilt and out of scope — this section deliberately has no live prices or open-position management.
+
+Metrics as specced, and all built except one:
+- Win rate, P&L over time, R:R ratio, profit factor, max drawdown, top markets by P&L, P&L per trade — **all built**
+- **Average hold time was dropped** — it is not in the approved handoff. `open_date` is stored, so it remains cheap to add later.
+- Supply and demand swing trading strategy — informs the 60% win-rate and 2:1 R:R targets in config
+- ~~DEMO mode badge~~ — not built. `IG_ACCOUNT_TYPE` distinguishes demo from live and the sync response echoes it, but nothing surfaces it in the UI. Worth adding before live capital is deployed.
 
 ### Phase 4 — Health & Performance
 
@@ -435,6 +438,63 @@ Two flags at the top of `FinancePage.jsx` are permanently `false`, with the dead
 
 ---
 
+## Trading Section (current implementation)
+
+Built 16 September 2026 to the approved handoff (`design-handoffs/trading/`). Read-only analytics over **closed** trades synced from IG. It is deliberately **not** a trade journal: no manual entry, no strategy/setup/notes fields, no live prices, no open-position management, no alerts.
+
+Files: `api/ig-sync.js`, `src/useIgSync.js`, `src/utils/tradingAnalytics.js`, `src/components/TradingPage.jsx`, `sql/trading_ig.sql`.
+
+### IG sync
+
+Manual only — a **Sync IG** button on the page. Credentials live in Vercel env vars and never reach the browser, same pattern as the other `api/` functions. Required: `IG_API_KEY`, `IG_USERNAME`, `IG_PASSWORD`; optional `IG_ACCOUNT_TYPE` (`demo`/`live`, defaults `demo`). Demo account in use is **Z6ECE2** (SPREADBET, GBP) — note the login also exposes Z6ECE1 (CFD); the sync reads the **preferred** account only, so switching would need new code.
+
+Two IG endpoints, not one:
+- `/history/transactions` (v2) — the trade itself: instrument, open/close levels, dates, realised P&L. Canonical, and the only source of P&L.
+- `/history/activity` (v3, `detailed=true`) — the **original stop**, which transactions do not carry at all. Without this there is no R multiple.
+
+De-duplication is the whole story of `deal_id` (IG's transaction `reference`) as primary key + `upsert(onConflict: 'deal_id')`. There is no secondary dedupe pass. Verified against the live demo account: the same sync run twice produced three rows, not six.
+
+**Three non-obvious IG behaviours, each found only against real data — do not "simplify" these away:**
+
+1. **IG reads `from`/`to` in the ACCOUNT'S LOCAL TIME, not UTC.** The session response carries `timezoneOffset` (hours). Sending UTC silently drops every trade closed within the last `timezoneOffset` hours — i.e. the newest ones, exactly the ones that matter, with no error. Proven directly: `to=now(UTC)` returned 0 deals where `to=now+2h` returned 3. `igDate(d, tz)` applies the shift; a 5-minute forward pad on `to` absorbs clock skew.
+2. **A transaction's `reference` is the CLOSING deal's id, but the stop lives on the OPENING deal.** The sync builds a `closeToOpen` map from `POSITION_CLOSED` actions' `affectedDealId` and hops through it before looking up the stop. Missing this makes the R column permanently empty while looking like "IG just doesn't have stops".
+3. **IG quotes `stopDistance` in POINTS, not price units.** 50 points on GBP/USD is 0.005 of the level; 50 on Germany 40 is 50.0. Everything is normalised to price units before storing (preferring `stopLevel`, which is already in price units; a points-only figure is converted using a factor *measured* from other trades on the same market, never assumed). `stop_distance` in the DB is therefore in **price units**, not IG's points.
+
+**R multiple** derives from levels alone, which sidesteps needing the per-point value entirely: since `pnl = move × size × pointValue` and `risk = stop × size × pointValue`, the point value cancels and `R = move / stop`. A stop set at open beats a later `STOP_LIMIT_AMENDED` — the metric is the risk originally taken.
+
+Where no stop is recoverable, `stop_distance` and `r_multiple` stay **null** and the table renders a dash. Never fabricate a number here.
+
+Only **closed** trades produce transactions. Resting limit orders and open positions return nothing, which reads as "the sync is broken" but is not. IG's transaction history also lags a minute or two behind a close.
+
+### Page
+
+Two screens in one component; the drill-down replaces the overview **in place**, not in a modal, with the period carried over.
+
+1. **Overview** — period control (Month + `‹ Sep 2026 ›` stepper clamped to months with data / All time / Custom date range, all filtered on **close** date); hero net P&L card with cumulative trend chart and month-over-month delta; five stat cards in priority order — **win rate, profit factor, avg return / trade, risk:reward, max drawdown**; markets ranked by net P&L with bars scaled to the largest *absolute* P&L.
+2. **Drill-down** — scoped header card + equity curve, three scoped stat cards, and a trade history table paginated 24 rows at a time.
+
+Win rate and risk:reward each carry a progress track plus a signed delta against target. **Targets live in `tradingAnalytics.js` (`WIN_RATE_TARGET = 60`, `RISK_REWARD_TARGET = 2`), not in the view.** Max drawdown is deliberately a plain stat — no warning colour or icon.
+
+All metrics come from **one pass over one filtered trade set** (`stats()`), never separate queries. Max drawdown is the largest peak-to-trough fall of the cumulative curve, recording both peak and trough dates. Wins are strictly positive; a scratch trade (exactly 0) counts as a loss, which is what keeps win rate and profit factor consistent with each other.
+
+**Responsive — the part most likely to be broken by a well-meaning edit.** The stat row is wrapping flex (`grow shrink basis-[150px] md:basis-[190px]`), **not** a fixed column count and **never** a JS-measured width: 2-up / 3-up / 5-up at 390 / 768 / 1440, with the last wrapped row always stretched so Max Drawdown never sits alone beside dead space. The basis steps at `md` because no single basis gives both 2-up on a phone (needs ≤163px) and 3-up on a tablet (needs >168px). The trade-count column is a `min-[900px]:` media query.
+
+Other decisions:
+- **Trading ignores the global GBP/AUD toggle.** Realised P&L is booked in the account's currency; converting it would misstate it. The symbol comes from the trade rows' own `currency`.
+- The top bar's FX slot shows `IG · SYNCED 16:26` on this tab instead of the rate — FX is irrelevant here. State is owned by `useIgSync` in `App.jsx` so the button (on the page) and the indicator (in the bar) cannot drift.
+- **Spread-bet prices are scaled**: AUD/USD at 0.71285 arrives as `7128.5`. That is IG's own convention, passed through faithfully. `price_dp` is inferred by counting digits after the point in IG's level strings — IG has no decimal-places field.
+- Sub-unit amounts render at 2dp so a winning trade can never display as `+£0`.
+- Empty periods render zeroes with a flat **neutral grey** baseline — green would read as a positive result where there is none.
+- Charts use recharts (app convention), not the prototype's hand-rolled SVG. The five date labels are their own row under the chart, not axis ticks, which centre the last label on the plot edge and clip it.
+
+### Verified / not verified
+
+Verified: 94 logic assertions (IG string parsing, R derivation, `stats()` against hand-computed figures, empty-period safety); responsive, drill-down and empty-period checks driven in a real browser at three widths; the full sync run twice against the live demo account.
+
+**Not yet proven: R multiples on a genuinely stopped trade.** No closed trade on the account has carried a stop, so finding #2 above is tested only against a fixture rebuilt from the real deal-reference chain. First stopped trade that closes will confirm it — watch `tradesWithR` in the sync response.
+
+---
+
 ## Supabase Tables
 
 | Table | Purpose |
@@ -446,6 +506,8 @@ Two flags at the top of `FinancePage.jsx` are permanently `false`, with the dead
 | `budget_targets` | id (uuid PK), category (text **unique**), target_amount (numeric, AUD/month), created_at — standing advisory soft target per category; purely informational, amber when trending over, never blocks; RLS disabled |
 | `budget_entries` | month, category, type (income/expense), amount, currency, notes, recurring_item_id (FK, nullable), **one_off (boolean, default false)** — one_off marks a single imported transaction split into its own row so the insights layer can exclude it from category averages |
 | `statement_imports` | id (uuid), imported_at, statement_month (date, first-of-month), commbank_filename, amex_filename, transaction_count (int), category_totals (jsonb), reimbursements_total (numeric) — one audit row per statement import; RLS disabled |
+| `ig_trades` | deal_id (text PK — IG's transaction `reference`; the entire dedupe mechanism), instrument_name, direction ('BUY'/'SELL'), open_level, close_level, price_dp (int, inferred from IG's level strings), open_date, close_date (timestamptz), pnl, currency, size, **stop_distance (numeric, nullable — in PRICE units, NOT IG's points)**, **r_multiple (numeric, nullable — dash in the UI when null, never fabricated)**, raw (jsonb), synced_at — one row per closed IG trade; indexes on close_date and (instrument_name, close_date); RLS disabled; `sql/trading_ig.sql` |
+| `ig_sync_state` | id (int PK, always 1), last_synced_at, last_status ('never'/'ok'/'error'), last_error, trades_synced, updated_at — single row; drives the top-bar indicator and lets the sync resume from the last run (7-day overlap) instead of refetching all history; RLS disabled |
 | `app_settings` | id (uuid), savings_target (numeric, fraction of income), fi_target (numeric, GBP), fi_target_date (date), created_at — single row holding Budgeting Insights targets; RLS disabled; created via `sql/app_settings.sql` |
 | ~~`habit_definitions`~~ | **RETIRED 10 July 2026.** Legacy positional-array habit list. Home page + Productivity migrated onto `habits`/`habit_completions`; data moved via `sql/migrate_habits_to_new_model.sql`, dropped via `sql/drop_legacy_habit_tables.sql` |
 | ~~`habit_logs`~~ | **RETIRED 10 July 2026.** See `habit_definitions` note |
@@ -531,7 +593,7 @@ All data persists via Supabase across sessions and devices. Do not use localStor
 
 - Long-term goal: £1,500,000 in assets generating £5,000/month passive income
 - Currency: GBP primary, AUD secondary (currently based in Perth)
-- Trading: supply and demand swing trading, currently on demo account
+- Trading: supply and demand swing trading, currently on demo account (IG demo **Z6ECE2**, SPREADBET, GBP — synced into the Trading section since 16 September 2026)
 
 ---
 
@@ -717,7 +779,7 @@ Data decisions / notes:
 2. ~~**Group overview / landing pages**~~ — **Training** (6 July), **Productivity** (10–11 July), **Finance** (1 August) all done. **Only Health remains** — it still lands on `subs[0]` (Daily Metrics) with no overview page. Wiring non-overview sub-items to their own routed views is done for Productivity and Finance; still open for **Training** (Log Session/Programmes/Exercise Bank/Analysis open from within `TrainingPage`/modals) and Health.
 3. ~~**Statement import and recurring reconciliation**~~ — done. Built 2–5 July, fitted up and bug-fixed 9 August, proven against four real statement months. See the Statement Import, Budgeting Insights, Budgeting fit-up and Statement import fixes sections.
 4. **Auto-linking engine for goals** — one reusable sync mechanism (not built per-feature): net worth snapshots auto-fill linked net-worth goals, habit completions auto-increment linked habit goals, steps data feeds linked step goals. The goals table needs a `linked_source` field reserved from the start.
-5. **Remaining horizon items** (sequenced as makes sense): app icon/logo (brief sent), Export Coach Data build (mockup approved), mood tracker, AI health insights, MyFitnessPal exploration, Trading tab proper build, password gate, Telegram bot for voice meal logging.
+5. **Remaining horizon items** (sequenced as makes sense): app icon/logo (brief sent), Export Coach Data build (mockup approved), mood tracker, AI health insights, MyFitnessPal exploration, ~~Trading tab proper build~~ (**done 16 September 2026**), password gate, Telegram bot for voice meal logging.
 
 ### Statement Import & Reconciliation (build 1 of 2 — complete)
 
