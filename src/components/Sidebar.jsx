@@ -48,7 +48,7 @@ const NAV = [
       { id: 'projections', label: 'Projections' },
     ],
   },
-  { id: 'trading', label: 'Trading', icon: TradingIcon, soon: true },
+  { id: 'trading', label: 'Trading', icon: TradingIcon },
   {
     id: 'productivity', label: 'Productivity', icon: ProductivityIcon,
     subs: [

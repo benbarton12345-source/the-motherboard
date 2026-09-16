@@ -11,8 +11,10 @@ import ReadingPage from './components/ReadingPage'
 import HealthPage from './components/HealthPage'
 import TrainingPage from './components/TrainingPage'
 import TrainingOverview from './components/TrainingOverview'
+import TradingPage from './components/TradingPage'
 import Sidebar, { MobileDrawer } from './components/Sidebar'
 import { useCurrency, ForceCurrency } from './CurrencyContext'
+import { useIgSync } from './useIgSync'
 
 const LABELS = {
   home: 'Home', finance: 'Finance', trading: 'Trading',
@@ -32,6 +34,9 @@ function App() {
   // Session id the Training Overview asked to start — consumed once by TrainingPage.
   const [pendingStartSession, setPendingStartSession] = useState(null)
   const { currency, setCurrency, rate } = useCurrency()
+  // Owned here, not in TradingPage: the Sync button lives on the page but the
+  // status indicator lives in this top bar, and they read one state.
+  const ig = useIgSync()
 
   useEffect(() => {
     try { localStorage.setItem('sidebarCollapsed', String(collapsed)) } catch { /* ignore */ }
@@ -86,7 +91,11 @@ function App() {
           </h1>
 
           <div className="flex items-center gap-4 shrink-0">
-            {rate !== null ? (
+            {/* Trading reuses the FX slot for its IG sync state — FX is irrelevant
+                there, and the status belongs next to the page it describes. */}
+            {activeTab === 'trading' ? (
+              <IgSyncIndicator ig={ig} />
+            ) : rate !== null ? (
               <span className="hidden sm:inline font-mono text-[11px] text-[#3a3a3a]">
                 1 GBP = A${rate.toFixed(4)}
               </span>
@@ -135,7 +144,15 @@ function App() {
                     ? <ProjectionsPage />
                     : <FinanceOverviewPage />
             )}
-            {activeTab === 'trading' && <TradingPlaceholder />}
+            {activeTab === 'trading' && (
+              <TradingPage
+                trades={ig.trades}
+                loading={ig.loading}
+                syncing={ig.syncing}
+                sync={ig.sync}
+                error={ig.error}
+              />
+            )}
             {activeTab === 'productivity' && (
               activeSubItem === 'habits-goals'
                 ? <HabitsGoalsPage />
@@ -169,24 +186,28 @@ function App() {
   )
 }
 
-function TradingPlaceholder() {
+// Sync state for the top bar: a dot plus a terse mono line, matching the weight
+// of the FX indicator it sits in place of.
+function IgSyncIndicator({ ig }) {
+  const { syncing, lastSyncedAt, status } = ig
+
+  const time = lastSyncedAt
+    ? new Date(lastSyncedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    : null
+
+  const [dot, text] = syncing
+    ? ['bg-amber-400', 'IG · SYNCING…']
+    : status === 'error'
+      ? ['bg-red-400', 'IG · SYNC FAILED']
+      : time
+        ? ['bg-emerald-400', `IG · SYNCED ${time}`]
+        : ['bg-gray-600', 'IG · NEVER SYNCED']
+
   return (
-    <div className="flex flex-col items-center justify-center text-center gap-4 py-20 min-h-[320px]">
-      <div className="w-16 h-16 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-600">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" />
-        </svg>
-      </div>
-      <div>
-        <div className="text-[17px] font-bold tracking-tight text-white mb-2">Trading</div>
-        <div className="text-sm text-gray-500 leading-relaxed max-w-[280px] mx-auto">
-          This section is not yet built. It will appear here once ready.
-        </div>
-      </div>
-      <div className="bg-white/5 border border-gray-800 text-gray-500 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
-        Coming soon
-      </div>
-    </div>
+    <span className="hidden sm:flex items-center gap-1.5 font-mono text-[11px] text-gray-500">
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot} ${syncing ? 'animate-pulse' : ''}`} />
+      {text}
+    </span>
   )
 }
 
