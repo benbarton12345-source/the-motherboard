@@ -31,7 +31,7 @@ Purpose: personal operating system combining finance, productivity, and health i
 
 - Dark background (#0a0a0a), neon green (#00ff88) as primary accent
 - Terminal / trading desk aesthetic — clean, data-rich, not cluttered
-- Typography: JetBrains Mono for numbers and labels, Syne for headings
+- Typography: three explicit roles — Syne for headings, JetBrains Mono for small labels and inline data, system sans for body **and all large display numerals**. See "Font roles" below; this was reworked 17 September 2026 and the numerals rule is the part most likely to be got wrong.
 - Three-column grid layout (see Home Layout section below)
 - Section labels follow the pattern: `01 // SECTION NAME`
 - Priority tags: HIGH / MEDIUM / LOW with colour coding (red / amber / blue)
@@ -49,7 +49,32 @@ All pages should match the finance page styling exactly:
 - Red: `text-red-400`
 - Amber: `text-amber-400`
 - No custom hex colours in page components — use Tailwind tokens only
-- No `font-mono` or `font-syne` in page components — those are reserved for the header/nav layer
+- ~~No `font-mono` or `font-syne` in page components~~ — **retired 17 September 2026.** This rule had already been overtaken by reality (49 `font-mono` uses in page components before the font rework) and describing it as header/nav-only was misleading. The real rule is the three-role system in "Font roles" below.
+
+
+### Font roles (reworked 17 September 2026)
+
+Set in `tailwind.config.js` (the three families) and `src/index.css` (the heading rule). Before this, nothing set a base `font-family` at all: everything fell through to Tailwind's `ui-sans-serif` and rendered in whatever the device supplied — San Francisco on macOS, Segoe UI on Windows, Roboto on Android. Syne was being downloaded and declared but used **zero** times; it went dead when the wordmark became an image. That was the main reason pages read as subtly inconsistent.
+
+| Role | Family | Applied to |
+|---|---|---|
+| `sans` | explicit system stack | body and UI text — **and every large display numeral**. Set app-wide by Tailwind's preflight, which applies `theme(fontFamily.sans)` to `html` |
+| `mono` | JetBrains Mono | small labels and inline data only (~49 uses). Unchanged by the rework |
+| `display` | Syne | `h1`–`h6` only, via an `@layer base` element rule so no component markup is involved. **Never numerals** |
+
+**Large display numerals are `font-sans`, and both alternatives were tried and rejected — do not re-litigate:**
+- **Syne** — its geometric numerals read poorly at display size, and it has no tabular figures, so columns of numbers drift and the ticking Home clock jitters.
+- **JetBrains Mono** — aligns correctly, but reads too technical at 36–64px.
+
+The Health metric tiles (HRV / Resting HR / Sleep / Steps / Weight) are the reference for how a display figure should look; they set no font class and inherit the sans stack. 41 numerals across 16 components were brought into line with them.
+
+Syne is fetched at 400–800. It was previously fetched at 600/700/800 only, which meant headings carrying no weight class rendered at 400 and the browser synthesised a faux weight.
+
+The full reasoning is written into the `src/index.css` comment. Read that before changing any font.
+
+### Repo hygiene note (17 September 2026)
+
+`NetWorthTracker.jsx` was deleted — dead since `NetWorthPage.jsx` + `useNetWorth.js` superseded it (zero imports, absent from the bundle). It was also tracked under **two** paths, `src/Components/` and `src/components/`, for one physical file. macOS is case-insensitive so it looked like one file locally, but **Vercel builds on Linux, where those are genuinely two** — a class of bug that only reproduces in deployment. Both index entries were removed. The repo has been swept: no other file or directory case-collision exists. Watch for this when creating files; the local filesystem will not warn you.
 
 ---
 
@@ -949,6 +974,7 @@ Builds are kept deliberately small and sequential to manage cost and review qual
 - When adding new Supabase tables, provide the SQL separately so I can run it in the Supabase dashboard
 - Commit message style: plain English, lowercase, descriptive (e.g. `add per-entry currency selection to net worth tracker`)
 - Finance page visual tokens are the source of truth for styling — see Design Direction above
+- Fonts follow three fixed roles — Syne headings / JetBrains Mono small labels / system sans body **and all large numerals**. Syne and mono were both tried on the big numerals and rejected; see "Font roles" above and the `src/index.css` comment before changing any font
 - Priority tags are HIGH/MEDIUM/LOW everywhere — never use HOT/WARM/COOL
 - Date strings must always use local date components — never toISOString() — see Timezone note above
 - All new form interactions must use the shared Modal component at `src/components/Modal.jsx` — no new inline forms. See Modal-first interaction pattern above.
