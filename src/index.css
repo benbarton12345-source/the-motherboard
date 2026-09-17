@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font roles — see tailwind.config.js. `sans` (body/UI) is applied by Tailwind's
+   preflight from the config; `mono` is applied per-element via font-mono. This
+   only has to wire up the third role: headings take the display face (Syne).
+   Element selectors rather than classes, so no component markup changes. Any
+   explicit font-* utility still wins, since utilities outrank the base layer. */
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: theme('fontFamily.display');
+  }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
