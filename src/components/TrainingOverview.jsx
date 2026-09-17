@@ -261,13 +261,13 @@ export default function TrainingOverview({ onStartSession, onOpenSub }) {
             <>
               <DotRow done={m.sessionsThisWeek} planned={m.plannedPerWeek} />
               <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold text-white">{m.sessionsThisWeek}</span>
+                <span className="font-sans text-2xl font-bold text-white">{m.sessionsThisWeek}</span>
                 <span className="text-sm text-gray-500">/ {m.plannedPerWeek} planned</span>
               </div>
             </>
           ) : (
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold text-white">{m.sessionsThisWeek}</span>
+              <span className="font-sans text-2xl font-bold text-white">{m.sessionsThisWeek}</span>
               <span className="text-sm text-gray-500">logged</span>
             </div>
           )}
@@ -277,14 +277,14 @@ export default function TrainingOverview({ onStartSession, onOpenSub }) {
           {m.weeksOn != null ? (
             <>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold text-white">{m.weeksOn}</span>
+                <span className="font-sans text-2xl font-bold text-white">{m.weeksOn}</span>
                 <span className="text-sm text-gray-500">{m.weeksOn === 1 ? 'week' : 'weeks'}</span>
               </div>
               <p className="text-xs text-gray-600 mt-2 truncate">{programme?.name || 'Current programme'}</p>
             </>
           ) : (
             <>
-              <div className="text-2xl font-bold text-gray-600">—</div>
+              <div className="font-sans text-2xl font-bold text-gray-600">—</div>
               <p className="text-xs text-gray-600 mt-2">No sessions logged yet</p>
             </>
           )}
@@ -294,7 +294,7 @@ export default function TrainingOverview({ onStartSession, onOpenSub }) {
           {m.adherence != null ? (
             <>
               <div className="flex items-baseline gap-1.5 mb-2.5">
-                <span className="text-2xl font-bold text-white">{m.adherence}%</span>
+                <span className="font-sans text-2xl font-bold text-white">{m.adherence}%</span>
                 <span className="text-sm text-gray-500 ml-auto">{m.completed4w}/{m.planned4w} · 4wk</span>
               </div>
               <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
@@ -303,7 +303,7 @@ export default function TrainingOverview({ onStartSession, onOpenSub }) {
             </>
           ) : (
             <>
-              <div className="text-2xl font-bold text-gray-600">—</div>
+              <div className="font-sans text-2xl font-bold text-gray-600">—</div>
               <p className="text-xs text-gray-600 mt-2">Needs an active programme</p>
             </>
           )}

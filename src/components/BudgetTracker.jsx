@@ -99,15 +99,15 @@ export default function BudgetTracker() {
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
           <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Income</div>
-          <div className="text-2xl font-bold text-emerald-400">{format(totalIncome)}</div>
+          <div className="font-sans text-2xl font-bold text-emerald-400">{format(totalIncome)}</div>
         </div>
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
           <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Expenses</div>
-          <div className="text-2xl font-bold text-red-400">{format(totalExpenses)}</div>
+          <div className="font-sans text-2xl font-bold text-red-400">{format(totalExpenses)}</div>
         </div>
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
           <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Net</div>
-          <div className={`text-2xl font-bold ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+          <div className={`font-sans text-2xl font-bold ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             {net >= 0 ? '+' : ''}{format(Math.abs(net))}
           </div>
         </div>

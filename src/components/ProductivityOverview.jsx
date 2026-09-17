@@ -120,17 +120,17 @@ export default function ProductivityOverview({ onOpenSub }) {
   const snapshot = [
     {
       label: 'Tasks Today',
-      main: <><span className="text-3xl font-bold text-white">{tasksDone}</span><span className="text-sm text-gray-500">/ {tasksTotal}</span></>,
+      main: <><span className="font-sans text-3xl font-bold text-white">{tasksDone}</span><span className="text-sm text-gray-500">/ {tasksTotal}</span></>,
       sub: overdue > 0 ? <span className="text-red-400">{overdue} overdue</span> : <span className="text-gray-600">none overdue</span>,
     },
     {
       label: 'Habit Score',
-      main: <><span className="text-3xl font-bold text-emerald-400">{habitScoreToday}</span><span className="text-sm text-gray-500">/ {habits.length}</span></>,
+      main: <><span className="font-sans text-3xl font-bold text-emerald-400">{habitScoreToday}</span><span className="text-sm text-gray-500">/ {habits.length}</span></>,
       sub: topStreak > 0 ? <span className="text-gray-500">top streak {topStreak}d 🔥</span> : <span className="text-gray-600">no streak yet</span>,
     },
     {
       label: 'Goals This Week',
-      main: <><span className={`text-3xl font-bold ${weeklyGoals.length > 0 && weeklyHit === weeklyGoals.length ? 'text-emerald-400' : weeklyHit === 0 ? 'text-red-400' : 'text-white'}`}>{weeklyHit}</span><span className="text-sm text-gray-500">/ {weeklyGoals.length}</span></>,
+      main: <><span className={`font-sans text-3xl font-bold ${weeklyGoals.length > 0 && weeklyHit === weeklyGoals.length ? 'text-emerald-400' : weeklyHit === 0 ? 'text-red-400' : 'text-white'}`}>{weeklyHit}</span><span className="text-sm text-gray-500">/ {weeklyGoals.length}</span></>,
       sub: <span className="text-gray-600">hit this week</span>,
     },
     {

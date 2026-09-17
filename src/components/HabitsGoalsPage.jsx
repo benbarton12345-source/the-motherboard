@@ -79,7 +79,7 @@ export default function HabitsGoalsPage() {
           <div key={s.label} className="bg-gray-900 border border-gray-800 rounded-lg p-5">
             <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">{s.label}</div>
             <div className="flex items-baseline gap-1.5">
-              <span className={`text-3xl font-bold ${s.tone}`}>{s.value}</span>
+              <span className={`font-sans text-3xl font-bold ${s.tone}`}>{s.value}</span>
               <span className="text-xs text-gray-500">{s.sub}</span>
             </div>
           </div>

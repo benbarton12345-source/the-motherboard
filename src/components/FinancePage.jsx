@@ -495,7 +495,7 @@ export default function FinancePage() {
         {/* Net Worth */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">Net Worth</h2>
-          <div className="text-3xl font-bold text-white mb-1">
+          <div className="font-sans text-3xl font-bold text-white mb-1">
             {hasNetWorth ? format(convert(nw.totalGbp, 'GBP')) : '—'}
           </div>
           {monthDelta !== null && (
@@ -519,7 +519,7 @@ export default function FinancePage() {
         {/* Runway */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">Runway</h2>
-          <div className="text-3xl font-bold text-white mb-2">
+          <div className="font-sans text-3xl font-bold text-white mb-2">
             {runway !== null ? `${Math.floor(runway)} mo` : '—'}
           </div>
           <div className="text-xs text-gray-500 mb-0.5">Liquid: {format(convert(liquidCashGbp, 'GBP'))}</div>
@@ -529,7 +529,7 @@ export default function FinancePage() {
         {/* Income/mo */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">Income / mo</h2>
-          <div className="text-3xl font-bold text-emerald-400 mb-2">
+          <div className="font-sans text-3xl font-bold text-emerald-400 mb-2">
             {format(convert(monthlyIncome, 'GBP'))}
           </div>
           <div className="text-xs text-gray-500">
@@ -540,7 +540,7 @@ export default function FinancePage() {
         {/* Burn/mo */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">Burn / mo</h2>
-          <div className="text-3xl font-bold text-amber-400 mb-2">
+          <div className="font-sans text-3xl font-bold text-amber-400 mb-2">
             {format(convert(monthlyBurn, 'GBP'))}
           </div>
           <div className="text-xs text-gray-500">
@@ -556,7 +556,7 @@ export default function FinancePage() {
         {/* Liquid Cash */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-3">Liquid Cash</h2>
-          <div className="text-3xl font-bold text-white mb-1">{format(convert(totalCashGBP, 'GBP'))}</div>
+          <div className="font-sans text-3xl font-bold text-white mb-1">{format(convert(totalCashGBP, 'GBP'))}</div>
           <div className="text-xs text-gray-500 mb-4">{cashPct.toFixed(1)}% of net worth</div>
           {cashSparkData.length > 1 && (
             <div className="mb-4">
@@ -584,7 +584,7 @@ export default function FinancePage() {
         {/* Invested Assets */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widests uppercase text-gray-400 mb-3">Invested Assets</h2>
-          <div className="text-3xl font-bold text-white mb-1">{format(convert(totalInvestedGBP, 'GBP'))}</div>
+          <div className="font-sans text-3xl font-bold text-white mb-1">{format(convert(totalInvestedGBP, 'GBP'))}</div>
           <div className="text-xs text-gray-500 mb-4">{investedPct.toFixed(1)}% of net worth</div>
           {investedSparkData.length > 1 && (
             <div className="mb-4">

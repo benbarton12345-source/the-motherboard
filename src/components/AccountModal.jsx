@@ -88,7 +88,7 @@ export default function AccountModal({ account, history, onClose, onSaved }) {
               <span className="text-[9.5px] font-bold tracking-wider text-gray-400 border border-gray-700 rounded px-1.5 py-0.5">{account.country}</span>
             </div>
             <div className="flex items-baseline gap-2.5 mt-2">
-              <span className="text-2xl font-extrabold text-white">{disp(current)}</span>
+              <span className="font-sans text-2xl font-extrabold text-white">{disp(current)}</span>
               {growthPct !== null && (
                 <span className={`text-[12.5px] font-bold ${growthPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {growthPct >= 0 ? '▲' : '▼'} {Math.abs(growthPct).toFixed(1)}%

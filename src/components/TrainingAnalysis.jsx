@@ -338,7 +338,7 @@ function OverviewView({ tally, trackedCount, weeklySets, weekTotal, groups, grou
                     <StatusDot color={ws.color} size={6} />
                   </div>
                   <div className="flex items-end gap-1.5 mb-2.5">
-                    <span className="text-2xl font-bold text-white">{ws.sets}</span>
+                    <span className="font-sans text-2xl font-bold text-white">{ws.sets}</span>
                     <span className="text-xs text-gray-500 pb-0.5">/ {ws.range}</span>
                   </div>
                   <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
@@ -379,7 +379,7 @@ function OverviewView({ tally, trackedCount, weeklySets, weekTotal, groups, grou
                       <span className="mt-1"><StatusDot color={lift.color} size={7} /></span>
                     </div>
                     <div className="flex items-end gap-2">
-                      <div className="text-2xl font-bold text-white">{lift.top}</div>
+                      <div className="font-sans text-2xl font-bold text-white">{lift.top}</div>
                       <div className="text-xs text-gray-500 pb-1">kg</div>
                       <div className="ml-auto text-sm font-semibold pb-1" style={{ color: lift.color }}>{lift.delta}</div>
                     </div>
@@ -581,7 +581,7 @@ function LiftHeader({ exercise, bucket, onOpenSelector, status, headline }) {
       </div>
       {headline && (
         <div className="text-right">
-          <div className="text-3xl font-bold text-white">{headline.weight}<span className="text-base text-gray-500"> kg</span></div>
+          <div className="font-sans text-3xl font-bold text-white">{headline.weight}<span className="text-base text-gray-500"> kg</span></div>
           <div className="text-sm mt-1.5 font-semibold" style={{ color: headline.wDelta > 0 ? ACCENT.emerald : '#6b7280' }}>
             {headline.wDelta > 0 ? `▲ +${fmtTop(headline.wDelta)} vs last` : 'flat vs last'}{headline.ratio ? ` · ${headline.ratio.toFixed(2)}× BW` : ''}
           </div>

@@ -101,7 +101,7 @@ function StatCard({ title, value, valueClass = 'text-white', children }) {
   return (
     <div className={`${card} p-4 grow shrink basis-[150px] md:basis-[190px] min-w-0`}>
       <div className={label}>{title}</div>
-      <div className={`text-2xl font-extrabold mt-1 tabular-nums ${valueClass}`}>{value}</div>
+      <div className={`font-sans text-2xl font-extrabold mt-1 tabular-nums ${valueClass}`}>{value}</div>
       <div className="text-[11px] text-gray-500 mt-1.5 truncate">{children}</div>
     </div>
   )
@@ -114,7 +114,7 @@ function TargetStatCard({ title, value, pct, delta, deltaOk, target }) {
   return (
     <div className={`${card} p-4 grow shrink basis-[150px] md:basis-[190px] min-w-0`}>
       <div className={label}>{title}</div>
-      <div className="text-2xl font-extrabold text-white mt-1 tabular-nums">{value}</div>
+      <div className="font-sans text-2xl font-extrabold text-white mt-1 tabular-nums">{value}</div>
       <div className="h-1.5 w-full rounded-full bg-gray-800 overflow-hidden mt-2.5">
         <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, background: deltaOk ? GREEN : RED }} />
       </div>
@@ -270,7 +270,7 @@ export default function TradingPage({ trades = [], loading, syncing, sync, error
             <div className="lg:col-span-2 min-w-0">
               <div className="text-[15px] font-bold text-white truncate">{selected}</div>
               <div className={`${label} mt-3`}>Net P&L</div>
-              <div className={`text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold tracking-tight mt-1 tabular-nums ${ss.net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              <div className={`font-sans text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold tracking-tight mt-1 tabular-nums ${ss.net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {signed(ss.net, symbol)}
               </div>
               <div className="font-mono text-[11px] text-gray-500 mt-1">
@@ -368,7 +368,7 @@ export default function TradingPage({ trades = [], loading, syncing, sync, error
           <div className="lg:col-span-2 min-w-0">
             <div className={label}>Net P&L · {range.label}</div>
             <div
-              className={`text-[clamp(2.375rem,6vw,4rem)] font-extrabold tracking-tight mt-1 tabular-nums ${s.net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+              className={`font-sans text-[clamp(2.375rem,6vw,4rem)] font-extrabold tracking-tight mt-1 tabular-nums ${s.net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
               style={{ textShadow: `0 0 28px ${s.net >= 0 ? 'rgba(52,211,153,.25)' : 'rgba(248,113,113,.25)'}` }}
             >
               {signed(s.net, symbol)}

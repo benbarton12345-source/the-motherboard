@@ -875,7 +875,7 @@ function WhatIf({ d, fmt, whatIf, setWhatIf }) {
         <div className="text-[10px] text-gray-500">Currently saving</div>
         <div className="font-mono text-lg text-gray-400 mb-3">{fmt.money(currentSavings)}/mo</div>
         <div className="text-[10px] text-gray-500">Adjusted savings</div>
-        <div className="font-mono text-2xl font-bold" style={{ color: adjustedSavings >= currentSavings ? C.emerald : C.amber }}>{fmt.money(adjustedSavings)}/mo</div>
+        <div className="font-sans text-2xl font-bold" style={{ color: adjustedSavings >= currentSavings ? C.emerald : C.amber }}>{fmt.money(adjustedSavings)}/mo</div>
         <div className="font-mono text-xs mb-3" style={{ color: delta > 0 ? C.emerald : delta < 0 ? C.amber : 'rgba(214,218,234,0.4)' }}>{delta === 0 ? '—' : `${fmt.signed(delta)}/mo`}</div>
         <div className="border-t border-gray-800 pt-3">
           <div className="text-[10px] text-gray-500">FI timeline</div>

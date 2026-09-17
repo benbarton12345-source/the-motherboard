@@ -152,7 +152,7 @@ export default function ReadingPanel() {
         <div className="lg:border-l lg:border-white/5 lg:pl-6">
           <div className={subLabel + ' mb-3'}>{year} progress</div>
           <div className="flex items-baseline gap-2">
-            <span className="text-[40px] leading-none font-extrabold text-white tabular-nums">{r.doneCount}</span>
+            <span className="font-sans text-[40px] leading-none font-extrabold text-white tabular-nums">{r.doneCount}</span>
             <div className="text-xs text-gray-500">
               of{' '}
               {editingGoal ? (

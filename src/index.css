@@ -6,7 +6,16 @@
    preflight from the config; `mono` is applied per-element via font-mono. This
    only has to wire up the third role: headings take the display face (Syne).
    Element selectors rather than classes, so no component markup changes. Any
-   explicit font-* utility still wins, since utilities outrank the base layer. */
+   explicit font-* utility still wins, since utilities outrank the base layer.
+
+   Syne is for headings and section titles ONLY — never numerals.
+
+   Large display numerals (net worth, session clock, trading hero P&L and stat
+   row, counters, Health tiles) are font-sans, matching the Health metric tiles
+   which set no font class and inherit it. They are deliberately NOT font-mono:
+   mono was tried and rejected as too technical at display size. font-mono stays
+   on small labels and inline data only. Do not put a display number back on
+   Syne or mono. */
 @layer base {
   h1, h2, h3, h4, h5, h6 {
     font-family: theme('fontFamily.display');

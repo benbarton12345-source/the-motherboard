@@ -94,7 +94,7 @@ export default function FinanceOverviewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-center">
           <div className="lg:col-span-2 min-w-0">
             <div className="text-[11px] font-bold tracking-widest uppercase text-gray-500">Total Net Worth</div>
-            <div className="text-4xl font-extrabold text-white mt-1">{format(convert(totalGbp, 'GBP'))}</div>
+            <div className="font-sans text-4xl font-extrabold text-white mt-1">{format(convert(totalGbp, 'GBP'))}</div>
             {deltaDisp != null && (
               <div className={`text-sm font-semibold mt-1 ${deltaDisp >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {deltaDisp >= 0 ? '▲' : '▼'} {format(Math.abs(deltaDisp))}{deltaPct != null && ` (${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%)`} since last snapshot
@@ -141,7 +141,7 @@ export default function FinanceOverviewPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className={`${card} p-5`}>
           <div className="text-[11px] font-bold tracking-widest uppercase text-gray-500">Savings rate</div>
-          <div className="text-2xl font-extrabold text-white mt-1">{saveRate != null ? `${saveRate.toFixed(0)}%` : '—'}</div>
+          <div className="font-sans text-2xl font-extrabold text-white mt-1">{saveRate != null ? `${saveRate.toFixed(0)}%` : '—'}</div>
           <div className="text-[11px] mt-1">
             {rateDrift == null ? <span className="text-gray-600">this month</span>
               : <span className={rateDrift >= 0 ? 'text-emerald-400' : 'text-amber-400'}>{rateDrift >= 0 ? '+' : ''}{rateDrift.toFixed(0)} pts vs 3-mo avg</span>}
@@ -149,12 +149,12 @@ export default function FinanceOverviewPage() {
         </div>
         <div className={`${card} p-5`}>
           <div className="text-[11px] font-bold tracking-widest uppercase text-gray-500">FI pace</div>
-          <div className="text-2xl font-extrabold text-white mt-1">{fiYears != null ? `${fiYears} yrs` : '—'}</div>
+          <div className="font-sans text-2xl font-extrabold text-white mt-1">{fiYears != null ? `${fiYears} yrs` : '—'}</div>
           <div className="text-[11px] text-gray-500 mt-1">to {format(convert(NET_WORTH_TARGET_GBP, 'GBP'))} · ~{monthsToLabel(projMonth)}</div>
         </div>
         <div className={`${card} p-5`}>
           <div className="text-[11px] font-bold tracking-widest uppercase text-gray-500">Budget position</div>
-          <div className={`text-2xl font-extrabold mt-1 ${position >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtAud(position)}</div>
+          <div className={`font-sans text-2xl font-extrabold mt-1 ${position >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtAud(position)}</div>
           <div className="text-[11px] text-gray-500 mt-1">{fmtAud(curB.income)} in · {fmtAud(curB.expense)} out</div>
         </div>
       </div>

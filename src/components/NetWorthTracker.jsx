@@ -107,7 +107,7 @@ export default function NetWorthTracker() {
             {showForm ? 'Cancel' : 'Update'}
           </button>
         </div>
-        <div className="text-4xl font-bold text-white mb-4">
+        <div className="font-sans text-4xl font-bold text-white mb-4">
           {latest ? format(convert(latest.total, 'GBP')) : format(0)}
         </div>
         {latest && (

@@ -82,7 +82,7 @@ export default function ReadingCard() {
       {/* Year count */}
       <div className="flex justify-between items-baseline mt-4 pt-3.5 border-t border-white/5">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[22px] font-extrabold text-white tabular-nums">{r.doneCount}</span>
+          <span className="font-sans text-[22px] font-extrabold text-white tabular-nums">{r.doneCount}</span>
           {editingGoal ? (
             <input autoFocus value={goalDraft}
               onChange={e => setGoalDraft(e.target.value.replace(/[^0-9]/g, ''))}

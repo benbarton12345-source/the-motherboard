@@ -302,7 +302,7 @@ export default function HomePage() {
         {/* NET WORTH */}
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Net Worth</h2>
-          <div className="text-4xl font-bold text-white mb-2">{nwDisplay}</div>
+          <div className="font-sans text-4xl font-bold text-white mb-2">{nwDisplay}</div>
           {monthDelta !== null && (
             <div className="mb-2">
               <span className={`text-sm font-medium ${monthDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -350,7 +350,7 @@ export default function HomePage() {
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-sm tracking-widest uppercase text-gray-400 mb-4">Session</h2>
           <div className="text-xs text-gray-500 uppercase tracking-widest mb-2">{greeting}, Ben</div>
-          <div className="text-4xl font-bold text-white tracking-tight leading-none mb-2">{perthTime}</div>
+          <div className="font-sans text-4xl font-bold text-white tracking-tight leading-none mb-2">{perthTime}</div>
           <div className="text-sm text-gray-400 mb-1">{dateStr}</div>
           <div className="text-xs text-gray-500">UK · {ukTime}</div>
         </div>

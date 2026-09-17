@@ -137,7 +137,7 @@ export default function ProjectionsPage() {
           <div className="flex items-end justify-between flex-wrap gap-2 mb-3">
             <div>
               <div className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Projected to reach {compact(targetDisp)}</div>
-              <div className="text-2xl font-extrabold text-white mt-0.5">{monthsToLabel(projMonth)}</div>
+              <div className="font-sans text-2xl font-extrabold text-white mt-0.5">{monthsToLabel(projMonth)}</div>
             </div>
             <div className="text-right">
               <div className="text-[11px] text-gray-500">In {FI_PROJECTION_YEARS}y ({nowYear + FI_PROJECTION_YEARS})</div>
@@ -226,12 +226,12 @@ export default function ProjectionsPage() {
               ) : revMode === 'monthly' ? (
                 <div>
                   <div className="text-[11px] text-gray-500 uppercase tracking-widest">Required monthly contribution</div>
-                  <div className="text-3xl font-extrabold text-emerald-400 mt-1">{format(cDisp(rev.requiredMonthly))}<span className="text-sm text-gray-500 font-medium"> / month</span></div>
+                  <div className="font-sans text-3xl font-extrabold text-emerald-400 mt-1">{format(cDisp(rev.requiredMonthly))}<span className="text-sm text-gray-500 font-medium"> / month</span></div>
                 </div>
               ) : (
                 <div>
                   <div className="text-[11px] text-gray-500 uppercase tracking-widest">Required lump sum invested today</div>
-                  <div className="text-3xl font-extrabold text-emerald-400 mt-1">{format(cDisp(rev.requiredLumpSum))}</div>
+                  <div className="font-sans text-3xl font-extrabold text-emerald-400 mt-1">{format(cDisp(rev.requiredLumpSum))}</div>
                   <div className="text-[11px] text-gray-600 mt-1">with no further monthly contributions</div>
                 </div>
               )}
